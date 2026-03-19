@@ -1,0 +1,30 @@
+commands:
+  install: pnpm install
+  lint: pnpm lint
+  typecheck: pnpm typecheck
+  build: pnpm build
+  test: pnpm test -- --maxWorkers=8
+  e2e: pnpm test:e2e -- --project=chromium --workers=6
+  storybook_build: pnpm storybook:build
+
+services:
+  docs:
+    start: pnpm --filter @emerald/docs dev -- --port 3100
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
+    healthcheck: curl -sf http://localhost:3100
+    port: 3100
+    depends_on: []
+
+  workspace:
+    start: pnpm --filter @emerald/workspace dev -- --port 3101
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3101 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
+    healthcheck: curl -sf http://localhost:3101
+    port: 3101
+    depends_on: []
+
+  storybook:
+    start: pnpm storybook -- --port 6100
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 6100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
+    healthcheck: curl -sf http://localhost:6100
+    port: 6100
+    depends_on: []
