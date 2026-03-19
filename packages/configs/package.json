@@ -1,0 +1,16 @@
+{
+  "name": "@emerald/configs",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./tsconfig/*": "./tsconfig/*",
+    "./tailwind/*": "./tailwind/*",
+    "./vitest/*": "./vitest/*",
+    "./eslint/*": "./eslint/*"
+  },
+  "files": [
+    "tsconfig",
+    "tailwind",
+    "vitest"
+  ]
+}

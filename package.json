@@ -1,0 +1,32 @@
+{
+  "name": "emerald",
+  "private": true,
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "vitest run",
+    "build": "pnpm -r run build",
+    "dev:docs": "pnpm --filter @emerald/docs dev",
+    "dev:workspace": "pnpm --filter @emerald/workspace dev",
+    "storybook": "echo \"Storybook not yet configured\"",
+    "storybook:build": "echo \"Storybook not yet configured\"",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "@eslint/js": "^9.17.0",
+    "vitest": "^3.0.4",
+    "jsdom": "^25.0.1",
+    "@playwright/test": "^1.49.1",
+    "globals": "^15.14.0"
+  },
+  "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "msw", "sharp"]
+  }
+}
