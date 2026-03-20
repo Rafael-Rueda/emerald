@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import type { WorkspaceNavigation } from "@emerald/contracts";
+import {
+  buildCanonicalNavigationLabel,
+  buildCanonicalPathLabel,
+  type WorkspaceNavigation,
+} from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
   useReorderWorkspaceNavigationAction,
@@ -229,6 +233,10 @@ export function NavigationInspector() {
               {listItems.map((item) => {
                 const isSelected = selectedNavigationId === item.id;
                 const order = getEffectiveOrder(item.id, item.order);
+                const pathLabel = buildCanonicalPathLabel({
+                  space: item.space,
+                  slug: item.slug,
+                });
 
                 return (
                   <li
@@ -246,9 +254,11 @@ export function NavigationInspector() {
                         isSelected && "border-primary bg-accent",
                       )}
                     >
-                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-sm font-medium">
+                        {buildCanonicalNavigationLabel(item.label)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.space}/{item.slug} • order{" "}
+                        {pathLabel} • order{" "}
                         <span data-testid={`navigation-list-item-${item.id}-order`}>
                           {order}
                         </span>
@@ -344,6 +354,15 @@ export function NavigationInspector() {
           {selectedNavigationId && detailState.state === "success" && (
             <dl className="mt-3 space-y-2 text-sm">
               <div className="grid grid-cols-[9rem_1fr] gap-2">
+                <dt className="text-muted-foreground">Path</dt>
+                <dd className="font-medium" data-testid="navigation-detail-path-label">
+                  {buildCanonicalPathLabel({
+                    space: detailState.data.space,
+                    slug: detailState.data.slug,
+                  })}
+                </dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">ID</dt>
                 <dd className="font-medium" data-testid="navigation-detail-id">
                   {detailState.data.id}
@@ -352,7 +371,7 @@ export function NavigationInspector() {
               <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">Label</dt>
                 <dd className="font-medium" data-testid="navigation-detail-label">
-                  {detailState.data.label}
+                  {buildCanonicalNavigationLabel(detailState.data.label)}
                 </dd>
               </div>
               <div className="grid grid-cols-[9rem_1fr] gap-2">

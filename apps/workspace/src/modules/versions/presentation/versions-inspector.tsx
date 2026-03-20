@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import type { WorkspaceVersion } from "@emerald/contracts";
+import {
+  buildCanonicalVersionLabel,
+  type WorkspaceVersion,
+} from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
   usePublishWorkspaceVersionAction,
@@ -202,6 +205,7 @@ export function VersionsInspector() {
               {listState.data.versions.map((version) => {
                 const isSelected = selectedVersionId === version.id;
                 const status = getEffectiveStatus(version.id, version.status);
+                const versionLabel = buildCanonicalVersionLabel(version.label);
 
                 return (
                   <li
@@ -219,7 +223,7 @@ export function VersionsInspector() {
                         isSelected && "border-primary bg-accent",
                       )}
                     >
-                      <p className="text-sm font-medium">{version.label}</p>
+                      <p className="text-sm font-medium">{versionLabel}</p>
                       <p className="text-xs text-muted-foreground">
                         <span data-testid={`version-list-item-${version.id}-status`}>
                           {status}
@@ -325,7 +329,7 @@ export function VersionsInspector() {
               <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">Label</dt>
                 <dd className="font-medium" data-testid="version-detail-label">
-                  {detailState.data.label}
+                  {buildCanonicalVersionLabel(detailState.data.label)}
                 </dd>
               </div>
               <div className="grid grid-cols-[9rem_1fr] gap-2">

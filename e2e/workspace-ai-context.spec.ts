@@ -29,6 +29,24 @@ test.describe("workspace AI context surface", () => {
       "document/doc-getting-started",
     );
     await expect(page.getByTestId("ai-context-chunks")).toBeVisible();
+    await expect(
+      page.getByTestId("ai-context-source-document-chunk-installation"),
+    ).toContainText("Getting Started");
+    await expect(
+      page.getByTestId("ai-context-source-version-chunk-installation"),
+    ).toContainText("v1");
+    await expect(
+      page.getByTestId("ai-context-source-path-chunk-installation"),
+    ).toHaveText("guides/getting-started");
+    await expect(
+      page.getByTestId("ai-context-source-navigation-chunk-installation"),
+    ).toHaveText("Getting Started");
+    await expect(
+      page.getByTestId("ai-context-source-section-chunk-installation"),
+    ).toHaveText("Installation (installation)");
+    await expect(
+      page.getByTestId("ai-context-source-chunk-chunk-installation"),
+    ).toHaveText("chunk-installation");
 
     await page.getByRole("button", { name: /API Reference/i }).click();
 

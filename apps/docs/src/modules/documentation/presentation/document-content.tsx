@@ -2,6 +2,11 @@
 
 import React from "react";
 import type { Document } from "@emerald/contracts";
+import {
+  buildCanonicalDocumentTitleLabel,
+  buildCanonicalPathLabel,
+  buildCanonicalVersionLabel,
+} from "@emerald/contracts";
 
 /**
  * DocumentContent — renders the resolved document with title and body.
@@ -14,6 +19,12 @@ interface DocumentContentProps {
 }
 
 export function DocumentContent({ document }: DocumentContentProps) {
+  const versionLabel = buildCanonicalVersionLabel(document.version);
+  const pathLabel = buildCanonicalPathLabel({
+    space: document.space,
+    slug: document.slug,
+  });
+
   return (
     <article
       className="max-w-3xl space-y-4"
@@ -23,11 +34,15 @@ export function DocumentContent({ document }: DocumentContentProps) {
         className="text-3xl font-bold text-foreground"
         data-testid="doc-title"
       >
-        {document.title}
+        {buildCanonicalDocumentTitleLabel(document.title)}
       </h1>
-      <div className="text-sm text-muted-foreground">
-        <span data-testid="doc-meta">
-          {document.space} / {document.version} / {document.slug}
+      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground" data-testid="doc-meta">
+        <span>
+          Version:{" "}
+          <span data-testid="doc-version-label">{versionLabel}</span>
+        </span>
+        <span>
+          Path: <span data-testid="doc-path-label">{pathLabel}</span>
         </span>
       </div>
       <div

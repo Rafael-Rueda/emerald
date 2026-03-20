@@ -11,3 +11,4 @@ export * from "./version";
 export * from "./search";
 export * from "./ai-context";
 export * from "./workspace";
+export * from "./canonical-labels";

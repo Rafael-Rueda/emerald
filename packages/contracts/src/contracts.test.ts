@@ -132,6 +132,7 @@ describe("Zod Contracts", () => {
               documentTitle: "Test",
               versionId: "v1",
               versionLabel: "v1",
+              navigationLabel: "Test",
               sectionId: "sec-1",
               sectionTitle: "Section",
               slug: "test",

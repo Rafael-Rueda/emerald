@@ -204,6 +204,7 @@ describe("MSW Handlers: AI Context Success Scenarios", () => {
     for (const chunk of parsed.chunks) {
       expect(chunk.source.documentId).toBeTruthy();
       expect(chunk.source.versionLabel).toBeTruthy();
+      expect(chunk.source.navigationLabel).toBeTruthy();
       expect(chunk.source.sectionId).toBeTruthy();
     }
   });

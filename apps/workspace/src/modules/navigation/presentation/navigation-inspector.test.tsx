@@ -79,6 +79,9 @@ describe("NavigationInspector", () => {
     expect(screen.getByTestId("navigation-detail-slug")).toHaveTextContent(
       "api-reference",
     );
+    expect(screen.getByTestId("navigation-detail-path-label")).toHaveTextContent(
+      "guides/api-reference",
+    );
     expect(screen.getByTestId("navigation-detail-space")).toHaveTextContent(
       "guides",
     );

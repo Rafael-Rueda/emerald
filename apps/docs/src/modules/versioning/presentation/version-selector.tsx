@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import type { Version } from "@emerald/contracts";
+import { buildCanonicalVersionLabel } from "@emerald/contracts";
 import {
   buildVersionRoutePath,
   findActiveVersion,
@@ -53,7 +54,7 @@ export function VersionSelector({
             className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary"
             data-testid="version-active-label"
           >
-            {activeVersionEntry?.label ?? activeVersion}
+            {buildCanonicalVersionLabel(activeVersionEntry?.label ?? activeVersion)}
           </span>
           <label htmlFor="version-select" className="sr-only">
             Select documentation version
@@ -72,7 +73,7 @@ export function VersionSelector({
                 value={version.slug}
                 data-testid={`version-option-${version.slug}`}
               >
-                {version.label}
+                {buildCanonicalVersionLabel(version.label)}
               </option>
             ))}
           </select>

@@ -17,8 +17,9 @@ test.describe("public docs versioning flow", () => {
     await page.getByTestId("version-select").selectOption("v2");
     await page.waitForURL("**/guides/v2/getting-started", { timeout: 10000 });
 
-    await expect(page.getByTestId("doc-meta")).toContainText(
-      "guides / v2 / getting-started",
+    await expect(page.getByTestId("doc-version-label")).toHaveText("v2");
+    await expect(page.getByTestId("doc-path-label")).toHaveText(
+      "guides/getting-started",
     );
     await expect(page.getByTestId("breadcrumb-version")).toContainText("v2");
     await expect(page.getByTestId("version-active-label")).toContainText("v2");
@@ -58,8 +59,9 @@ test.describe("public docs versioning flow", () => {
     await expect(page.getByTestId("toc-entry-installation")).toHaveCount(0);
 
     await page.waitForURL("**/guides/v2/getting-started", { timeout: 10000 });
-    await expect(page.getByTestId("doc-meta")).toContainText(
-      "guides / v2 / getting-started",
+    await expect(page.getByTestId("doc-version-label")).toHaveText("v2");
+    await expect(page.getByTestId("doc-path-label")).toHaveText(
+      "guides/getting-started",
     );
   });
 

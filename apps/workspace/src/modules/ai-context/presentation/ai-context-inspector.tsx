@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import type { WorkspaceDocument } from "@emerald/contracts";
+import {
+  buildCanonicalPathLabel,
+  mapAiChunkToCanonicalProvenance,
+  type WorkspaceDocument,
+} from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import { useWorkspaceDocumentsList } from "../../documents/application/use-workspace-documents";
 import {
@@ -164,6 +168,10 @@ export function AiContextInspector() {
             <ul className="mt-3 space-y-2" data-testid="ai-entities-list">
               {entities.map((entity) => {
                 const isSelected = scope?.entityId === entity.id;
+                const pathLabel = buildCanonicalPathLabel({
+                  space: entity.space,
+                  slug: entity.slug,
+                });
 
                 return (
                   <li key={entity.id} className="list-none">
@@ -184,9 +192,7 @@ export function AiContextInspector() {
                       data-testid={`ai-entity-item-${entity.id}`}
                     >
                       <p className="text-sm font-medium">{entity.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {entity.space}/{entity.slug}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{pathLabel}</p>
                     </button>
                   </li>
                 );
@@ -263,44 +269,60 @@ export function AiContextInspector() {
 
           {scope && aiContextState.state === "success" && (
             <ol className="mt-3 space-y-3" data-testid="ai-context-chunks">
-              {aiContextState.data.chunks.map((chunk) => (
-                <li
-                  key={chunk.id}
-                  className="rounded-md border border-border bg-background p-3"
-                  data-testid={`ai-context-chunk-${chunk.id}`}
-                >
-                  <p className="text-sm font-medium text-foreground">{chunk.content}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Relevance: {formatRelevanceScore(chunk.relevanceScore)}
-                  </p>
-                  <dl className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-                    <div>
-                      <dt className="font-semibold text-foreground">Document</dt>
-                      <dd data-testid={`ai-context-source-document-${chunk.id}`}>
-                        {chunk.source.documentTitle} ({chunk.source.documentId})
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-semibold text-foreground">Version</dt>
-                      <dd data-testid={`ai-context-source-version-${chunk.id}`}>
-                        {chunk.source.versionLabel} ({chunk.source.versionId})
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-semibold text-foreground">Path</dt>
-                      <dd data-testid={`ai-context-source-path-${chunk.id}`}>
-                        {chunk.source.space}/{chunk.source.slug}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-semibold text-foreground">Section</dt>
-                      <dd data-testid={`ai-context-source-section-${chunk.id}`}>
-                        {chunk.source.sectionTitle} ({chunk.source.sectionId})
-                      </dd>
-                    </div>
-                  </dl>
-                </li>
-              ))}
+              {aiContextState.data.chunks.map((chunk) => {
+                const canonical = mapAiChunkToCanonicalProvenance(chunk);
+
+                return (
+                  <li
+                    key={chunk.id}
+                    className="rounded-md border border-border bg-background p-3"
+                    data-testid={`ai-context-chunk-${chunk.id}`}
+                  >
+                    <p className="text-sm font-medium text-foreground">{chunk.content}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Relevance: {formatRelevanceScore(chunk.relevanceScore)}
+                    </p>
+                    <dl className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                      <div>
+                        <dt className="font-semibold text-foreground">Document</dt>
+                        <dd data-testid={`ai-context-source-document-${chunk.id}`}>
+                          {canonical.documentLabel} ({chunk.source.documentId})
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-foreground">Version</dt>
+                        <dd data-testid={`ai-context-source-version-${chunk.id}`}>
+                          {canonical.versionLabel} ({chunk.source.versionId})
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-foreground">Path</dt>
+                        <dd data-testid={`ai-context-source-path-${chunk.id}`}>
+                          {canonical.pathLabel}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-foreground">Navigation</dt>
+                        <dd data-testid={`ai-context-source-navigation-${chunk.id}`}>
+                          {canonical.navigationLabel}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-foreground">Section</dt>
+                        <dd data-testid={`ai-context-source-section-${chunk.id}`}>
+                          {canonical.sectionLabel}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-foreground">Chunk</dt>
+                        <dd data-testid={`ai-context-source-chunk-${chunk.id}`}>
+                          {canonical.chunkLabel}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </div>

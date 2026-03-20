@@ -20,7 +20,10 @@ describe("DocumentContent", () => {
 
   it("renders the document meta information", () => {
     renderWithProviders(<DocumentContent document={documentGettingStarted} />);
-    expect(screen.getByTestId("doc-meta")).toHaveTextContent("guides / v1 / getting-started");
+    expect(screen.getByTestId("doc-version-label")).toHaveTextContent("v1");
+    expect(screen.getByTestId("doc-path-label")).toHaveTextContent(
+      "guides/getting-started",
+    );
   });
 
   it("renders a different document correctly", () => {

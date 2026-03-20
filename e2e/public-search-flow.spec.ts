@@ -22,8 +22,9 @@ test.describe("public docs search flow", () => {
     await page.getByTestId("search-result-link-sr-getting-started-v2").click();
 
     await page.waitForURL("**/guides/v2/getting-started", { timeout: 10000 });
-    await expect(page.getByTestId("doc-meta")).toContainText(
-      "guides / v2 / getting-started",
+    await expect(page.getByTestId("doc-version-label")).toHaveText("v2");
+    await expect(page.getByTestId("doc-path-label")).toHaveText(
+      "guides/getting-started",
     );
     await expect(page.getByTestId("breadcrumb-version")).toContainText("v2");
     await expect(page.getByTestId("sidebar-item-getting-started")).toHaveAttribute(

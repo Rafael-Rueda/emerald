@@ -3,6 +3,7 @@ import type {
   AiContextResponse,
   AiSourceReference,
 } from "@emerald/contracts";
+import { navApiReference, navGettingStarted } from "./navigation";
 
 /**
  * Canonical AI context fixtures.
@@ -13,6 +14,7 @@ export const sourceRefGettingStarted: AiSourceReference = {
   documentTitle: "Getting Started",
   versionId: "ver-v1",
   versionLabel: "v1",
+  navigationLabel: navGettingStarted.label,
   sectionId: "installation",
   sectionTitle: "Installation",
   slug: "getting-started",
@@ -24,6 +26,7 @@ export const sourceRefApiReference: AiSourceReference = {
   documentTitle: "API Reference",
   versionId: "ver-v1",
   versionLabel: "v1",
+  navigationLabel: navApiReference.label,
   sectionId: "root",
   sectionTitle: "API Reference",
   slug: "api-reference",

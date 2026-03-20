@@ -11,6 +11,8 @@ import {
   WorkspaceNavigationListSchema,
   WorkspaceVersionListSchema,
   MutationResultSchema,
+  buildCanonicalPathLabel,
+  mapAiChunkToCanonicalProvenance,
 } from "@emerald/contracts";
 import {
   documentGettingStarted,
@@ -23,6 +25,8 @@ import {
 import {
   navigationTreeGuidesV1,
   navigationTreeGuidesV2,
+  navGettingStarted,
+  navApiReference,
   allNavigationTrees,
   findNavigationTree,
   buildNavigationResponse,
@@ -38,6 +42,7 @@ import {
   buildSearchResponse,
 } from "./search";
 import {
+  aiChunkInstallation,
   sourceRefGettingStarted,
   sourceRefApiReference,
   buildAiContextResponse,
@@ -181,11 +186,28 @@ describe("Fixtures: AI Context", () => {
       expect(ref.documentTitle).toBeTruthy();
       expect(ref.versionId).toBeTruthy();
       expect(ref.versionLabel).toBeTruthy();
+      expect(ref.navigationLabel).toBeTruthy();
       expect(ref.sectionId).toBeTruthy();
       expect(ref.sectionTitle).toBeTruthy();
       expect(ref.slug).toBeTruthy();
       expect(ref.space).toBeTruthy();
     }
+  });
+
+  it("AI provenance maps back to canonical labels used by public docs", () => {
+    const canonical = mapAiChunkToCanonicalProvenance(aiChunkInstallation);
+
+    expect(canonical.documentLabel).toBe(documentGettingStarted.title);
+    expect(canonical.versionLabel).toBe(versionV1.label);
+    expect(canonical.navigationLabel).toBe(navGettingStarted.label);
+    expect(canonical.pathLabel).toBe(
+      buildCanonicalPathLabel({
+        space: documentGettingStarted.space,
+        slug: documentGettingStarted.slug,
+      }),
+    );
+    expect(canonical.sectionLabel).toBe("Installation (installation)");
+    expect(canonical.chunkLabel).toBe("chunk-installation");
   });
 });
 
@@ -229,7 +251,20 @@ describe("Fixtures: Workspace", () => {
     expect(wsDocGettingStarted.slug).toBe(documentGettingStarted.slug);
     expect(wsDocApiReference.title).toBe(documentApiReference.title);
     expect(wsDocApiReference.slug).toBe(documentApiReference.slug);
+    expect(wsNavigationList.items[0].label).toBe(navGettingStarted.label);
+    expect(wsNavigationList.items[1].label).toBe(navApiReference.label);
     expect(wsVersionV1.label).toBe(versionV1.label);
     expect(wsVersionV2.label).toBe(versionV2.label);
+    expect(
+      buildCanonicalPathLabel({
+        space: wsDocGettingStarted.space,
+        slug: wsDocGettingStarted.slug,
+      }),
+    ).toBe(
+      buildCanonicalPathLabel({
+        space: documentGettingStarted.space,
+        slug: documentGettingStarted.slug,
+      }),
+    );
   });
 });

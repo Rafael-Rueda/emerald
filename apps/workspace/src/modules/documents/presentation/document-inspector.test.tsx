@@ -79,6 +79,9 @@ describe("DocumentInspector", () => {
     expect(screen.getByTestId("document-detail-slug")).toHaveTextContent(
       "api-reference",
     );
+    expect(screen.getByTestId("document-detail-path-label")).toHaveTextContent(
+      "guides/api-reference",
+    );
     expect(screen.getByTestId("document-detail-status")).toHaveTextContent(
       "draft",
     );

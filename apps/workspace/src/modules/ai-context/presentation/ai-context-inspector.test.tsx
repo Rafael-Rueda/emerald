@@ -60,6 +60,21 @@ describe("AiContextInspector", () => {
     expect(
       screen.getByTestId("ai-context-source-document-chunk-installation"),
     ).toHaveTextContent("Getting Started");
+    expect(
+      screen.getByTestId("ai-context-source-version-chunk-installation"),
+    ).toHaveTextContent("v1");
+    expect(
+      screen.getByTestId("ai-context-source-path-chunk-installation"),
+    ).toHaveTextContent("guides/getting-started");
+    expect(
+      screen.getByTestId("ai-context-source-navigation-chunk-installation"),
+    ).toHaveTextContent("Getting Started");
+    expect(
+      screen.getByTestId("ai-context-source-section-chunk-installation"),
+    ).toHaveTextContent("Installation (installation)");
+    expect(
+      screen.getByTestId("ai-context-source-chunk-chunk-installation"),
+    ).toHaveTextContent("chunk-installation");
   });
 
   it("switches entity scope and updates URL + request path", async () => {

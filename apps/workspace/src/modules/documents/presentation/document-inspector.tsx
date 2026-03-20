@@ -2,7 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { WorkspaceDocument } from "@emerald/contracts";
+import {
+  buildCanonicalDocumentTitleLabel,
+  buildCanonicalPathLabel,
+  type WorkspaceDocument,
+} from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
   usePublishWorkspaceDocumentAction,
@@ -202,6 +206,10 @@ export function DocumentInspector() {
               {listState.data.documents.map((document) => {
                 const isSelected = selectedDocumentId === document.id;
                 const status = getEffectiveStatus(document.id, document.status);
+                const pathLabel = buildCanonicalPathLabel({
+                  space: document.space,
+                  slug: document.slug,
+                });
 
                 return (
                   <li
@@ -219,9 +227,11 @@ export function DocumentInspector() {
                         isSelected && "border-primary bg-accent",
                       )}
                     >
-                      <p className="text-sm font-medium">{document.title}</p>
+                      <p className="text-sm font-medium">
+                        {buildCanonicalDocumentTitleLabel(document.title)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {document.space}/{document.slug} •{" "}
+                        {pathLabel} •{" "}
                         <span data-testid={`document-list-item-${document.id}-status`}>
                           {status}
                         </span>
@@ -328,6 +338,15 @@ export function DocumentInspector() {
           {selectedDocumentId && detailState.state === "success" && (
             <dl className="mt-3 space-y-2 text-sm">
               <div className="grid grid-cols-[9rem_1fr] gap-2">
+                <dt className="text-muted-foreground">Path</dt>
+                <dd className="font-medium" data-testid="document-detail-path-label">
+                  {buildCanonicalPathLabel({
+                    space: detailState.data.space,
+                    slug: detailState.data.slug,
+                  })}
+                </dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">ID</dt>
                 <dd className="font-medium" data-testid="document-detail-id">
                   {detailState.data.id}
@@ -336,7 +355,7 @@ export function DocumentInspector() {
               <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">Title</dt>
                 <dd className="font-medium" data-testid="document-detail-title">
-                  {detailState.data.title}
+                  {buildCanonicalDocumentTitleLabel(detailState.data.title)}
                 </dd>
               </div>
               <div className="grid grid-cols-[9rem_1fr] gap-2">

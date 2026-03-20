@@ -9,6 +9,7 @@ export const AiSourceReferenceSchema = z.object({
   documentTitle: z.string(),
   versionId: z.string(),
   versionLabel: z.string(),
+  navigationLabel: z.string(),
   sectionId: z.string(),
   sectionTitle: z.string(),
   slug: z.string(),

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import type { NavigationItem } from "@emerald/contracts";
+import { buildCanonicalNavigationLabel } from "@emerald/contracts";
 
 interface SidebarProps {
   items: NavigationItem[];
@@ -81,7 +82,7 @@ function SidebarItem({
         aria-current={isActive ? "page" : undefined}
         data-testid={`sidebar-item-${item.slug}`}
       >
-        {item.label}
+        {buildCanonicalNavigationLabel(item.label)}
       </Link>
       {item.children.length > 0 && (
         <div className="ml-2">
