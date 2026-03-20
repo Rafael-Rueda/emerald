@@ -6,6 +6,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts",
+    "./styles/*": "./src/styles/*",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -13,11 +15,14 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.91.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@emerald/configs": "workspace:*",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "typescript": "^5.7.3"
   }
 }

@@ -5,4 +5,5 @@
  * This package must remain agnostic of app and domain module internals.
  */
 
-export {};
+export { AppProviders, AppErrorBoundary, createQueryClient } from "./providers";
+

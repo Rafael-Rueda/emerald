@@ -144,6 +144,75 @@ describe("shared config inheritance", () => {
   );
 });
 
+describe("storybook configuration", () => {
+  it(".storybook/main.ts exists", () => {
+    expect(existsSync(resolve(ROOT, ".storybook/main.ts"))).toBe(true);
+  });
+
+  it(".storybook/preview.tsx exists", () => {
+    expect(existsSync(resolve(ROOT, ".storybook/preview.tsx"))).toBe(true);
+  });
+
+  it("root storybook script points to storybook dev on port 6100", () => {
+    const rootPkg = readJson("package.json") as {
+      scripts: Record<string, string>;
+    };
+    expect(rootPkg.scripts.storybook).toContain("6100");
+  });
+
+  it("root storybook:build script runs storybook build", () => {
+    const rootPkg = readJson("package.json") as {
+      scripts: Record<string, string>;
+    };
+    expect(rootPkg.scripts["storybook:build"]).toContain("storybook build");
+  });
+});
+
+describe("shared provider stack", () => {
+  it("@emerald/ui exports providers entrypoint", () => {
+    const uiPkg = readJson("packages/ui/package.json") as {
+      exports: Record<string, string>;
+    };
+    expect(uiPkg.exports["./providers"]).toBeDefined();
+  });
+
+  it("provider source files exist", () => {
+    const providerFiles = [
+      "packages/ui/src/providers/index.ts",
+      "packages/ui/src/providers/app-providers.tsx",
+      "packages/ui/src/providers/error-boundary.tsx",
+      "packages/ui/src/providers/query-client.ts",
+    ];
+    for (const file of providerFiles) {
+      expect(existsSync(resolve(ROOT, file))).toBe(true);
+    }
+  });
+
+  it("shared global CSS exists", () => {
+    expect(
+      existsSync(resolve(ROOT, "packages/ui/src/styles/globals.css"))
+    ).toBe(true);
+  });
+
+  it("apps/docs layout imports AppProviders", () => {
+    const layout = readFileSync(
+      resolve(ROOT, "apps/docs/src/app/layout.tsx"),
+      "utf-8"
+    );
+    expect(layout).toContain("AppProviders");
+    expect(layout).toContain("@emerald/ui/providers");
+  });
+
+  it("apps/workspace layout imports AppProviders", () => {
+    const layout = readFileSync(
+      resolve(ROOT, "apps/workspace/src/app/layout.tsx"),
+      "utf-8"
+    );
+    expect(layout).toContain("AppProviders");
+    expect(layout).toContain("@emerald/ui/providers");
+  });
+});
+
 describe("import-boundary rules", () => {
   it("eslint config contains no-restricted-imports for packages", () => {
     const eslintConfig = readFileSync(

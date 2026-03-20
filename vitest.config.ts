@@ -9,6 +9,8 @@ export default defineConfig({
           include: ["packages/**/*.{test,spec}.{ts,tsx}"],
           exclude: ["**/node_modules/**", "**/dist/**"],
           environment: "jsdom",
+          globals: true,
+          setupFiles: ["./packages/configs/vitest/setup.ts"],
         },
       },
       {
@@ -17,6 +19,8 @@ export default defineConfig({
           include: ["apps/docs/**/*.{test,spec}.{ts,tsx}"],
           exclude: ["**/node_modules/**", "**/.next/**", "**/e2e/**"],
           environment: "jsdom",
+          globals: true,
+          setupFiles: ["./packages/configs/vitest/setup.ts"],
         },
       },
       {
@@ -25,6 +29,8 @@ export default defineConfig({
           include: ["apps/workspace/**/*.{test,spec}.{ts,tsx}"],
           exclude: ["**/node_modules/**", "**/.next/**", "**/e2e/**"],
           environment: "jsdom",
+          globals: true,
+          setupFiles: ["./packages/configs/vitest/setup.ts"],
         },
       },
     ],
