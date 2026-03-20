@@ -1,0 +1,22 @@
+{
+  "featureId": "data-access-foundation",
+  "reviewedAt": "2026-03-20T23:15:00.000Z",
+  "commitId": "33ad2b3737171b23a86e03e1ed642ba91edc425f",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The data-access-foundation feature was implemented successfully. The worker created a robust typed API client builder (`createApiClient`) that uses generic `FetchResult<T>` wrappers, correctly validates payloads using Zod schemas from `@emerald/contracts`, and surfaces accurate return types. Query key factories for TanStack Query were also implemented properly with stable keys. Unit tests effectively verify the behavior and type inferences. The implementation accurately meets all requirements specified in the feature description.",
+    "issues": [
+      {
+        "file": "packages/data-access/src/index.ts",
+        "line": 121,
+        "severity": "non_blocking",
+        "description": "The client attempts to read the environment variable via optional chaining (`globalWithProcess.process?.env?.NEXT_PUBLIC_API_URL`). In Next.js, environment variables prefixed with `NEXT_PUBLIC_` are typically replaced at build time using exact string matching for `process.env.NEXT_PUBLIC_API_URL`. The optional chaining syntax may prevent the bundler from successfully replacing the variable in browser environments. However, since the client accepts `baseUrl` as an argument, consuming applications can manually pass `process.env.NEXT_PUBLIC_API_URL` to avoid this issue."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The implementation correctly satisfies the feature requirements. The REST client builder, query key factories, and robust type/schema validation were correctly applied and tested."
+}
