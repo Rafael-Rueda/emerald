@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppProviders } from "@emerald/ui/providers";
 import { WorkspaceShell } from "@emerald/ui/shells";
+import { MswInit } from "./msw-init";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,9 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
-        <AppProviders>
-          <WorkspaceShell>{children}</WorkspaceShell>
-        </AppProviders>
+        <MswInit>
+          <AppProviders>
+            <WorkspaceShell>{children}</WorkspaceShell>
+          </AppProviders>
+        </MswInit>
       </body>
     </html>
   );

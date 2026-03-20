@@ -9,12 +9,13 @@ const config: StorybookConfig = {
   stories: [
     "../packages/ui/src/**/*.mdx",
     "../packages/ui/src/**/*.stories.@(ts|tsx)",
+    "./stories/**/*.stories.@(ts|tsx)",
   ],
   addons: [],
   framework: {
     name: "@storybook/react-vite",
   },
-  staticDirs: [],
+  staticDirs: ["./public"],
   docs: {},
   viteFinal: async (config) => {
     // Resolve workspace package imports for pnpm monorepo
@@ -54,6 +55,30 @@ const config: StorybookConfig = {
         __dirname,
         "../packages/data-access/src/index.ts"
       ),
+      "@emerald/mocks/storybook": path.resolve(
+        __dirname,
+        "../packages/mocks/src/storybook.tsx"
+      ),
+      "@emerald/mocks/browser": path.resolve(
+        __dirname,
+        "../packages/mocks/src/browser.ts"
+      ),
+      "@emerald/mocks/fixtures": path.resolve(
+        __dirname,
+        "../packages/mocks/src/fixtures/index.ts"
+      ),
+      "@emerald/mocks/handlers": path.resolve(
+        __dirname,
+        "../packages/mocks/src/handlers/index.ts"
+      ),
+      "@emerald/mocks/scenarios": path.resolve(
+        __dirname,
+        "../packages/mocks/src/scenarios.ts"
+      ),
+      "@emerald/mocks": path.resolve(
+        __dirname,
+        "../packages/mocks/src/index.ts"
+      ),
     };
 
     // Configure PostCSS with Tailwind for the Storybook Vite build
@@ -71,6 +96,7 @@ const config: StorybookConfig = {
           presets: [preset],
           content: [
             path.resolve(__dirname, "../packages/ui/src/**/*.{ts,tsx,mdx}"),
+            path.resolve(__dirname, "./stories/**/*.{ts,tsx}"),
           ],
           darkMode: "class",
         }),

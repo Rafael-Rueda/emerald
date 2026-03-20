@@ -71,12 +71,18 @@ importers:
       '@emerald/data-access':
         specifier: workspace:*
         version: link:../../packages/data-access
+      '@emerald/mocks':
+        specifier: workspace:*
+        version: link:../../packages/mocks
       '@emerald/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: ^5.64.1
         version: 5.91.2(react@19.2.4)
+      msw:
+        specifier: ^2.7.0
+        version: 2.12.13(@types/node@22.19.15)(typescript@5.9.3)
       next:
         specifier: ^15.1.6
         version: 15.5.14(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -123,12 +129,18 @@ importers:
       '@emerald/data-access':
         specifier: workspace:*
         version: link:../../packages/data-access
+      '@emerald/mocks':
+        specifier: workspace:*
+        version: link:../../packages/mocks
       '@emerald/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: ^5.64.1
         version: 5.91.2(react@19.2.4)
+      msw:
+        specifier: ^2.7.0
+        version: 2.12.13(@types/node@22.19.15)(typescript@5.9.3)
       next:
         specifier: ^15.1.6
         version: 15.5.14(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -200,6 +212,9 @@ importers:
 
   packages/mocks:
     dependencies:
+      '@emerald/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       msw:
         specifier: ^2.7.0
         version: 2.12.13(@types/node@22.19.15)(typescript@5.9.3)
@@ -207,18 +222,36 @@ importers:
       '@emerald/configs':
         specifier: workspace:*
         version: link:../configs
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
 
   packages/test-utils:
     dependencies:
+      '@emerald/mocks':
+        specifier: workspace:*
+        version: link:../mocks
+      '@tanstack/react-query':
+        specifier: ^5.64.1
+        version: 5.91.2(react@19.2.4)
+      '@testing-library/dom':
+        specifier: ^10.4.0
+        version: 10.4.1
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1
       '@testing-library/react':
         specifier: ^16.1.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      msw:
+        specifier: ^2.7.0
+        version: 2.12.13(@types/node@22.19.15)(typescript@5.9.3)
       react:
         specifier: ^19.0.0
         version: 19.2.4

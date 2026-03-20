@@ -18,12 +18,14 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "pnpm --filter @emerald/docs dev -- --port 3100",
+      command: "npx next dev --port 3100",
+      cwd: "./apps/docs",
       port: 3100,
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: "pnpm --filter @emerald/workspace dev -- --port 3101",
+      command: "npx next dev --port 3101",
+      cwd: "./apps/workspace",
       port: 3101,
       reuseExistingServer: !process.env.CI,
     },

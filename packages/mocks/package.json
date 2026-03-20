@@ -6,6 +6,12 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
+    "./node": "./src/node.ts",
+    "./storybook": "./src/storybook.tsx",
+    "./fixtures": "./src/fixtures/index.ts",
+    "./handlers": "./src/handlers/index.ts",
+    "./scenarios": "./src/scenarios.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -13,10 +19,21 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@emerald/contracts": "workspace:*",
     "msw": "^2.7.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@emerald/configs": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.0.0",
     "typescript": "^5.7.3"
   }
 }

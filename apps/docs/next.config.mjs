@@ -4,6 +4,7 @@ const nextConfig = {
     "@emerald/ui",
     "@emerald/contracts",
     "@emerald/data-access",
+    "@emerald/mocks",
   ],
   // Lint is handled centrally by the root `pnpm lint` command which
   // already includes the @next/eslint-plugin-next rules for app files.

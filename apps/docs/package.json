@@ -17,7 +17,9 @@
     "zod": "^3.24.1",
     "@emerald/ui": "workspace:*",
     "@emerald/contracts": "workspace:*",
-    "@emerald/data-access": "workspace:*"
+    "@emerald/data-access": "workspace:*",
+    "@emerald/mocks": "workspace:*",
+    "msw": "^2.7.0"
   },
   "devDependencies": {
     "@emerald/configs": "workspace:*",
