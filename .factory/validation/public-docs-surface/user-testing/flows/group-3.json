@@ -1,0 +1,154 @@
+{
+  "groupId": "group-3",
+  "testedAt": "2026-03-20T12:50:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:3100",
+    "workspaceDir": "e2e/"
+  },
+  "toolsUsed": [
+    "playwright"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-PUBLIC-008",
+      "title": "Public document and shell-data failures show safe non-success states",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Mock /api/docs/guides/v1/getting-started to return 500 error",
+          "expected": "Fetch overridden",
+          "observed": "Fetch overridden"
+        },
+        {
+          "action": "Navigate to /guides/v1/getting-started",
+          "expected": "Page loads with error state",
+          "observed": "Page loaded"
+        },
+        {
+          "action": "Verify document-error is visible",
+          "expected": "document-error testid is visible",
+          "observed": "document-error testid is visible"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "public-docs-surface/group-3/VAL-PUBLIC-008-public-document-request-failure.png"
+        ],
+        "consoleErrors": "none",
+        "network": "mock public document request -> failure (500)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PUBLIC-009",
+      "title": "Public contract or shell-data failures show safe non-success states",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Mock /api/docs/guides/v1/getting-started to return malformed payload",
+          "expected": "Fetch overridden",
+          "observed": "Fetch overridden"
+        },
+        {
+          "action": "Navigate to /guides/v1/getting-started",
+          "expected": "Page loads with error state",
+          "observed": "Page loaded with document-error visible"
+        },
+        {
+          "action": "Mock /api/navigation/guides/v1 to return malformed payload",
+          "expected": "Fetch overridden",
+          "observed": "Fetch overridden"
+        },
+        {
+          "action": "Navigate to /guides/v1/getting-started",
+          "expected": "Page loads with navigation error state",
+          "observed": "Page loaded with navigation-error visible"
+        },
+        {
+          "action": "Mock /api/versions/guides to return malformed payload",
+          "expected": "Fetch overridden",
+          "observed": "Fetch overridden"
+        },
+        {
+          "action": "Navigate to /guides/v1/getting-started",
+          "expected": "Page loads with version error state",
+          "observed": "Page loaded with version-error visible"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "public-docs-surface/group-3/VAL-PUBLIC-009-public-document-schema-failure.png",
+          "public-docs-surface/group-3/VAL-PUBLIC-009-public-navigation-failure.png",
+          "public-docs-surface/group-3/VAL-PUBLIC-009-public-version-metadata-failure.png"
+        ],
+        "consoleErrors": "none",
+        "network": "mock requests -> malformed payloads (document, navigation, versions)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Resolved default docs state is internally consistent",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to /",
+          "expected": "Redirects to default docs route",
+          "observed": "Redirected to /guides/v1/getting-started"
+        },
+        {
+          "action": "Verify context parity",
+          "expected": "Title, breadcrumbs, sidebar, version match context",
+          "observed": "All context verified matching 'guides', 'v1', 'Getting Started'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "public-docs-surface/group-3/VAL-CROSS-002-default-public-state.png"
+        ],
+        "consoleErrors": "none",
+        "network": "mock docs request -> success"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Direct deep links match in-app navigation state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate directly to /guides/v1/api-reference",
+          "expected": "Page loads with context",
+          "observed": "Page loaded"
+        },
+        {
+          "action": "Capture reading context snapshot",
+          "expected": "Snapshot captured",
+          "observed": "Snapshot captured"
+        },
+        {
+          "action": "Navigate to /guides/v1/getting-started then click API Reference link",
+          "expected": "Navigates to /guides/v1/api-reference",
+          "observed": "Navigated"
+        },
+        {
+          "action": "Capture second reading context snapshot and compare",
+          "expected": "Snapshots match exactly",
+          "observed": "Snapshots match exactly"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "public-docs-surface/group-3/VAL-CROSS-003-direct-deep-link.png",
+          "public-docs-surface/group-3/VAL-CROSS-003-navigated-deep-link.png"
+        ],
+        "consoleErrors": "none",
+        "network": "mock docs request -> success"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 4 passed."
+}

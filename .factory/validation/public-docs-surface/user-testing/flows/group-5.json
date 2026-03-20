@@ -1,0 +1,13 @@
+{
+  "groupId": "group-5",
+  "assertions": [
+    { "id": "VAL-VERSION-001", "status": "pass" },
+    { "id": "VAL-VERSION-002", "status": "pass" },
+    { "id": "VAL-VERSION-003", "status": "pass" },
+    { "id": "VAL-VERSION-004", "status": "pass" },
+    { "id": "VAL-CROSS-005", "status": "pass" }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["playwright"]
+}
