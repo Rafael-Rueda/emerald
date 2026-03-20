@@ -15,6 +15,10 @@ Runtime validation notes for browser-facing surfaces.
 
 The dry run happened before the app existed, so planning validated the **machine + toolchain path**, not real project scripts. Once the scaffold exists, workers and validators should treat service startup and browser accessibility as something to verify, not assume.
 
+### Current runtime caveat
+
+An early foundation worker hit an `agent-browser` startup failure on Windows (`EACCES` while attempting to bind a local port). Playwright and Storybook build verification still worked, but the browser-validation harness should be treated as an active follow-up until a deterministic repo-local workaround or explicit fallback is established.
+
 ## Validation Concurrency
 
 - **Browser-based validation (docs/workspace/storybook combined): max 6 concurrent validators total**
