@@ -58,10 +58,9 @@ describe("Tabs", () => {
     const user = userEvent.setup();
     render(<TestTabs />);
 
-    // Focus the first tab
-    const tab1 = screen.getByRole("tab", { name: /tab 1/i });
-    tab1.focus();
-    expect(tab1).toHaveFocus();
+    // Focus the first tab via keyboard (Tab key into the tablist)
+    await user.tab();
+    expect(screen.getByRole("tab", { name: /tab 1/i })).toHaveFocus();
 
     // Arrow right moves to next tab
     await user.keyboard("{ArrowRight}");
@@ -76,8 +75,8 @@ describe("Tabs", () => {
     const user = userEvent.setup();
     render(<TestTabs />);
 
-    const tab1 = screen.getByRole("tab", { name: /tab 1/i });
-    tab1.focus();
+    // Focus the first tab via keyboard (Tab key into the tablist)
+    await user.tab();
 
     // Navigate to tab 2
     await user.keyboard("{ArrowRight}");
@@ -90,8 +89,8 @@ describe("Tabs", () => {
     const user = userEvent.setup();
     render(<TestTabs />);
 
-    const tab3 = screen.getByRole("tab", { name: /tab 3/i });
-    tab3.focus();
+    // Click the last tab to focus it (avoids direct .focus() outside act)
+    await user.click(screen.getByRole("tab", { name: /tab 3/i }));
 
     // Arrow right from last tab should wrap to first
     await user.keyboard("{ArrowRight}");
