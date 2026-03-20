@@ -1,6 +1,6 @@
 {
   "milestone": "foundation-platform",
-  "round": 2,
+  "round": 1,
   "status": "pass",
   "validatorsRun": {
     "test": {
@@ -20,8 +20,8 @@
     }
   },
   "reviewsSummary": {
-    "total": 9,
-    "passed": 9,
+    "total": 8,
+    "passed": 8,
     "failed": 0,
     "failedFeatures": []
   },
@@ -46,11 +46,6 @@
       "target": "library",
       "description": "Documented UI architecture dependencies (Radix UI, CVA, clsx, tailwind-merge)",
       "sourceFeature": "foundation-ui-primitives-and-stories"
-    },
-    {
-      "target": "library",
-      "description": "Documented that pnpm in background via Execute (fireAndForget) on Windows may fail silently, requiring custom Node helper scripts to spawn servers.",
-      "sourceFeature": "foundation-cross-surface-theme-persistence"
     }
   ],
   "suggestedGuidanceUpdates": [
@@ -71,12 +66,6 @@
       "suggestion": "Clarify that the 'write tests first where practical' step does not apply to pure configuration changes (like ESLint updates). Workers should rely on lint/build checks for validation in these cases.",
       "evidence": "Worker for `foundation-eslint-generated-file-hygiene` noted that writing tests for ESLint configuration changes is not practical or meaningful.",
       "isSystemic": false
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Add explicit instruction for how workers should handle pre-existing working-tree changes left behind by crashed sessions. They should verify and commit those changes rather than re-implementing from scratch.",
-      "evidence": "Worker for `foundation-cross-surface-theme-persistence` successfully salvaged a crashed session's working tree but noted the lack of explicit guidance on this.",
-      "isSystemic": false
     }
   ],
   "rejectedObservations": [
@@ -85,5 +74,5 @@
       "reason": "Already resolved by the subsequent `foundation-eslint-generated-file-hygiene` feature."
     }
   ],
-  "previousRound": ".factory/validation/foundation-platform/scrutiny/synthesis.1.json"
+  "previousRound": null
 }
