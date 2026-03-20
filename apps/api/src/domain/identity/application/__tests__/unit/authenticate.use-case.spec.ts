@@ -213,7 +213,47 @@ describe("AuthenticateUseCase", () => {
             });
 
             expect(result.isRight()).toBe(true);
-            expect(createUserUseCase.execute).toHaveBeenCalled();
+            expect(createUserUseCase.execute).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    roles: [ROLES.VIEWER],
+                }),
+            );
+        });
+
+        it("should update existing Google user on repeat login", async () => {
+            const existingUser = makeUser({
+                id: "user-1",
+                email: "google@example.com",
+                username: "old_google_name",
+            });
+
+            const updatedUser = makeUser({
+                id: "user-1",
+                email: "google@example.com",
+                username: "new_google_name",
+            });
+
+            googleAuthProvider.getUserFromCode.mockResolvedValue({
+                id: "google-123",
+                email: "google@example.com",
+                name: "New Google Name",
+            });
+
+            usersRepository.findByEmail.mockResolvedValue(existingUser);
+            usersRepository.findByUsername.mockResolvedValue(null);
+            usersRepository.update.mockResolvedValue(updatedUser);
+
+            const result = await sut.execute({
+                method: AUTH_METHOD_VARIATIONS.GOOGLE_OAUTH,
+                code: "valid_google_code",
+            });
+
+            expect(result.isRight()).toBe(true);
+            expect(usersRepository.update).toHaveBeenCalledTimes(1);
+
+            if (result.isRight()) {
+                expect(result.value.user.username).toBe("new_google_name");
+            }
         });
 
         it("should return MissingCredentialsError when code not provided", async () => {

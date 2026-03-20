@@ -26,7 +26,7 @@ export const authResponseSchema = z.object({
         id: z.uuid().describe("User unique identifier"),
         username: z.string().describe("Username"),
         email: z.email().describe("User email address"),
-        roles: z.array(z.enum(["USER", "ADMIN"])).describe("User roles"),
+        roles: z.array(z.enum(["USER", "ADMIN", "SUPER_ADMIN", "AUTHOR", "VIEWER"])).describe("User roles"),
     }),
 });
 

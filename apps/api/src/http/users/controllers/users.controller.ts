@@ -37,10 +37,12 @@ import { UsersService } from "../services/users.service";
 import type { Env } from "@/env/env";
 import { Validator } from "@/http/@shared/decorators/validator.decorator";
 import { Public } from "@/http/auth/decorators/public.decorator";
+import { SuperAdmin } from "@/http/auth/decorators/super-admin.decorator";
 
 @ApiTags("Users")
 @ApiBearerAuth("JWT-auth")
 @Controller("/users")
+@SuperAdmin()
 export class UsersController {
     constructor(
         private readonly usersService: UsersService,
@@ -97,7 +99,10 @@ export class UsersController {
                 username: { type: "string", description: "Username (3-24 characters)" },
                 email: { type: "string", format: "email", description: "User email address" },
                 password: { type: "string", description: "Password (minimum 8 characters)" },
-                roles: { type: "array", items: { type: "string", enum: ["USER", "ADMIN"] } },
+                roles: {
+                    type: "array",
+                    items: { type: "string", enum: ["USER", "ADMIN", "SUPER_ADMIN", "AUTHOR", "VIEWER"] },
+                },
                 avatar: { type: "string", format: "binary", description: "Avatar image (max 5MB)" },
                 deleteAvatar: {
                     type: "string",

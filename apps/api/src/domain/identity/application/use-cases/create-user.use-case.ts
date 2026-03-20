@@ -34,9 +34,13 @@ export class CreateUserUseCase {
             return Left.call(new UserAlreadyExistsError());
         }
 
+        const roles = request.roles.length
+            ? request.roles
+            : [request.admin ? ROLES.SUPER_ADMIN : ROLES.USER];
+
         const userToCreate = User.create({
             email: request.email,
-            roles: [request.admin ? (ROLES.ADMIN, ROLES.USER) : ROLES.USER],
+            roles,
             username: username,
             ...(request.passwordHash ? { passwordHash: await this.bcryptHashProvider.hash(request.passwordHash) } : {}),
         });

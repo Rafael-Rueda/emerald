@@ -101,18 +101,18 @@ export class AuthenticateUseCase {
         const googleUser = await this.googleAuthProvider.getUserFromCode(code);
 
         let user = await this.usersRepository.findByEmail(googleUser.email);
-        const username = Username.create(googleUser.name);
-
-        const usernameAlreadyTaken = await this.usersRepository.findByUsername(username.toString());
+        const username = Username.create(googleUser.name).toString();
 
         if (!user) {
+            const usernameAlreadyTaken = await this.usersRepository.findByUsername(username);
+
             const response = await this.createUserUseCase.execute({
                 username: usernameAlreadyTaken
-                    ? Username.generateUniqueFrom(username.toString()).toString()
-                    : username.toString(),
+                    ? Username.generateUniqueFrom(username).toString()
+                    : username,
                 email: googleUser.email,
                 passwordHash: undefined,
-                roles: [ROLES.USER],
+                roles: [ROLES.VIEWER],
             });
 
             if (response.isLeft()) {
@@ -120,6 +120,30 @@ export class AuthenticateUseCase {
             }
 
             user = response.value.user;
+        } else {
+            let shouldUpdateUser = false;
+
+            if (user.username !== username) {
+                const existingUsernameOwner = await this.usersRepository.findByUsername(username);
+                const hasDifferentUserWithUsername =
+                    existingUsernameOwner && existingUsernameOwner.id.toString() !== user.id.toString();
+
+                user.username = hasDifferentUserWithUsername ? Username.generateUniqueFrom(username).toString() : username;
+                shouldUpdateUser = true;
+            }
+
+            if (!user.roles.length) {
+                user.roles = [ROLES.VIEWER];
+                shouldUpdateUser = true;
+            }
+
+            if (shouldUpdateUser) {
+                const updatedUser = await this.usersRepository.update(user);
+
+                if (updatedUser) {
+                    user = updatedUser;
+                }
+            }
         }
 
         return Right.call({ user });

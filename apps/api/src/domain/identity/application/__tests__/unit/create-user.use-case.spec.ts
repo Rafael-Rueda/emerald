@@ -81,7 +81,24 @@ describe("CreateUserUseCase", () => {
 
         expect(result.isRight()).toBe(true);
         if (result.isRight()) {
-            expect(result.value.user.roles).toContain(ROLES.USER);
+            expect(result.value.user.roles).toContain(ROLES.ADMIN);
+        }
+    });
+
+    it("should preserve explicit roles passed to the use case", async () => {
+        usersRepository.findByEmail.mockResolvedValue(null);
+        usersRepository.findByUsername.mockResolvedValue(null);
+        usersRepository.create.mockImplementation(async (user) => user);
+
+        const result = await sut.execute({
+            username: "vieweruser",
+            email: "viewer@example.com",
+            roles: [ROLES.VIEWER],
+        });
+
+        expect(result.isRight()).toBe(true);
+        if (result.isRight()) {
+            expect(result.value.user.roles).toEqual([ROLES.VIEWER]);
         }
     });
 

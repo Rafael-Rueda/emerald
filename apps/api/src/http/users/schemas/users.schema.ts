@@ -31,7 +31,7 @@ export const updateUserBodySchema = z.object({
     email: z.email().optional().describe("User email address"),
     password: z.string().min(8).optional().describe("Password (minimum 8 characters)"),
     roles: z
-        .array(z.enum(["USER", "ADMIN"]))
+        .array(z.enum(["USER", "ADMIN", "SUPER_ADMIN", "AUTHOR", "VIEWER"]))
         .optional()
         .describe("User roles"),
     deleteAvatar: z.enum(["true", "false"]).optional().describe("Set to 'true' to delete avatar"),
@@ -44,7 +44,7 @@ export const userResponseSchema = z.object({
     id: z.uuid().describe("User unique identifier"),
     username: z.string().describe("Username"),
     email: z.email().describe("User email address"),
-    roles: z.array(z.enum(["USER", "ADMIN"])).describe("User roles"),
+    roles: z.array(z.enum(["USER", "ADMIN", "SUPER_ADMIN", "AUTHOR", "VIEWER"])).describe("User roles"),
     avatarUrl: z.string().nullable().describe("User avatar URL"),
 });
 

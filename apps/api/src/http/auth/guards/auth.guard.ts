@@ -1,5 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import type { User } from "@prisma/client";
@@ -10,14 +9,11 @@ import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import { ROLES_KEY } from "../decorators/roles.decorator";
 import { Role, type Roles } from "../enums/role.enum";
 
-import type { Env } from "@/env/env";
-
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
         private jwtService: JwtService,
         private reflector: Reflector,
-        private configService: ConfigService<Env, true>,
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -59,12 +55,12 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException("Invalid JWT Token");
         }
 
-        if (adminOnly && !user.roles?.includes(Role.ADMIN)) {
-            throw new UnauthorizedException("You must be Admin");
+        if (adminOnly && !this.hasRequiredRole(user, Role.SUPER_ADMIN)) {
+            throw new ForbiddenException("You must be Super Admin");
         }
 
-        if (requiredRoles && !requiredRoles.some((role) => user.roles?.includes(role))) {
-            throw new UnauthorizedException("You do not have the proper role");
+        if (requiredRoles && !requiredRoles.some((role) => this.hasRequiredRole(user, role))) {
+            throw new ForbiddenException("You do not have the proper role");
         }
 
         return true;
@@ -73,5 +69,21 @@ export class AuthGuard implements CanActivate {
     private extractTokenFromHeader(request: Request): string | undefined {
         const [type, token] = request.headers.authorization?.split(" ") ?? [];
         return type === "Bearer" ? token : undefined;
+    }
+
+    private hasRequiredRole(user: User, requiredRole: Roles): boolean {
+        if (!user.roles?.length) {
+            return false;
+        }
+
+        const roleAliases: Record<Roles, Roles[]> = {
+            [Role.SUPER_ADMIN]: [Role.SUPER_ADMIN, Role.ADMIN],
+            [Role.ADMIN]: [Role.ADMIN, Role.SUPER_ADMIN],
+            [Role.AUTHOR]: [Role.AUTHOR, Role.USER, Role.ADMIN, Role.SUPER_ADMIN],
+            [Role.USER]: [Role.USER, Role.AUTHOR, Role.ADMIN, Role.SUPER_ADMIN],
+            [Role.VIEWER]: [Role.VIEWER, Role.AUTHOR, Role.USER, Role.ADMIN, Role.SUPER_ADMIN],
+        };
+
+        return roleAliases[requiredRole].some((role) => user.roles.includes(role));
     }
 }
