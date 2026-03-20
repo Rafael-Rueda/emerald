@@ -12,6 +12,6 @@ Environment variables, external dependencies, and setup notes.
 - Do not introduce a real backend, database, queue, or third-party runtime dependency for core flows
 - Use `MSW` as the authoritative mock transport for public docs, workspace/admin, Storybook, and tests
 - pnpm ignored-builds warning for `esbuild`, `msw`, and `sharp` was resolved by moving `onlyBuiltDependencies` into `pnpm-workspace.yaml`; future workers should treat that file as the canonical pnpm approval source
-- Current platform follow-up: `pnpm build` is failing because `@emerald/configs/tailwind/preset` is not resolving correctly from package exports yet; this belongs to the pending theming/shell foundation feature
+- Resolved: `@emerald/configs/tailwind/preset` export now works via explicit `"./tailwind/preset": "./tailwind/preset.js"` in the configs package.json exports map (jiti/CJS doesn't resolve the wildcard pattern with file extensions automatically)
 - Existing local listeners on `5432`, `5672`, and `27017` are off-limits and unrelated to this mission
 - Storybook and both app surfaces must work without requiring credentials or external accounts

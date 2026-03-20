@@ -1,10 +1,13 @@
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-primary">Emerald Docs</h1>
-      <p className="mt-4 text-muted-foreground">
-        Public documentation portal — under construction.
+    <div className="max-w-3xl space-y-4">
+      <h1 className="text-3xl font-bold text-foreground">
+        Welcome to Emerald Docs
+      </h1>
+      <p className="text-muted-foreground">
+        Public documentation portal — under construction. Select a document
+        from the sidebar to get started.
       </p>
-    </main>
+    </div>
   );
 }

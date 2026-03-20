@@ -25,6 +25,14 @@ const config: StorybookConfig = {
         __dirname,
         "../packages/ui/src/providers/index.ts"
       ),
+      "@emerald/ui/theme": path.resolve(
+        __dirname,
+        "../packages/ui/src/theme/index.ts"
+      ),
+      "@emerald/ui/shells": path.resolve(
+        __dirname,
+        "../packages/ui/src/shells/index.ts"
+      ),
       "@emerald/ui/styles": path.resolve(
         __dirname,
         "../packages/ui/src/styles"

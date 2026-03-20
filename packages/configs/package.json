@@ -4,6 +4,7 @@
   "private": true,
   "exports": {
     "./tsconfig/*": "./tsconfig/*",
+    "./tailwind/preset": "./tailwind/preset.js",
     "./tailwind/*": "./tailwind/*",
     "./vitest/*": "./vitest/*",
     "./eslint/*": "./eslint/*"

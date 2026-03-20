@@ -1,10 +1,13 @@
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-primary">Emerald Workspace</h1>
-      <p className="mt-4 text-muted-foreground">
-        Workspace administration portal — under construction.
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-foreground">
+        Emerald Workspace
+      </h1>
+      <p className="text-muted-foreground">
+        Workspace administration portal — under construction. Use the
+        navigation to explore admin sections.
       </p>
-    </main>
+    </div>
   );
 }
