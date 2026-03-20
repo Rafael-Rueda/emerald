@@ -1,0 +1,39 @@
+{
+  "groupId": "VAL-CROSS-007",
+  "testedAt": "2026-03-20T08:24:00.000Z",
+  "isolation": {
+    "playwrightTest": "e2e/validator-shells.spec.ts -g 'VAL-CROSS-007'",
+    "project": "chromium",
+    "webServer": "automatically started via playwright config",
+    "evidenceDir": "C:/Users/rafae/.factory/missions/90873c85-f376-4669-b8a5-a7ed7eec901e/evidence/foundation-platform/VAL-CROSS-007"
+  },
+  "toolsUsed": ["Playwright"],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Theme choice persists across public and workspace surfaces",
+      "status": "pass",
+      "steps": [
+        { "action": "Clear cookies and visit Docs (surface A)", "expected": "Docs open in default theme", "observed": "Docs opened in default theme" },
+        { "action": "Set theme to dark in Docs", "expected": "Docs changes to dark theme", "observed": "Theme changed to dark, cookie updated" },
+        { "action": "Visit Workspace (surface B)", "expected": "Workspace loads in dark theme automatically", "observed": "Workspace loaded in dark theme" },
+        { "action": "Set theme to light in Workspace", "expected": "Workspace changes to light theme", "observed": "Theme changed to light, cookie updated" },
+        { "action": "Visit Docs (surface A) again", "expected": "Docs loads in light theme automatically", "observed": "Docs loaded in light theme" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "foundation-platform/VAL-CROSS-007/VAL-CROSS-007-surface-A-dark.png",
+          "foundation-platform/VAL-CROSS-007/VAL-CROSS-007-surface-B-dark.png",
+          "foundation-platform/VAL-CROSS-007/VAL-CROSS-007-workspace-light.png",
+          "foundation-platform/VAL-CROSS-007/VAL-CROSS-007-surface-A-light.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none relevant for this specific e2e test"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed (VAL-CROSS-007: Theme choice persists across public and workspace surfaces)"
+}
