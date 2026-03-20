@@ -1,0 +1,98 @@
+{
+  "groupId": "group2",
+  "testedAt": "2026-03-20T14:40:00.000Z",
+  "isolation": {
+    "appUrl": "http://localhost:3101",
+    "testFile": "e2e/validator-workspace-domains.spec.ts"
+  },
+  "toolsUsed": ["playwright"],
+  "assertions": [
+    {
+      "id": "VAL-WORKSPACE-003",
+      "title": "Documents management supports selection-sensitive list-to-detail inspection",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /admin/documents", "expected": "Documents list displayed", "observed": "Documents list and selected detail loaded successfully" },
+        { "action": "Click first document item", "expected": "Detail view updates to match document A", "observed": "Detail view correctly showed document A details" },
+        { "action": "Click second document item", "expected": "Detail view updates to match document B", "observed": "Detail view correctly showed document B details" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-003-documents-list.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-003-document-detail-A.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-003-document-detail-B.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Intercepted mock documents request returned 200 OK"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-004",
+      "title": "Navigation management supports selection-sensitive list-to-detail inspection",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /admin/navigation", "expected": "Navigation list displayed", "observed": "Navigation list loaded successfully" },
+        { "action": "Click first navigation item", "expected": "Detail view updates to match navigation item A", "observed": "Detail view correctly updated" },
+        { "action": "Click second navigation item", "expected": "Detail view updates to match navigation item B", "observed": "Detail view correctly updated" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-004-navigation-list.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-004-navigation-detail-A.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-004-navigation-detail-B.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Intercepted mock navigation request returned 200 OK"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-005",
+      "title": "Versions management supports selection-sensitive list-to-detail inspection",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /admin/versions", "expected": "Versions list displayed", "observed": "Versions list loaded successfully" },
+        { "action": "Click first version item", "expected": "Detail view updates to match version A", "observed": "Detail view correctly updated" },
+        { "action": "Click second version item", "expected": "Detail view updates to match version B", "observed": "Detail view correctly updated" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-005-versions-list.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-005-version-detail-A.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-005-version-detail-B.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Intercepted mock versions request returned 200 OK"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-006",
+      "title": "Workspace exposes at least one representative mocked management action per admin domain",
+      "status": "pass",
+      "steps": [
+        { "action": "Trigger document publish action", "expected": "Success feedback is shown", "observed": "Action feedback success was shown correctly" },
+        { "action": "Trigger navigation reorder action", "expected": "Success feedback is shown", "observed": "Action feedback success was shown correctly" },
+        { "action": "Trigger versions publish action", "expected": "Success feedback is shown", "observed": "Action feedback success was shown correctly" },
+        { "action": "Trigger failures across all domains (using window.fetch interception)", "expected": "Error feedback is shown without breaking app", "observed": "Action feedback error was shown properly across all three domains" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-006-document-action-success.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-006-document-action-failure.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-006-navigation-action-success.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-006-navigation-action-failure.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-006-version-action-success.png",
+          "mocked-workspace-surface/group2/VAL-WORKSPACE-006-version-action-failure.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Tested mocked success and failure states via Playwright intercepts and API checks"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 4 passed. Verified documents, navigation, and versions domain behavior using fully automated Playwright checks, capturing valid list-to-detail interaction and mocked mutation capabilities with proper success and failure guard handling."
+}

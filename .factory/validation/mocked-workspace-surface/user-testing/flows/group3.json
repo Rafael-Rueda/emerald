@@ -1,0 +1,72 @@
+{
+  "groupId": "group3",
+  "testedAt": "2026-03-20T15:10:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:3101",
+    "testFile": "e2e/validator-ai-context.spec.ts"
+  },
+  "toolsUsed": ["playwright"],
+  "assertions": [
+    {
+      "id": "VAL-AI-001",
+      "title": "AI context is reachable for the selected workspace entity without losing admin context",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /admin/ai-context", "expected": "Admin shell and AI context visible for entity A", "observed": "Shell and AI context for doc-getting-started rendered" },
+        { "action": "Click API Reference button to change entity", "expected": "AI context updates for entity B", "observed": "AI context updated for doc-api-reference" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group3/VAL-AI-001-entity-A.png",
+          "mocked-workspace-surface/group3/VAL-AI-001-entity-B.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/workspace/ai-context/document/doc-getting-started -> 200, GET /api/workspace/ai-context/document/doc-api-reference -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AI-002",
+      "title": "AI context shows chunks and source references with specific provenance",
+      "status": "pass",
+      "steps": [
+        { "action": "View AI context chunks for doc-getting-started", "expected": "Chunks are rendered", "observed": "Chunks rendered" },
+        { "action": "Check source references", "expected": "Source references expose document, version, path, navigation, section identity", "observed": "Correct canonical labels displayed" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group3/VAL-AI-002-ai-chunks.png",
+          "mocked-workspace-surface/group3/VAL-AI-002-ai-references.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/workspace/ai-context/document/doc-getting-started -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AI-003",
+      "title": "AI context handles non-success states safely",
+      "status": "pass",
+      "steps": [
+        { "action": "Load with loading scenario", "expected": "Loading state shown", "observed": "Loading state shown" },
+        { "action": "Load with empty scenario", "expected": "Empty state shown", "observed": "Empty state shown" },
+        { "action": "Load with error scenario", "expected": "Error state shown", "observed": "Error state shown" },
+        { "action": "Load with malformed scenario", "expected": "Validation error state shown", "observed": "Validation error state shown" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group3/VAL-AI-003-loading.png",
+          "mocked-workspace-surface/group3/VAL-AI-003-empty.png",
+          "mocked-workspace-surface/group3/VAL-AI-003-error.png",
+          "mocked-workspace-surface/group3/VAL-AI-003-malformed.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Mocked fetch intercepts for loading, empty, error, and malformed scenarios triggered successfully"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 3 assertions (VAL-AI-001, VAL-AI-002, VAL-AI-003): 3 passed, 0 failed. Verified AI context navigation, chunks, source references, and safe handling of non-success states."
+}

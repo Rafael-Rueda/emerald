@@ -1,0 +1,54 @@
+{
+  "groupId": "group4",
+  "testedAt": "2026-03-20T14:40:00Z",
+  "isolation": {
+    "appUrls": ["http://localhost:3100", "http://localhost:3101"],
+    "testFile": "e2e/validator-cross-surface.spec.ts"
+  },
+  "toolsUsed": ["playwright"],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-006",
+      "title": "Workspace and public surfaces use matching canonical entity labels",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to workspace documents", "expected": "Document labels visible", "observed": "Document labels match expected values" },
+        { "action": "Navigate to workspace navigation", "expected": "Navigation labels visible", "observed": "Navigation labels match expected values" },
+        { "action": "Navigate to workspace versions", "expected": "Version labels visible", "observed": "Version labels match expected values" },
+        { "action": "Navigate to public docs getting-started", "expected": "Public labels visible", "observed": "Public labels match workspace labels" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group4/VAL-CROSS-006-workspace-document-labels.png",
+          "mocked-workspace-surface/group4/VAL-CROSS-006-workspace-navigation-labels.png",
+          "mocked-workspace-surface/group4/VAL-CROSS-006-workspace-version-labels.png",
+          "mocked-workspace-surface/group4/VAL-CROSS-006-public-labels.png"
+        ],
+        "consoleErrors": "none",
+        "network": "MSW scenarios handle requests successfully"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "title": "AI provenance maps back to the same canonical public entity chain",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to workspace AI context for Getting Started doc", "expected": "AI context chunks and provenance visible", "observed": "AI provenance labels are visible and correct" },
+        { "action": "Navigate to public docs getting-started", "expected": "Public labels matching AI provenance visible", "observed": "Public labels match AI provenance" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group4/VAL-CROSS-008-ai-provenance-labels.png",
+          "mocked-workspace-surface/group4/VAL-CROSS-008-corresponding-public-labels.png"
+        ],
+        "consoleErrors": "none",
+        "network": "MSW scenarios handle requests successfully"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 2 assertions via automated Playwright validation: 2 passed. Both VAL-CROSS-006 and VAL-CROSS-008 correctly present canonical labels matching their counterparts across different surfaces."
+}

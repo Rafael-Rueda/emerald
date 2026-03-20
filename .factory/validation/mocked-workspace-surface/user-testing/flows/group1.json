@@ -1,0 +1,118 @@
+{
+  "groupId": "group1",
+  "testedAt": "2026-03-20T15:10:00.000Z",
+  "isolation": {
+    "appUrl": "http://localhost:3101",
+    "testFile": "e2e/validator-workspace-basics.spec.ts"
+  },
+  "toolsUsed": ["playwright"],
+  "assertions": [
+    {
+      "id": "VAL-WORKSPACE-001",
+      "title": "Workspace entry lands in a persistent admin shell",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /admin", "expected": "Workspace shell at entry", "observed": "Shell is rendered successfully" },
+        { "action": "Navigate to /admin/versions", "expected": "Workspace shell persists after section change", "observed": "Shell remains visible after route change" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-001-workspace-shell-at-entry.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-001-workspace-shell-after-section-change.png"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-002",
+      "title": "Core admin sections are discoverable and route-aware",
+      "status": "pass",
+      "steps": [
+        { "action": "Observe workspace nav", "expected": "Nav is visible", "observed": "Nav is visible" },
+        { "action": "Check active admin section indicator", "expected": "Indicator matches current route", "observed": "Indicator matches current route" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-002-workspace-nav.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-002-active-admin-section.png"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-009",
+      "title": "Direct workspace sub-route loads land in the correct section",
+      "status": "pass",
+      "steps": [
+        { "action": "Load /admin/documents directly", "expected": "Lands in documents section", "observed": "Lands in documents section" },
+        { "action": "Load /admin/navigation directly", "expected": "Lands in navigation section", "observed": "Lands in navigation section" },
+        { "action": "Load /admin/versions directly", "expected": "Lands in versions section", "observed": "Lands in versions section" },
+        { "action": "Load /admin/ai-context directly", "expected": "Lands in AI context section", "observed": "Lands in AI context section" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-009-workspace-documents-deep-link.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-009-workspace-navigation-deep-link.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-009-workspace-versions-deep-link.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-009-workspace-ai-deep-link.png"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-007",
+      "title": "Workspace management views stay stable during non-success states",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to documents, navigation, versions with SCENARIO=loading", "expected": "Loading state renders without breaking shell", "observed": "Loading states render safely" },
+        { "action": "Navigate with SCENARIO=empty", "expected": "Empty state renders", "observed": "Empty state renders safely" },
+        { "action": "Navigate with SCENARIO=error", "expected": "Error state renders", "observed": "Error state renders safely" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-documents-list-detail-loading.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-documents-list-detail-empty.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-documents-list-detail-error.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-navigation-list-detail-loading.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-navigation-list-detail-empty.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-navigation-list-detail-error.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-versions-list-detail-loading.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-versions-list-detail-empty.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-007-versions-list-detail-error.png"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WORKSPACE-008",
+      "title": "Invalid workspace payloads fail safely across admin domains",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to documents, navigation, versions with SCENARIO=malformed", "expected": "Controlled non-success UI", "observed": "Controlled non-success UI renders" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-008-documents-list-detail-schema-failure.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-008-navigation-list-detail-schema-failure.png",
+          "mocked-workspace-surface/group1/VAL-WORKSPACE-008-versions-list-detail-schema-failure.png"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Playwright webServer config fails to start because dev server is already running on ports 3100/3101",
+      "resolved": true,
+      "resolution": "Created temporary playwright config to skip webServer spin-up and reuse running servers directly.",
+      "affectedAssertions": ["VAL-WORKSPACE-001", "VAL-WORKSPACE-002", "VAL-WORKSPACE-009", "VAL-WORKSPACE-007", "VAL-WORKSPACE-008"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 5 passed."
+}

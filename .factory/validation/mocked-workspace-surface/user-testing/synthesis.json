@@ -1,0 +1,37 @@
+{
+  "milestone": "mocked-workspace-surface",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-WORKSPACE-001",
+    "VAL-WORKSPACE-002",
+    "VAL-WORKSPACE-009",
+    "VAL-WORKSPACE-007",
+    "VAL-WORKSPACE-008",
+    "VAL-WORKSPACE-003",
+    "VAL-WORKSPACE-004",
+    "VAL-WORKSPACE-005",
+    "VAL-WORKSPACE-006",
+    "VAL-AI-001",
+    "VAL-AI-002",
+    "VAL-AI-003",
+    "VAL-CROSS-006",
+    "VAL-CROSS-008"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Bypassed Playwright webServer spin-up config to directly reuse dev servers explicitly started prior to tests to avoid OS port-binding races.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}
