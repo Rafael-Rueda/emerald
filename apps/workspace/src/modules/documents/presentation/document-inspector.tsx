@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import type { WorkspaceDocument } from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
+  usePublishWorkspaceDocumentAction,
   useWorkspaceDocumentDetail,
   useWorkspaceDocumentsList,
 } from "../application/use-workspace-documents";
+
+type ActionFeedback =
+  | { tone: "success"; message: string }
+  | { tone: "error"; message: string }
+  | null;
 
 function formatUpdatedAt(value: string): string {
   const parsed = new Date(value);
@@ -26,9 +33,14 @@ function formatUpdatedAt(value: string): string {
 
 export function DocumentInspector() {
   const listState = useWorkspaceDocumentsList();
+  const publishAction = usePublishWorkspaceDocumentAction();
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
   );
+  const [documentStatusOverrides, setDocumentStatusOverrides] = useState<
+    Record<string, WorkspaceDocument["status"]>
+  >({});
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
 
   const listDocuments = useMemo(() => {
     if (listState.state !== "success") {
@@ -56,7 +68,82 @@ export function DocumentInspector() {
     });
   }, [listDocuments]);
 
+  useEffect(() => {
+    const validIds = new Set(listDocuments.map((document) => document.id));
+
+    setDocumentStatusOverrides((currentOverrides) => {
+      let hasChanges = false;
+      const nextOverrides: Record<string, WorkspaceDocument["status"]> = {};
+
+      for (const [documentId, status] of Object.entries(currentOverrides)) {
+        if (validIds.has(documentId)) {
+          nextOverrides[documentId] = status;
+          continue;
+        }
+
+        hasChanges = true;
+      }
+
+      return hasChanges ? nextOverrides : currentOverrides;
+    });
+  }, [listDocuments]);
+
   const detailState = useWorkspaceDocumentDetail(selectedDocumentId);
+
+  function getEffectiveStatus(documentId: string, baseStatus: WorkspaceDocument["status"]) {
+    return documentStatusOverrides[documentId] ?? baseStatus;
+  }
+
+  const selectedDocumentStatus =
+    selectedDocumentId && detailState.state === "success"
+      ? getEffectiveStatus(detailState.data.id, detailState.data.status)
+      : null;
+
+  async function handlePublishSelectedDocument() {
+    if (!selectedDocumentId || detailState.state !== "success") {
+      return;
+    }
+
+    const documentId = detailState.data.id;
+    const previousStatus = getEffectiveStatus(documentId, detailState.data.status);
+    const nextStatus: WorkspaceDocument["status"] = "published";
+
+    setActionFeedback(null);
+    setDocumentStatusOverrides((currentOverrides) => ({
+      ...currentOverrides,
+      [documentId]: nextStatus,
+    }));
+
+    try {
+      const result = await publishAction.mutateAsync(documentId);
+
+      if (result.status === "success") {
+        setActionFeedback({
+          tone: "success",
+          message: result.data.message,
+        });
+        return;
+      }
+
+      setDocumentStatusOverrides((currentOverrides) => ({
+        ...currentOverrides,
+        [documentId]: previousStatus,
+      }));
+      setActionFeedback({
+        tone: "error",
+        message: result.message,
+      });
+    } catch (error) {
+      setDocumentStatusOverrides((currentOverrides) => ({
+        ...currentOverrides,
+        [documentId]: previousStatus,
+      }));
+      setActionFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Unknown mutation failure",
+      });
+    }
+  }
 
   return (
     <section className="space-y-4" data-testid="admin-section-documents">
@@ -104,6 +191,7 @@ export function DocumentInspector() {
             <ul className="mt-3 space-y-2" data-testid="documents-list">
               {listState.data.documents.map((document) => {
                 const isSelected = selectedDocumentId === document.id;
+                const status = getEffectiveStatus(document.id, document.status);
 
                 return (
                   <li
@@ -123,7 +211,10 @@ export function DocumentInspector() {
                     >
                       <p className="text-sm font-medium">{document.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {document.space}/{document.slug}
+                        {document.space}/{document.slug} •{" "}
+                        <span data-testid={`document-list-item-${document.id}-status`}>
+                          {status}
+                        </span>
                       </p>
                     </button>
                   </li>
@@ -137,6 +228,37 @@ export function DocumentInspector() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Selected document
           </h2>
+
+          {selectedDocumentId && detailState.state === "success" && (
+            <div className="mt-3 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  void handlePublishSelectedDocument();
+                }}
+                disabled={publishAction.isPending || selectedDocumentStatus === "published"}
+                className={cn(
+                  "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                  "border-border text-foreground hover:bg-accent",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                )}
+              >
+                {publishAction.isPending ? "Publishing…" : "Publish selected document"}
+              </button>
+
+              {actionFeedback?.tone === "success" && (
+                <p className="text-sm text-emerald-600" data-testid="document-action-feedback-success">
+                  {actionFeedback.message}
+                </p>
+              )}
+
+              {actionFeedback?.tone === "error" && (
+                <p className="text-sm text-destructive" data-testid="document-action-feedback-error">
+                  {actionFeedback.message}
+                </p>
+              )}
+            </div>
+          )}
 
           {listState.state === "success" && listState.data.documents.length === 0 && (
             <p className="mt-3 text-sm text-muted-foreground">Select a document to inspect details.</p>
@@ -198,7 +320,7 @@ export function DocumentInspector() {
               <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">Status</dt>
                 <dd className="font-medium" data-testid="document-detail-status">
-                  {detailState.data.status}
+                  {selectedDocumentStatus ?? detailState.data.status}
                 </dd>
               </div>
               <div className="grid grid-cols-[9rem_1fr] gap-2">

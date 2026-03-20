@@ -1,11 +1,52 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import type { WorkspaceNavigation } from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
+  useReorderWorkspaceNavigationAction,
   useWorkspaceNavigationDetail,
   useWorkspaceNavigationList,
 } from "../application/use-workspace-navigation";
+
+type ActionFeedback =
+  | { tone: "success"; message: string }
+  | { tone: "error"; message: string }
+  | null;
+
+function sortNavigationItemsByOrder(items: WorkspaceNavigation[]): WorkspaceNavigation[] {
+  return [...items].sort((a, b) => {
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+
+    return a.label.localeCompare(b.label);
+  });
+}
+
+function buildMoveToTopOrderOverrides(
+  items: WorkspaceNavigation[],
+  targetId: string,
+): Record<string, number> {
+  const targetItem = items.find((item) => item.id === targetId);
+  if (!targetItem) {
+    return {};
+  }
+
+  const targetOrder = targetItem.order;
+  const nextOrders: Record<string, number> = {};
+
+  for (const item of items) {
+    if (item.id === targetId) {
+      nextOrders[item.id] = 0;
+      continue;
+    }
+
+    nextOrders[item.id] = item.order < targetOrder ? item.order + 1 : item.order;
+  }
+
+  return nextOrders;
+}
 
 function formatUpdatedAt(value: string): string {
   const parsed = new Date(value);
@@ -26,17 +67,27 @@ function formatUpdatedAt(value: string): string {
 
 export function NavigationInspector() {
   const listState = useWorkspaceNavigationList();
+  const reorderAction = useReorderWorkspaceNavigationAction();
   const [selectedNavigationId, setSelectedNavigationId] = useState<string | null>(
     null,
   );
+  const [navigationOrderOverrides, setNavigationOrderOverrides] = useState<
+    Record<string, number>
+  >({});
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
 
-  const listItems = useMemo(() => {
+  const listItems = useMemo<WorkspaceNavigation[]>(() => {
     if (listState.state !== "success") {
       return [];
     }
 
-    return listState.data.items;
-  }, [listState]);
+    const itemsWithEffectiveOrder = listState.data.items.map((item) => ({
+      ...item,
+      order: navigationOrderOverrides[item.id] ?? item.order,
+    }));
+
+    return sortNavigationItemsByOrder(itemsWithEffectiveOrder);
+  }, [listState, navigationOrderOverrides]);
 
   useEffect(() => {
     if (listItems.length === 0) {
@@ -53,7 +104,73 @@ export function NavigationInspector() {
     });
   }, [listItems]);
 
+  useEffect(() => {
+    const validIds = new Set(listItems.map((item) => item.id));
+
+    setNavigationOrderOverrides((currentOverrides) => {
+      let hasChanges = false;
+      const nextOverrides: Record<string, number> = {};
+
+      for (const [navigationId, order] of Object.entries(currentOverrides)) {
+        if (validIds.has(navigationId)) {
+          nextOverrides[navigationId] = order;
+          continue;
+        }
+
+        hasChanges = true;
+      }
+
+      return hasChanges ? nextOverrides : currentOverrides;
+    });
+  }, [listItems]);
+
   const detailState = useWorkspaceNavigationDetail(selectedNavigationId);
+
+  function getEffectiveOrder(navigationId: string, baseOrder: number) {
+    return navigationOrderOverrides[navigationId] ?? baseOrder;
+  }
+
+  const selectedNavigationOrder =
+    selectedNavigationId && detailState.state === "success"
+      ? getEffectiveOrder(detailState.data.id, detailState.data.order)
+      : null;
+
+  async function handleMoveSelectedNavigationToTop() {
+    if (!selectedNavigationId || detailState.state !== "success") {
+      return;
+    }
+
+    const navigationId = detailState.data.id;
+    const previousOverrides = { ...navigationOrderOverrides };
+    const nextOverrides = buildMoveToTopOrderOverrides(listItems, navigationId);
+
+    setActionFeedback(null);
+    setNavigationOrderOverrides(nextOverrides);
+
+    try {
+      const result = await reorderAction.mutateAsync(navigationId);
+
+      if (result.status === "success") {
+        setActionFeedback({
+          tone: "success",
+          message: result.data.message,
+        });
+        return;
+      }
+
+      setNavigationOrderOverrides(previousOverrides);
+      setActionFeedback({
+        tone: "error",
+        message: result.message,
+      });
+    } catch (error) {
+      setNavigationOrderOverrides(previousOverrides);
+      setActionFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Unknown mutation failure",
+      });
+    }
+  }
 
   return (
     <section className="space-y-4" data-testid="admin-section-navigation">
@@ -92,16 +209,17 @@ export function NavigationInspector() {
             </p>
           )}
 
-          {listState.state === "success" && listState.data.items.length === 0 && (
+          {listState.state === "success" && listItems.length === 0 && (
             <p className="mt-3 text-sm text-muted-foreground" data-testid="navigation-list-empty">
               No navigation records found.
             </p>
           )}
 
-          {listState.state === "success" && listState.data.items.length > 0 && (
+          {listState.state === "success" && listItems.length > 0 && (
             <ul className="mt-3 space-y-2" data-testid="navigation-list">
-              {listState.data.items.map((item) => {
+              {listItems.map((item) => {
                 const isSelected = selectedNavigationId === item.id;
+                const order = getEffectiveOrder(item.id, item.order);
 
                 return (
                   <li
@@ -121,7 +239,10 @@ export function NavigationInspector() {
                     >
                       <p className="text-sm font-medium">{item.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.space}/{item.slug}
+                        {item.space}/{item.slug} • order{" "}
+                        <span data-testid={`navigation-list-item-${item.id}-order`}>
+                          {order}
+                        </span>
                       </p>
                     </button>
                   </li>
@@ -136,7 +257,38 @@ export function NavigationInspector() {
             Selected navigation item
           </h2>
 
-          {listState.state === "success" && listState.data.items.length === 0 && (
+          {selectedNavigationId && detailState.state === "success" && (
+            <div className="mt-3 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleMoveSelectedNavigationToTop();
+                }}
+                disabled={reorderAction.isPending || selectedNavigationOrder === 0}
+                className={cn(
+                  "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                  "border-border text-foreground hover:bg-accent",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                )}
+              >
+                {reorderAction.isPending ? "Moving…" : "Move selected item to top"}
+              </button>
+
+              {actionFeedback?.tone === "success" && (
+                <p className="text-sm text-emerald-600" data-testid="navigation-action-feedback-success">
+                  {actionFeedback.message}
+                </p>
+              )}
+
+              {actionFeedback?.tone === "error" && (
+                <p className="text-sm text-destructive" data-testid="navigation-action-feedback-error">
+                  {actionFeedback.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          {listState.state === "success" && listItems.length === 0 && (
             <p className="mt-3 text-sm text-muted-foreground">
               Select a navigation item to inspect details.
             </p>
@@ -204,7 +356,7 @@ export function NavigationInspector() {
               <div className="grid grid-cols-[9rem_1fr] gap-2">
                 <dt className="text-muted-foreground">Order</dt>
                 <dd className="font-medium" data-testid="navigation-detail-order">
-                  {detailState.data.order}
+                  {selectedNavigationOrder ?? detailState.data.order}
                 </dd>
               </div>
               <div className="grid grid-cols-[9rem_1fr] gap-2">

@@ -6,9 +6,11 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { createAllHandlers } from "@emerald/mocks";
 import { AppProviders } from "@emerald/ui/providers";
@@ -66,5 +68,110 @@ describe("VersionsInspector", () => {
     expect(screen.getByTestId("version-detail-default")).toHaveTextContent("No");
     expect(screen.getByTestId("admin-section-versions")).toBeInTheDocument();
     expect(screen.getByText("Versions")).toBeInTheDocument();
+  });
+
+  it("publishes the selected version and updates visible status indicators", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    try {
+      renderInspector();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-detail-id")).toHaveTextContent("ver-v1");
+      });
+
+      await user.click(screen.getByRole("button", { name: /^v2/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
+          "draft",
+        );
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /Publish selected version/i }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
+          "published",
+        );
+      });
+
+      expect(screen.getByTestId("version-list-item-ver-v2-status")).toHaveTextContent(
+        "published",
+      );
+      expect(screen.getByTestId("version-action-feedback-success")).toHaveTextContent(
+        "Operation completed successfully.",
+      );
+
+      await waitFor(() => {
+        expect(
+          fetchSpy.mock.calls.some(
+            ([input, init]) =>
+              input === "/api/workspace/versions/ver-v2/publish" &&
+              init?.method === "POST",
+          ),
+        ).toBe(true);
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("rolls back optimistic version publish when the mutation fails", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    server.use(
+      http.post("*/api/workspace/versions/:id/publish", () =>
+        HttpResponse.json({ error: "Mutation failed" }, { status: 500 }),
+      ),
+    );
+
+    try {
+      renderInspector();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-detail-id")).toHaveTextContent("ver-v1");
+      });
+
+      await user.click(screen.getByRole("button", { name: /^v2/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
+          "draft",
+        );
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /Publish selected version/i }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
+          "draft",
+        );
+      });
+
+      expect(screen.getByTestId("version-list-item-ver-v2-status")).toHaveTextContent(
+        "draft",
+      );
+      expect(screen.getByTestId("version-action-feedback-error")).toHaveTextContent(
+        "Request failed with status 500",
+      );
+
+      await waitFor(() => {
+        expect(
+          fetchSpy.mock.calls.some(
+            ([input, init]) =>
+              input === "/api/workspace/versions/ver-v2/publish" &&
+              init?.method === "POST",
+          ),
+        ).toBe(true);
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });

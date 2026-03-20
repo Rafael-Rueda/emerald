@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   WorkspaceNavigation,
   WorkspaceNavigationList,
@@ -8,8 +8,10 @@ import type {
 import {
   fetchWorkspaceNavigationDetail,
   fetchWorkspaceNavigationList,
+  reorderWorkspaceNavigation,
   type WorkspaceNavigationDetailFetchResult,
   type WorkspaceNavigationListFetchResult,
+  type WorkspaceNavigationReorderResult,
 } from "../infrastructure/workspace-navigation-api";
 
 export type WorkspaceNavigationListViewState =
@@ -108,4 +110,10 @@ export function useWorkspaceNavigationDetail(
     case "validation-error":
       return { state: "validation-error", message: data.message };
   }
+}
+
+export function useReorderWorkspaceNavigationAction() {
+  return useMutation<WorkspaceNavigationReorderResult, Error, string>({
+    mutationFn: reorderWorkspaceNavigation,
+  });
 }

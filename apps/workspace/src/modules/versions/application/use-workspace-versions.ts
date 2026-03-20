@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { WorkspaceVersion, WorkspaceVersionList } from "@emerald/contracts";
 import {
   fetchWorkspaceVersionDetail,
   fetchWorkspaceVersionsList,
+  publishWorkspaceVersion,
   type WorkspaceVersionDetailFetchResult,
+  type WorkspaceVersionPublishResult,
   type WorkspaceVersionsListFetchResult,
 } from "../infrastructure/workspace-versions-api";
 
@@ -105,4 +107,10 @@ export function useWorkspaceVersionDetail(
     case "validation-error":
       return { state: "validation-error", message: data.message };
   }
+}
+
+export function usePublishWorkspaceVersionAction() {
+  return useMutation<WorkspaceVersionPublishResult, Error, string>({
+    mutationFn: publishWorkspaceVersion,
+  });
 }

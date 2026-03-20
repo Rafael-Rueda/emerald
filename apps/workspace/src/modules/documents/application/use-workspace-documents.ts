@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { WorkspaceDocument, WorkspaceDocumentList } from "@emerald/contracts";
 import {
   fetchWorkspaceDocumentDetail,
   fetchWorkspaceDocumentsList,
+  publishWorkspaceDocument,
   type WorkspaceDocumentDetailFetchResult,
+  type WorkspaceDocumentPublishResult,
   type WorkspaceDocumentsListFetchResult,
 } from "../infrastructure/workspace-documents-api";
 
@@ -105,4 +107,10 @@ export function useWorkspaceDocumentDetail(
     case "validation-error":
       return { state: "validation-error", message: data.message };
   }
+}
+
+export function usePublishWorkspaceDocumentAction() {
+  return useMutation<WorkspaceDocumentPublishResult, Error, string>({
+    mutationFn: publishWorkspaceDocument,
+  });
 }
