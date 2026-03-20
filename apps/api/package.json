@@ -19,10 +19,15 @@
         "test:cov": "jest --coverage",
         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
         "test:e2e": "dotenv -e .env.test -- jest --config ./test/e2e/jest.config.json",
+        "prisma": "prisma",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
+        "prisma:seed": "prisma db seed",
         "prisma:studio": "prisma studio",
         "sync:template": "node scripts/sync-template.js"
+    },
+    "prisma": {
+        "seed": "ts-node prisma/seed.ts"
     },
     "dependencies": {
         "@google-cloud/storage": "^7.18.0",

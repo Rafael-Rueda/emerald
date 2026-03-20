@@ -15,6 +15,27 @@ datasource db {
 enum ROLES {
   ADMIN
   USER
+  SUPER_ADMIN
+  AUTHOR
+  VIEWER
+}
+
+enum DocumentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ReleaseVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NavigationNodeType {
+  DOCUMENT
+  GROUP
+  EXTERNAL_LINK
 }
 
 model User {
@@ -66,4 +87,107 @@ model File {
   @@index([entityType, entityId])
   @@index([entityType, entityId, field])
   @@map("files")
+}
+
+model Space {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  documents      Document[]
+  releaseVersion ReleaseVersion[]
+  navigationNode NavigationNode[]
+
+  @@map("spaces")
+}
+
+model Document {
+  id                String         @id @default(uuid())
+  spaceId           String         @map("space_id")
+  releaseVersionId  String         @map("release_version_id")
+  title             String
+  slug              String
+  status            DocumentStatus
+  currentRevisionId String?        @map("current_revision_id")
+  createdBy         String         @map("created_by")
+  updatedBy         String         @map("updated_by")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  space           Space              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  releaseVersion  ReleaseVersion     @relation(fields: [releaseVersionId], references: [id], onDelete: Cascade)
+  revisions       DocumentRevision[] @relation("DocumentRevisions")
+  currentRevision DocumentRevision?  @relation("CurrentDocumentRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
+  navigationNodes NavigationNode[]
+
+  @@unique([spaceId, slug, releaseVersionId])
+  @@index([spaceId, releaseVersionId, status])
+  @@map("documents")
+}
+
+model DocumentRevision {
+  id             String   @id @default(uuid())
+  documentId     String   @map("document_id")
+  revisionNumber Int      @map("revision_number")
+  contentJson    Json     @map("content_json")
+  renderedHtml   String?  @map("rendered_html")
+  plainText      String?  @map("plain_text")
+  changeNote     String?  @map("change_note")
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  document            Document   @relation("DocumentRevisions", fields: [documentId], references: [id], onDelete: Cascade)
+  currentForDocuments Document[] @relation("CurrentDocumentRevision")
+
+  @@unique([documentId, revisionNumber])
+  @@index([documentId])
+  @@map("document_revisions")
+}
+
+model NavigationNode {
+  id               String             @id @default(uuid())
+  spaceId          String             @map("space_id")
+  releaseVersionId String?            @map("release_version_id")
+  parentId         String?            @map("parent_id")
+  documentId       String?            @map("document_id")
+  label            String
+  slug             String
+  order            Int
+  nodeType         NavigationNodeType @map("node_type")
+  externalUrl      String?            @map("external_url")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  space          Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  releaseVersion ReleaseVersion? @relation(fields: [releaseVersionId], references: [id], onDelete: SetNull)
+  parent         NavigationNode? @relation("NavigationTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children       NavigationNode[] @relation("NavigationTree")
+  document       Document?       @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([spaceId, releaseVersionId])
+  @@index([parentId])
+  @@map("navigation_nodes")
+}
+
+model ReleaseVersion {
+  id          String               @id @default(uuid())
+  spaceId     String               @map("space_id")
+  key         String
+  label       String
+  status      ReleaseVersionStatus
+  isDefault   Boolean              @default(false) @map("is_default")
+  publishedAt DateTime?            @map("published_at")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  space         Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  documents     Document[]
+  navigation    NavigationNode[]
+
+  @@unique([spaceId, key])
+  @@index([spaceId, isDefault])
+  @@map("release_versions")
 }
