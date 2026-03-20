@@ -2,7 +2,23 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { ThemeProvider, useTheme } from "./theme-provider";
+import { ThemeProvider, useTheme, THEME_COOKIE_NAME, themeInitScript } from "./theme-provider";
+
+// Helper to read a cookie value from document.cookie
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? match[1] : null;
+}
+
+// Helper to set a cookie
+function setCookie(name: string, value: string): void {
+  document.cookie = `${name}=${value};path=/`;
+}
+
+// Helper to clear a cookie
+function clearCookie(name: string): void {
+  document.cookie = `${name}=;path=/;max-age=0`;
+}
 
 // Helper component to inspect and control the theme context
 function ThemeInspector() {
@@ -25,8 +41,8 @@ function ThemeInspector() {
 
 describe("ThemeProvider", () => {
   beforeEach(() => {
-    // Clear localStorage and DOM class between tests
-    localStorage.clear();
+    // Clear cookie and DOM class between tests
+    clearCookie(THEME_COOKIE_NAME);
     document.documentElement.classList.remove("light", "dark");
   });
 
@@ -40,8 +56,8 @@ describe("ThemeProvider", () => {
     expect(document.documentElement.classList.contains("light")).toBe(true);
   });
 
-  it("reads theme from localStorage on mount", () => {
-    localStorage.setItem("emerald-theme", "dark");
+  it("reads theme from cookie on mount", () => {
+    setCookie(THEME_COOKIE_NAME, "dark");
     render(
       <ThemeProvider>
         <ThemeInspector />
@@ -51,8 +67,8 @@ describe("ThemeProvider", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("respects the defaultTheme prop over localStorage", () => {
-    localStorage.setItem("emerald-theme", "light");
+  it("respects the defaultTheme prop over cookie", () => {
+    setCookie(THEME_COOKIE_NAME, "light");
     render(
       <ThemeProvider defaultTheme="dark">
         <ThemeInspector />
@@ -80,7 +96,7 @@ describe("ThemeProvider", () => {
     expect(document.documentElement.classList.contains("light")).toBe(true);
   });
 
-  it("setTheme persists to localStorage", async () => {
+  it("setTheme persists to cookie", async () => {
     const user = userEvent.setup();
     render(
       <ThemeProvider>
@@ -89,10 +105,10 @@ describe("ThemeProvider", () => {
     );
 
     await user.click(screen.getByTestId("set-dark"));
-    expect(localStorage.getItem("emerald-theme")).toBe("dark");
+    expect(getCookie(THEME_COOKIE_NAME)).toBe("dark");
 
     await user.click(screen.getByTestId("set-light"));
-    expect(localStorage.getItem("emerald-theme")).toBe("light");
+    expect(getCookie(THEME_COOKIE_NAME)).toBe("light");
   });
 
   it("applies the correct class on <html> element", async () => {
@@ -112,7 +128,7 @@ describe("ThemeProvider", () => {
     expect(document.documentElement.classList.contains("light")).toBe(false);
   });
 
-  it("persists theme choice across reloads (simulated)", () => {
+  it("persists theme choice across reloads (simulated via cookie)", () => {
     // Simulate: first render sets dark
     const { unmount } = render(
       <ThemeProvider>
@@ -120,12 +136,12 @@ describe("ThemeProvider", () => {
       </ThemeProvider>
     );
 
-    // Set to dark manually via localStorage to simulate toggle + unmount
-    localStorage.setItem("emerald-theme", "dark");
+    // Set cookie to dark to simulate toggle + unmount
+    setCookie(THEME_COOKIE_NAME, "dark");
     unmount();
     document.documentElement.classList.remove("light", "dark");
 
-    // Second render: should pick up dark from storage
+    // Second render: should pick up dark from cookie
     render(
       <ThemeProvider>
         <ThemeInspector />
@@ -133,6 +149,32 @@ describe("ThemeProvider", () => {
     );
     expect(screen.getByTestId("current-theme").textContent).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("cookie is shared across origins on the same host (simulated)", async () => {
+    // This test simulates the cross-origin behavior:
+    // Setting a theme via the provider writes to document.cookie,
+    // which (in a real browser on localhost) is shared across ports.
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider>
+        <ThemeInspector />
+      </ThemeProvider>
+    );
+
+    await user.click(screen.getByTestId("set-dark"));
+    const cookieValue = getCookie(THEME_COOKIE_NAME);
+    expect(cookieValue).toBe("dark");
+
+    // Simulate "another origin" reading the same cookie (in jsdom,
+    // document.cookie is the same object, which mirrors real localhost behavior)
+    const { unmount } = render(
+      <ThemeProvider>
+        <ThemeInspector />
+      </ThemeProvider>
+    );
+    expect(screen.getAllByTestId("current-theme")[1].textContent).toBe("dark");
+    unmount();
   });
 });
 
@@ -146,5 +188,37 @@ describe("useTheme", () => {
     }).toThrow("useTheme must be used within a ThemeProvider");
 
     spy.mockRestore();
+  });
+});
+
+describe("themeInitScript", () => {
+  beforeEach(() => {
+    clearCookie(THEME_COOKIE_NAME);
+    document.documentElement.classList.remove("light", "dark");
+  });
+
+  it("is a non-empty string", () => {
+    expect(typeof themeInitScript).toBe("string");
+    expect(themeInitScript.length).toBeGreaterThan(0);
+  });
+
+  it("applies dark class when cookie is set to dark", () => {
+    setCookie(THEME_COOKIE_NAME, "dark");
+    const fn = new Function(themeInitScript);
+    fn();
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("applies light class when cookie is set to light", () => {
+    setCookie(THEME_COOKIE_NAME, "light");
+    const fn = new Function(themeInitScript);
+    fn();
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+  });
+
+  it("defaults to light class when no cookie is set", () => {
+    const fn = new Function(themeInitScript);
+    fn();
+    expect(document.documentElement.classList.contains("light")).toBe(true);
   });
 });

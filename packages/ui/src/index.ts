@@ -6,7 +6,7 @@
  */
 
 export { AppProviders, AppErrorBoundary, createQueryClient } from "./providers";
-export { ThemeProvider, useTheme, ThemeToggle } from "./theme";
+export { ThemeProvider, useTheme, ThemeToggle, themeInitScript, THEME_COOKIE_NAME } from "./theme";
 export type { Theme, ThemeProviderProps, ThemeToggleProps } from "./theme";
 export { PublicShell, WorkspaceShell } from "./shells";
 export type { PublicShellProps, WorkspaceShellProps } from "./shells";

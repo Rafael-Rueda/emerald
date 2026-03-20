@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { ThemeProvider, useTheme } from "./theme-provider";
+import { ThemeProvider, useTheme, THEME_COOKIE_NAME } from "./theme-provider";
 import { ThemeToggle } from "./theme-toggle";
 
 // Helper to read the current theme
@@ -13,7 +13,8 @@ function ThemeDisplay() {
 
 describe("ThemeToggle", () => {
   beforeEach(() => {
-    localStorage.clear();
+    // Clear theme cookie and DOM class between tests
+    document.cookie = `${THEME_COOKIE_NAME}=;path=/;max-age=0`;
     document.documentElement.classList.remove("light", "dark");
   });
 
