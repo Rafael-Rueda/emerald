@@ -81,7 +81,7 @@ test.describe('group-4 search validation', () => {
     await page.goto('http://localhost:3100');
 
     // 1. Loading state
-    let searchInput = page.getByTestId('search-input');
+    const searchInput = page.getByTestId('search-input');
     await searchInput.fill('loadingtest');
     await page.getByTestId('search-submit').click();
     await expect(page.getByTestId('search-loading')).toBeVisible();
