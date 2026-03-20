@@ -1,0 +1,25 @@
+{
+  "assertions": {
+    "VAL-DS-004": {
+      "status": "pass",
+      "observation": "Theme switching successfully updates shared UI surfaces in Storybook, public docs, and workspace shells, keeping text and controls visible."
+    },
+    "VAL-DS-006": {
+      "status": "pass",
+      "observation": "Public and workspace shells remain operable across desktop and 390px narrow viewports, with functional mobile navigation overlays that open and close correctly."
+    },
+    "VAL-CROSS-007": {
+      "status": "fail",
+      "observation": "Theme choice does not persist across public and workspace surfaces. The workspace app did not adopt the dark theme set in the public app. This occurs because localStorage does not share state across different ports (3100 vs 3101)."
+    }
+  },
+  "frictions": [
+    {
+      "description": "Cross-surface persistence testing via localStorage fails because the local apps run on different ports, resulting in cross-origin isolation. Playwright correctly caught this domain boundary issue."
+    }
+  ],
+  "blockers": [],
+  "toolsUsed": [
+    "playwright"
+  ]
+}

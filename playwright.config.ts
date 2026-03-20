@@ -18,6 +18,11 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: "pnpm storybook",
+      port: 6100,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: "npx next dev --port 3100",
       cwd: "./apps/docs",
       port: 3100,

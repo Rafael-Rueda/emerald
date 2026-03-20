@@ -1,0 +1,27 @@
+{
+  "assertions": {
+    "VAL-DS-001": {
+      "status": "pass",
+      "observation": "Playwright successfully navigated to http://localhost:6100 and captured the Storybook landing page screenshot."
+    },
+    "VAL-DS-002": {
+      "status": "pass",
+      "observation": "Playwright successfully navigated to the baseline shared components (action, input, overlay, navigation, feedback, theme-toggle) in Storybook and captured screenshots for both docs and canvas views."
+    },
+    "VAL-DS-003": {
+      "status": "pass",
+      "observation": "Playwright successfully previewed foundation tokens including typography and colors in Storybook and saved screenshots."
+    },
+    "VAL-DS-005": {
+      "status": "pass",
+      "observation": "Playwright verified interactive primitives (Tabs, Dialog) using keyboard navigation (Tab, ArrowRight, Enter, Escape) and successfully captured focus, selection, open, and dismissed states."
+    }
+  },
+  "frictions": [
+    {
+      "description": "Storybook URL navigation using Playwright required using the iframe.html endpoint to properly capture interactive component keyboard behavior inside the Canvas."
+    }
+  ],
+  "blockers": [],
+  "toolsUsed": ["playwright"]
+}

@@ -25,6 +25,17 @@ An early foundation worker hit an `agent-browser` startup failure on Windows (`E
 - **Deterministic fallback:** For browser-validation flows that need `agent-browser`, workers should use Playwright directly via `pnpm test:e2e -- --project=chromium` as the primary automated path. For interactive Storybook/manual checks, start services using the manifest and open Chromium manually.
 - **If agent-browser is needed:** Retry with a `--session` flag as documented. The `EACCES` may be transient (port contention). If it persists, it is an external OS-level issue outside the project's control.
 
+## Flow Validator Guidance: Playwright Automated Validation
+
+Isolation rules and boundaries:
+- Use Playwright directly via `pnpm test:e2e -- --project=chromium` by writing a new test file in `e2e/` (e.g., `e2e/validator-ds-group.spec.ts`).
+- Avoid `agent-browser` if possible due to OS-level port binding issues. Use Playwright's native `page.goto()`, `page.screenshot()`, etc.
+- Playwright's browser contexts are fully isolated, so tests can run concurrently.
+- For Storybook tests, `http://localhost:6100` is already running in the background.
+- For Docs (`http://localhost:3100`) and Workspace (`http://localhost:3101`), Playwright's `webServer` config will start them automatically if they are not already running.
+- Ensure your test file takes the required screenshots and saves them to the evidence directory provided in your isolation context.
+- Your output report should strictly follow the JSON structure requested.
+
 ## Validation Concurrency
 
 - **Browser-based validation (docs/workspace/storybook combined): max 6 concurrent validators total**
