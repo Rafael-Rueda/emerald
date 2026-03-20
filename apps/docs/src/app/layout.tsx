@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { AppProviders } from "@emerald/ui/providers";
-import { PublicShell } from "@emerald/ui/shells";
 import { themeInitScript } from "@emerald/ui/theme";
 import { MswInit } from "./msw-init";
+import { DocsShell } from "./docs-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default function RootLayout({
       <body className="min-h-screen font-sans antialiased">
         <MswInit>
           <AppProviders>
-            <PublicShell>{children}</PublicShell>
+            <DocsShell>{children}</DocsShell>
           </AppProviders>
         </MswInit>
       </body>

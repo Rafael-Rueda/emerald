@@ -47,7 +47,10 @@ export default defineConfig({
       },
       {
         resolve: {
-          alias: workspaceAliases,
+          alias: {
+            ...workspaceAliases,
+            "@": path.resolve(__dirname, "apps/docs/src"),
+          },
         },
         test: {
           name: "docs",
