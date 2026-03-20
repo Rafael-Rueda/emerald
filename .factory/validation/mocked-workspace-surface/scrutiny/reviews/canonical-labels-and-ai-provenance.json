@@ -1,0 +1,21 @@
+{
+  "featureId": "canonical-labels-and-ai-provenance",
+  "reviewedAt": "2026-03-20T18:00:00Z",
+  "commitId": "e497a5b587d770e0664a754b1f24d4dbb821b2a4",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly introduces a shared canonical label and provenance mapping across the public docs, workspace detail views, and AI context surfaces. It does so by centralizing formatting logic into `packages/contracts/src/canonical-labels.ts` and successfully wiring it through all targeted presentation components. The unit and E2E test coverage thoroughly verifies cross-surface parity.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker noted pre-existing `pnpm lint` warnings in `e2e/validator-public-docs-group-1.spec.ts` and `e2e/validator-public-docs-group-2.spec.ts` regarding unused variables. These files belong to validators and the warnings should be addressed in the validator generators or tests.",
+      "evidence": "Noted in `handoff.discoveredIssues`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review passed. The worker properly implemented shared canonical labels, wired them across the required public and workspace surfaces, and added robust automated assertions for cross-surface label parity."
+}

@@ -1,0 +1,15 @@
+{
+  "featureId": "ai-context-surface",
+  "reviewedAt": "2026-03-20T17:58:00.000Z",
+  "commitId": "d997ba6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature was implemented flawlessly. URL parameters (entityType, entityId) appropriately dictate the AI context scope without forcing page reloads, fully meeting the requirement to remain inside the workspace shell. Validations properly employ Zod bounding and loading/empty/error states are thoroughly implemented as standard feedback states.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Implementation fully addresses the feature requirements. Data-fetching aligns with TanStack Query standards, parameters sync back to the URL successfully, and comprehensive tests verify scoping scenarios along with error boundary situations."
+}

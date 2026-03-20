@@ -1,0 +1,15 @@
+{
+  "featureId": "workspace-navigation-inspector",
+  "reviewedAt": "2026-03-20T17:59:00Z",
+  "commitId": "aee79a0d85ff1768c5491555ceb2005d84979675",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly introduces a navigation inspector that fetches mocked data using TanStack Query and validates it with Zod schemas. It properly renders the list of navigation records, updates the detail view upon selection, and handles edge cases such as loading, error, validation-error, and empty states. E2E tests verify the workspace shell is preserved during selection changes.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Review passed. The workspace navigation inspector was implemented according to all requirements and conventions. It correctly handles various data fetching states and strictly validates data with Zod schemas."
+}

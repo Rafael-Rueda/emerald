@@ -1,0 +1,15 @@
+{
+  "featureId": "workspace-management-actions",
+  "reviewedAt": "2026-03-20T18:00:00.000Z",
+  "commitId": "bea9fb10781b3697133ef0d8202dc1e7d7553550",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly adds representative management actions (publish for documents and versions, reorder for navigation) with optimistic UI updates and robust rollback mechanisms upon failure. Tests effectively verify success states and rollback behavior.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Review passed. The worker successfully implemented management actions across all three workspace domains with appropriate optimistic state handling and rollback on failure."
+}
