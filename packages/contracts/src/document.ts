@@ -10,10 +10,14 @@ export const DocumentHeadingSchema = z.object({
   level: z.number().int().min(1).max(6),
 });
 
+const UrlSafeSlugSchema = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must be URL-safe");
+
 export const DocumentSchema = z.object({
   id: z.string(),
   title: z.string(),
-  slug: z.string(),
+  slug: UrlSafeSlugSchema,
   space: z.string(),
   version: z.string(),
   body: z.string(),

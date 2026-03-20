@@ -7,7 +7,9 @@ import { z } from "zod";
 export const WorkspaceDocumentSchema = z.object({
   id: z.string(),
   title: z.string(),
-  slug: z.string(),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must be URL-safe"),
   space: z.string(),
   status: z.enum(["published", "draft", "archived"]),
   updatedAt: z.string(),

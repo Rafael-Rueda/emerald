@@ -6,8 +6,14 @@
  */
 
 export * from "./document";
+export * from "./document-content";
+export * from "./revision";
 export * from "./navigation";
+export * from "./navigation-node";
 export * from "./version";
+export * from "./release-version";
+export * from "./space";
+export * from "./asset";
 export * from "./search";
 export * from "./ai-context";
 export * from "./workspace";
