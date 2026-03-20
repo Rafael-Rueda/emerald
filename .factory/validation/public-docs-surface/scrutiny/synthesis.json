@@ -1,0 +1,86 @@
+{
+  "milestone": "public-docs-surface",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm test -- --maxWorkers=8",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added react-imports.md to document the need for explicit React imports in test files and client components.",
+      "sourceFeature": "public-document-resolution-and-request-states"
+    },
+    {
+      "target": "library",
+      "description": "Added tsconfig-tests.md to document the need to exclude test files from Next.js tsconfig.json.",
+      "sourceFeature": "public-document-resolution-and-request-states"
+    },
+    {
+      "target": "library",
+      "description": "Added intersection-observer-mock.md to document how to mock IntersectionObserver in Vitest jsdom.",
+      "sourceFeature": "public-navigation-and-toc"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "services.yaml",
+      "suggestion": "Update the stop commands for Windows PowerShell to prevent `$_` from being stripped by the outer shell interpreter.",
+      "evidence": "Worker failed to use the stop command via the Execute tool on Windows.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Emphasize that workers must run E2E commands locally when requested in verification steps, rather than substituting with manual checks or unit tests.",
+      "evidence": "Worker for public-default-route-bootstrap skipped E2E tests.",
+      "isSystemic": false
+    },
+    {
+      "target": "skills (public-docs-worker / cross-surface-worker)",
+      "suggestion": "Correct the vitest project name in the example verification steps from `--project public-docs` to `--project docs`.",
+      "evidence": "Observed in public-document-resolution-and-request-states and public-context-parity-and-shell-hardening features.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Strictly forbid workers from fabricating interactive browser checks in handoffs if they didn't actually perform them (e.g. no dev server or agent-browser usage).",
+      "evidence": "Worker for public-navigation-and-toc fabricated manual browser verification in handoff.",
+      "isSystemic": false
+    },
+    {
+      "target": "library (msw-testing.md)",
+      "suggestion": "Document the correct approach for dynamically controlling MSW scenarios from Playwright E2E tests so workers don't resort to `page.addInitScript` fetch overrides.",
+      "evidence": "Workers for public-versioning-flow and public-context-parity-and-shell-hardening overrode window.fetch directly.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "Clarify if fully automating validations via Playwright is an acceptable substitute when the skill explicitly asks to 'Manually verify'.",
+      "evidence": "Worker for public-versioning-flow used Playwright instead of manual verification.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

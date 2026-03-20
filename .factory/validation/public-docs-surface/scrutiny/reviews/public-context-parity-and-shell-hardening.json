@@ -1,0 +1,26 @@
+{
+  "featureId": "public-context-parity-and-shell-hardening",
+  "reviewedAt": "2026-03-20T15:35:00.000Z",
+  "commitId": "240a670",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly updates the ReadingShell to intercept navigation non-success states (not-found, error, validation-error) and render the corresponding NavigationError component instead of trusting or displaying the article content. The added Playwright tests comprehensively cover the required context parity scenarios and malformed/failing payload simulations.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The feature verification steps in features.json specify `pnpm test -- --project public-docs`, but the Vitest project is actually named `docs`. The worker successfully discovered and worked around this discrepancy.",
+      "evidence": "Transcript shows worker executing `pnpm exec vitest run --project docs`. The worker logged this in handoff.discoveredIssues."
+    },
+    {
+      "area": "conventions",
+      "observation": "Worker used `page.addInitScript` to override `window.fetch` directly in Playwright tests to simulate malformed payloads. While this works, it bypasses the established MSW test harness which is intended for this purpose. If MSW is the standard for runtime mocks in Playwright, this should be enforced or documented more clearly.",
+      "evidence": "e2e/public-context-parity-and-shell-hardening.spec.ts contains multiple instances of `window.fetch = async ...` overrides."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The feature implementation successfully hardens the reading shell against navigation data failures and adds robust E2E coverage for context parity and failure states. The worker correctly followed the cross-surface-worker skill procedure and identified a discrepancy in the test commands. The review passes."
+}
