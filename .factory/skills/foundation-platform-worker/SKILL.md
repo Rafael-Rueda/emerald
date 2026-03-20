@@ -26,14 +26,16 @@ Use this skill for foundational features that shape the repo and shared frontend
    - component tests for shared primitives
    - story-level checks for documented states
    - shell/theming tests for providers and persisted theme behavior
-4. Implement changes in shared packages first, then wire them into apps/Storybook. Keep shared packages free of app/domain internals.
-5. When the feature touches Storybook or shells, manually verify:
-   - Storybook is reachable
-   - the intended stories load
-   - theme behavior is correct
-   - responsive shell controls operate at the narrow viewport
-6. Run the narrowest meaningful validators first, then broader ones before handoff. At minimum run relevant tests plus `typecheck` and `lint` if shared code changed.
-7. Leave the repo in a reusable state: no watch processes, no orphan ports, no half-wired config.
+4. If the monorepo or project structure already exists from a prior commit, focus on verifying and extending the existing foundation instead of rebuilding it from scratch.
+5. Implement changes in shared packages first, then wire them into apps/Storybook. Keep shared packages free of app/domain internals.
+6. When the feature touches Storybook or shells, `pnpm storybook:build` is only a smoke check and never the final proof.
+   Local interactive verification in the browser is required:
+   - Storybook must be reachable
+   - the intended stories must load in a real browser session
+   - theme behavior must be correct
+   - responsive shell controls must operate at the narrow viewport
+7. Run the narrowest meaningful validators first, then broader ones before handoff. At minimum run relevant tests plus `typecheck` and `lint` if shared code changed.
+8. Leave the repo in a reusable state: no watch processes, no orphan ports, no half-wired config.
 
 ## Example Handoff
 
