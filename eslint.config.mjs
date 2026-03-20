@@ -1,6 +1,7 @@
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import globals from "globals";
+import nextPlugin from "@next/eslint-plugin-next";
 
 export default tseslint.config(
   {
@@ -20,6 +21,9 @@ export default tseslint.config(
       "**/next.config.*",
       "**/tailwind.config.*",
       "**/vitest.workspace.*",
+      // Generated files — must not produce false-positive lint noise
+      "**/next-env.d.ts",
+      "**/public/mockServiceWorker.js",
     ],
   },
   eslint.configs.recommended,
@@ -45,6 +49,22 @@ export default tseslint.config(
         "error",
         { prefer: "type-imports" },
       ],
+    },
+  },
+  // Next.js plugin — scoped to app directories so shared packages
+  // are not subject to Next-specific rules (e.g. no-html-link-for-pages).
+  {
+    files: ["apps/**/*.ts", "apps/**/*.tsx", "apps/**/*.js", "apps/**/*.jsx"],
+    plugins: {
+      "@next/next": nextPlugin,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+    },
+    settings: {
+      next: {
+        rootDir: "apps/*/",
+      },
     },
   },
   // Import-boundary rules for shared packages
