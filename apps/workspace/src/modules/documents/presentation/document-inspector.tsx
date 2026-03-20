@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { WorkspaceDocument } from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
@@ -240,6 +241,17 @@ export function DocumentInspector() {
 
           {selectedDocumentId && detailState.state === "success" && (
             <div className="mt-3 space-y-2">
+              <Link
+                href={`/admin/ai-context?entityType=document&entityId=${encodeURIComponent(detailState.data.id)}`}
+                className={cn(
+                  "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                  "border-border text-foreground hover:bg-accent",
+                )}
+                data-testid="document-open-ai-context-link"
+              >
+                Open AI context for selected document
+              </Link>
+
               <button
                 type="button"
                 onClick={() => {
