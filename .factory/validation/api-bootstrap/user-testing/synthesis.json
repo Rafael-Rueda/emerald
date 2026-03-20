@@ -1,11 +1,11 @@
 {
   "milestone": "api-bootstrap",
-  "round": 2,
-  "status": "fail",
+  "round": 3,
+  "status": "pass",
   "assertionsSummary": {
     "total": 22,
-    "passed": 21,
-    "failed": 1,
+    "passed": 22,
+    "failed": 0,
     "blocked": 0
   },
   "passedAssertions": [
@@ -29,14 +29,10 @@
     "VAL-BOOT-019",
     "VAL-BOOT-020",
     "VAL-BOOT-021",
-    "VAL-CROSS-010"
+    "VAL-CROSS-010",
+    "VAL-BOOT-017"
   ],
-  "failedAssertions": [
-    {
-      "id": "VAL-BOOT-017",
-      "reason": "The test `prisma-document.mapper.spec.ts` passes and checks for proper space mapping string key, but misses the assertion for `DocumentResponseSchema.safeParse(response).success`."
-    }
-  ],
+  "failedAssertions": [],
   "blockedAssertions": [],
   "appliedUpdates": [
     {
