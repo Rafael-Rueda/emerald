@@ -1,0 +1,22 @@
+{
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "../../src",
+    "testEnvironment": "node",
+    "testRegex": "e2e/.*\\.spec\\.ts$",
+    "transform": {
+        "^.+\\.ts$": [
+            "ts-jest",
+            {
+                "tsconfig": "<rootDir>/../tsconfig.json",
+                "useESM": false
+            }
+        ]
+    },
+    "moduleNameMapper": {
+        "^@/(.*)$": "<rootDir>/$1",
+        "^(\\.{1,2}/.*)\\.js$": "$1",
+        "^file-type$": "<rootDir>/../test/__mocks__/file-type.ts"
+    },
+    "globalSetup": "<rootDir>/../test/e2e/setup.ts",
+    "globalTeardown": "<rootDir>/../test/e2e/teardown.ts"
+}

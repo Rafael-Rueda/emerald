@@ -1,0 +1,23 @@
+services:
+    postgres:
+        image: bitnami/postgresql:latest
+        container_name: sardius_postgres
+        environment:
+            POSTGRES_USER: sardius_user
+            POSTGRES_PASSWORD: sardius_password
+            POSTGRES_DB: sardius_db
+        ports:
+            - "5434:5432"
+        volumes:
+            - ./data/pg:/var/lib/postgresql/data
+    postgres-test:
+        image: bitnami/postgresql:latest
+        container_name: sardius_postgres_test
+        environment:
+            POSTGRES_USER: sardius_user
+            POSTGRES_PASSWORD: sardius_password
+            POSTGRES_DB: sardius_db
+        ports:
+            - "5435:5432"
+        volumes:
+            - ./data/pg-test:/var/lib/postgresql/data

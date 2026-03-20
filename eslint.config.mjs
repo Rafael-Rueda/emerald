@@ -24,6 +24,7 @@ export default tseslint.config(
       // Generated files — must not produce false-positive lint noise
       "**/next-env.d.ts",
       "**/public/mockServiceWorker.js",
+      "apps/api/**",
     ],
   },
   eslint.configs.recommended,

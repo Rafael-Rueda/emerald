@@ -8,6 +8,7 @@
     "build": "pnpm -r run build",
     "dev:docs": "pnpm --filter @emerald/docs dev",
     "dev:workspace": "pnpm --filter @emerald/workspace dev",
+    "dev:api": "pnpm --filter @emerald/api start:dev",
     "storybook": "storybook dev -p 6100",
     "storybook:build": "storybook build",
     "test:e2e": "playwright test"

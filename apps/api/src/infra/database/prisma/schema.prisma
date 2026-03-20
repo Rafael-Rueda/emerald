@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ROLES {
+  ADMIN
+  USER
+}
+
+model User {
+  // Identifier
+  id String @id @default(uuid())
+
+  // Information
+  username     String  @unique
+  email        String  @unique
+  passwordHash String?
+
+  // RBAC
+  roles ROLES[]
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ===========================================
+// STORAGE BOUNDED CONTEXT
+// ===========================================
+
+model File {
+  // Identifier
+  id String @id @default(uuid())
+
+  // Polymorphic relationship (can belong to any entity)
+  entityType String @map("entity_type") // "user", "product", etc.
+  entityId   String @map("entity_id")
+  field      String // "avatar", "gallery", "document", etc.
+
+  // File information
+  filename String
+  path     String @unique // Full path in bucket
+  mimeType String @map("mime_type")
+  size     Int // Size in bytes
+
+  // Image dimensions (nullable for non-image files)
+  width  Int?
+  height Int?
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityType, entityId])
+  @@index([entityType, entityId, field])
+  @@map("files")
+}

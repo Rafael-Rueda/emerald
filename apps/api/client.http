@@ -1,0 +1,189 @@
+@baseUrl = http://localhost:3333
+@accessToken = {{authenticate.response.body.accessToken}}
+
+# ===========================
+# AUTH
+# ===========================
+
+# @name authenticate
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "username": "jane_doe",
+    "email": "jane.doe@example.com",
+    "password": "changeme"
+}
+
+###
+
+# @name authenticate_google
+GET {{baseUrl}}/auth/google
+
+###
+
+# @name authenticate_google_callback
+GET {{baseUrl}}/auth/google/callback?code=your_google_code_here
+
+###
+
+# ===========================
+# USERS
+# ===========================
+
+# @name create_user
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+    "username": "jane_doe",
+    "email": "jane.doe@example.com",
+    "password": "changeme"
+}
+
+###
+
+# @name list_users
+GET {{baseUrl}}/users?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+###
+
+# @name get_user_by_id
+GET {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Authorization: Bearer {{accessToken}}
+
+###
+
+# @name update_user
+PATCH {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "username": "jane_updated",
+    "email": "jane.updated@example.com"
+}
+
+###
+
+# @name update_user_roles
+PATCH {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "roles": ["USER", "ADMIN"]
+}
+
+###
+
+# @name update_user_password
+PATCH {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "password": "changeme"
+}
+
+###
+
+# @name delete_user
+DELETE {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Authorization: Bearer {{accessToken}}
+
+###
+
+# @name update_user_avatar
+# Upload avatar image for user (multipart/form-data)
+PATCH {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="avatar"; filename="avatar.png"
+Content-Type: image/png
+
+< ./Sardius.png
+------WebKitFormBoundary--
+
+###
+
+# @name update_user_avatar_with_data
+# Upload avatar and update username at the same time
+PATCH {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="username"
+
+jane_with_avatar
+------WebKitFormBoundary
+Content-Disposition: form-data; name="avatar"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./Sardius.png
+------WebKitFormBoundary--
+
+###
+
+# @name delete_user_avatar
+# Delete avatar by sending deleteAvatar=true
+PATCH {{baseUrl}}/users/{{create_user.response.body.user.id}}
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="deleteAvatar"
+
+true
+------WebKitFormBoundary--
+
+###
+
+# ===========================
+# STORAGE
+# ===========================
+
+# @name upload_file
+# Upload a generic file to storage
+POST {{baseUrl}}/storage/upload
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="entityType"
+
+user
+------WebKitFormBoundary
+Content-Disposition: form-data; name="entityId"
+
+{{create_user.response.body.user.id}}
+------WebKitFormBoundary
+Content-Disposition: form-data; name="field"
+
+document
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="document.pdf"
+Content-Type: application/pdf
+
+< ./Sardius.png
+------WebKitFormBoundary--
+
+###
+
+# @name get_file_url
+# Get signed URL for a file
+GET {{baseUrl}}/storage/url?entityType=user&entityId={{create_user.response.body.user.id}}&field=avatar
+Authorization: Bearer {{accessToken}}
+
+###
+
+# @name delete_file
+# Delete a file from storage
+DELETE {{baseUrl}}/storage/file/{{upload_file.response.body.id}}
+Authorization: Bearer {{accessToken}}
+
+###
