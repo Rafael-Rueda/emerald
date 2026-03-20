@@ -12,5 +12,5 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "dist", "tailwind.config.ts", "postcss.config.mjs"]
+  "exclude": ["node_modules", ".next", "dist", "tailwind.config.ts", "postcss.config.mjs", "**/*.test.ts", "**/*.test.tsx"]
 }

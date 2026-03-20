@@ -1,10 +1,13 @@
 /**
  * Public document route — /[space]/[version]/[slug]
  *
- * This is the canonical route for reading a specific document.
- * Full document resolution, rendering, and non-success states
- * will be implemented in the document-resolution feature.
+ * Canonical route for reading a specific public document.
+ * Resolves document identity from URL params and renders
+ * the document view which handles loading, success, not-found,
+ * and error states through the documentation module.
  */
+
+import { DocPageClient } from "./doc-page-client";
 
 interface DocPageProps {
   params: Promise<{
@@ -17,17 +20,5 @@ interface DocPageProps {
 export default async function DocPage({ params }: DocPageProps) {
   const { space, version, slug } = await params;
 
-  return (
-    <div className="max-w-3xl space-y-4">
-      <h1
-        className="text-3xl font-bold text-foreground"
-        data-testid="doc-title"
-      >
-        {space}/{version}/{slug}
-      </h1>
-      <p className="text-muted-foreground">
-        Document content will be loaded here.
-      </p>
-    </div>
-  );
+  return <DocPageClient space={space} version={version} slug={slug} />;
 }
