@@ -4,67 +4,106 @@ Runtime validation notes for browser-facing surfaces.
 
 ## Validation Surface
 
-- **Public docs app:** `http://localhost:3100`
-  - Validate route resolution, reading shell, TOC, search, versioning, and public error states
-- **Workspace app:** `http://localhost:3101`
-  - Validate admin shell, list/detail flows, representative actions, AI context, and workspace error states
-- **Storybook:** `http://localhost:6100`
-  - Validate shared UI categories, tokens/foundations, theme behavior, and shell compositions
+### Browser surfaces (agent-browser / Playwright)
+- **Public docs app:** `http://localhost:3100` — document reading, SSR verification, search, version selector, sitemap
+- **Workspace app:** `http://localhost:3101` — document CRUD, TipTap editor, revision history, publish flow, navigation tree, version management, asset upload
+- **Storybook:** `http://localhost:6100` — shared UI components
 
-### Accepted limitation from planning
+### API surface (HTTP assertions via curl or supertest)
+- **Sardius NestJS API:** `http://localhost:3333` — all REST endpoints, auth, RBAC, storage, spaces, documents, navigation, versions, search, health
 
-The dry run happened before the app existed, so planning validated the **machine + toolchain path**, not real project scripts. Once the scaffold exists, workers and validators should treat service startup and browser accessibility as something to verify, not assume.
-
-### Browser validation path — resolved
-
-An early foundation worker hit an `agent-browser` startup failure on Windows (`EACCES` while attempting to bind a local port). Investigation determined:
-
-- **Root cause:** The `EACCES` error was an `agent-browser` process-level port-binding issue, not a project or Playwright problem. `agent-browser` binds an internal communication port on startup, and on this Windows machine that specific port request was blocked by OS-level restrictions (possibly Windows Defender, Hyper-V port reservations, or ephemeral port exhaustion).
-- **Playwright itself works:** Playwright Chromium (v1.58.2) is installed at `C:\Users\rafae\AppData\Local\ms-playwright\chromium-1208` and runs e2e tests successfully via `pnpm test:e2e`. The Playwright `webServer` config starts both apps automatically.
-- **Storybook build works:** `pnpm storybook:build` compiles and produces `storybook-static/` without issues.
-- **Deterministic fallback:** For browser-validation flows that need `agent-browser`, workers should use Playwright directly via `pnpm test:e2e -- --project=chromium` as the primary automated path. For interactive Storybook/manual checks, start services using the manifest and open Chromium manually.
-- **If agent-browser is needed:** Retry with a `--session` flag as documented. The `EACCES` may be transient (port contention). If it persists, it is an external OS-level issue outside the project's control.
-
-## Flow Validator Guidance: Playwright Automated Validation
-
-Isolation rules and boundaries:
-- Use Playwright directly via `pnpm test:e2e -- --project=chromium` by writing a new test file in `e2e/` (e.g., `e2e/validator-ds-group.spec.ts`).
-- Avoid `agent-browser` if possible due to OS-level port binding issues. Use Playwright's native `page.goto()`, `page.screenshot()`, etc.
-- Playwright's browser contexts are fully isolated, so tests can run concurrently.
-- For Storybook tests, `http://localhost:6100` is already running in the background.
-- For Docs (`http://localhost:3100`) and Workspace (`http://localhost:3101`), Playwright's `webServer` config will start them automatically if they are not already running.
-- Ensure your test file takes the required screenshots and saves them to the evidence directory provided in your isolation context.
-- Your output report should strictly follow the JSON structure requested.
+### Browser validation path
+Use Playwright directly (`pnpm test:e2e -- --project=chromium`) via test files in `e2e/`. The `agent-browser` skill may have OS-level port binding issues on Windows (`EACCES`). If agent-browser fails, fall back to Playwright's native API.
 
 ## Validation Concurrency
 
-- **Browser-based validation (docs/workspace/storybook combined): max 6 concurrent validators total**
-  - Planning snapshot: ~66.7 GB RAM total, ~23.3 GB free, 16 logical processors
-  - 70% of free-memory headroom leaves comfortable room for local Next.js + Storybook + browser automation
-  - Keep the limit conservative because real app complexity may rise after scaffold and feature implementation
+- **Browser-based validation (docs/workspace combined):** max 5 concurrent validators
+  - Machine: 64 GB RAM, ~20 GB free, 16 logical processors
+  - Each validator instance: ~400 MB browser + ~200 MB per app server
+  - With API running (adds ~300 MB), safe budget is 5 concurrent validators
+- **API-based validation (curl/supertest):** max 8 concurrent validators (no browser overhead)
 
-## MSW Test Harness
+## Pre-Test Setup (validators must do this before testing)
 
-The `@emerald/mocks` package provides reusable MSW infrastructure for all test surfaces:
+```bash
+# 1. Start Emerald PostgreSQL
+docker compose -f apps/api/docker-compose.yml up -d
 
-- **Vitest:** Use `createTestServer()` from `@emerald/test-utils/msw-server` with `beforeAll/afterEach/afterAll` lifecycle hooks
-- **Playwright:** MSW runs in-browser via the service worker (`mockServiceWorker.js`). Playwright e2e tests exercise the full app with MSW already integrated via the app's browser entry point
-- **Storybook:** Use `withMsw(config)` decorator from `@emerald/mocks/storybook` to opt stories into MSW-backed data
+# 2. Run migrations and seed
+pnpm --filter @emerald/api prisma migrate deploy
+pnpm --filter @emerald/api prisma db seed
 
-### Scenario-driven testing
+# 3. Start API
+pnpm dev:api &
+sleep 5
 
-All handlers support 5 scenarios: `success`, `loading`, `error`, `not-found`, `malformed`. Use `ScenarioConfig` to configure per-domain scenarios:
+# 4. Start frontend apps
+pnpm dev:docs &
+pnpm dev:workspace &
+sleep 8
 
-```ts
-const server = createTestServer({ document: "error", search: "malformed" });
+# 5. Verify health
+curl http://localhost:3333/health  # must return { status: 'ok' }
+curl -o /dev/null -s -w "%{http_code}" http://localhost:3100  # must return 200/301
+curl -o /dev/null -s -w "%{http_code}" http://localhost:3101  # must return 200
 ```
 
-### Handler URL matching
+## Test Credentials (from seed)
 
-MSW handlers use `*/api/...` wildcard patterns that match requests from any origin. In Node.js (Vitest), fetch to `http://localhost/api/...` is intercepted. In the browser (Storybook/apps), relative `/api/...` requests are intercepted. The `apiUrl()` utility in `@emerald/mocks/handlers` is available for building absolute URLs if needed.
+| Role | Email | Password |
+|------|-------|----------|
+| SUPER_ADMIN | admin@test.com | password123 |
+| VIEWER | viewer@test.com | password123 |
 
-## Validation Notes
+To get a JWT for API testing:
+```bash
+curl -X POST http://localhost:3333/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@test.com","password":"password123"}'
+# → { "accessToken": "<jwt>" }
+```
 
-- Default browser validation path: Chromium-based automation plus direct browser sanity checks
-- Prefer validating the exact assertions from `validation-contract.md`, not approximate visual guesses
-- For cross-surface assertions, compare the same mocked entity across public docs, workspace, and AI-context surfaces in one run when possible
+## MSW Behavior in Tests
+
+- **Vitest unit/integration tests:** MSW runs via msw/node (`@emerald/test-utils/msw-server`); not affected by health-check logic
+- **Playwright e2e tests:** MSW runs in-browser; the health-check in msw-init.tsx will activate when API is NOT running during tests. For e2e tests that need real API, start the API before running.
+- **Storybook:** MSW always active (dev mode, no health-check)
+
+## MSW Scenarios for Testing Fallback
+
+To test MSW fallback (API offline mode), stop the API:
+```bash
+# Stop API process on port 3333
+powershell -Command "Get-NetTCPConnection -LocalPort 3333 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
+# Reload the app — MSW should activate within 1.5s timeout
+```
+
+## SSR Verification
+
+To verify SSR without JavaScript:
+```bash
+# Document title must appear in HTML source (not just in JS bundle)
+curl http://localhost:3100/guides/v1/getting-started | grep -i "<title>"
+# Must show document-specific title, not generic "Emerald Docs"
+
+# og:description must be present
+curl http://localhost:3100/guides/v1/getting-started | grep "og:description"
+```
+
+## Cross-Surface Testing Notes
+
+- To test VAL-CROSS-001 (publish flow): create doc in workspace → publish → check public docs. Allow up to 5s for ISR cache invalidation.
+- To test VAL-CROSS-007 (theme cookie): set dark mode in docs at :3100, then open workspace at :3101 — same cookie domain (localhost) shares the theme.
+- All validation contract assertions (VAL-*) must be verified against the exact criteria in `validation-contract.md`.
+
+## API Test Notes
+
+- All workspace endpoints require `Authorization: Bearer <jwt>` header
+- Public endpoints (`/api/public/*`) require NO auth header
+- Test DB (port 5435) is used by `pnpm --filter @emerald/api test:e2e`; dev DB (port 5434) is used at runtime
+- Never run E2E tests against the dev DB — use the test DB only
+
+## Known Pre-Existing Constraints
+
+- Port 5432 is off-limits (another project's PostgreSQL)
+- Playwright `webServer` config in `playwright.config.ts` may need updating to include the API service at port 3333
