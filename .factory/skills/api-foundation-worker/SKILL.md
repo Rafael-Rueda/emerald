@@ -110,6 +110,14 @@ Commit all changes. Commit message should describe what was built.
 }
 ```
 
+## Sardius Scaffold Notes
+
+After running `npx @rueda.dev/gems-sardius apps/api`:
+- The scaffold may be missing `google-auth-library` — add it: `pnpm --filter @emerald/api add google-auth-library`
+- Run `pnpm --filter @emerald/api prisma:generate` before first `start:dev`
+- Remove `.git` inside `apps/api/` if it was created (nested git repo): `rm -rf apps/api/.git`
+- Droid-Shield may flag `DATABASE_URL` in template files — use placeholder values in .env.example, never real credentials
+
 ## When to Return to Orchestrator
 
 - Sardius CLI fails to scaffold (network issue, version mismatch)
