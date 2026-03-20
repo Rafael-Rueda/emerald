@@ -1,0 +1,101 @@
+{
+  "groupId": "config",
+  "testedAt": "2026-03-20T20:16:00Z",
+  "isolation": {
+    "context": "No special isolation needed. Safe to run pnpm scripts concurrently. Work in the root directory."
+  },
+  "toolsUsed": ["CLI/pnpm"],
+  "assertions": [
+    {
+      "id": "VAL-BOOT-001",
+      "title": "apps/api is a recognized pnpm workspace member",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm -r ls", "expected": "Lists @emerald/api", "observed": "Lists @emerald/api" },
+        { "action": "Check apps/api/package.json", "expected": "Contains name: @emerald/api", "observed": "Contains name: @emerald/api" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/config/VAL-BOOT-001-pnpm-ls.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-005",
+      "title": "Monorepo fully migrated to Zod v4 — no v3 remaining",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm -r ls --depth=1 zod", "expected": "Only v4 entries", "observed": "Only zod@4.3.6 found" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/config/VAL-BOOT-005-zod-versions.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-014",
+      "title": "Full monorepo typecheck and lint pass",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm typecheck && pnpm lint", "expected": "Exit code 0", "observed": "Exited with code 0" }
+      ],
+      "evidence": {
+        "terminal-output": [
+          "api-bootstrap/config/VAL-BOOT-014-typecheck.txt",
+          "api-bootstrap/config/VAL-BOOT-014-lint.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-015",
+      "title": ".env.example declares all required keys",
+      "status": "pass",
+      "steps": [
+        { "action": "Start API with missing keys", "expected": "Descriptive Zod validation error", "observed": "Failed with ZodValidationError for missing keys like DATABASE_URL" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/config/VAL-BOOT-015-missing-key.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-018",
+      "title": "Frontend apps declare NEXT_PUBLIC_API_URL in .env.local",
+      "status": "pass",
+      "steps": [
+        { "action": "Read apps/docs/.env.local and apps/workspace/.env.local", "expected": "Contains NEXT_PUBLIC_API_URL=http://localhost:3333", "observed": "Contains NEXT_PUBLIC_API_URL=http://localhost:3333" }
+      ],
+      "evidence": {
+        "terminal-output": ["Verified inline via file read, confirmed contents match expectation."]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-019",
+      "title": "Root package.json declares dev:api script",
+      "status": "pass",
+      "steps": [
+        { "action": "Check root package.json", "expected": "Includes dev:api script", "observed": "Includes dev:api script" }
+      ],
+      "evidence": {
+        "terminal-output": ["Verified inline via package.json read, script found."]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-021",
+      "title": "pnpm install completes cleanly with new api package",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm install", "expected": "Completes cleanly", "observed": "Exit code 0 with no errors" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/config/VAL-BOOT-021-install.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed"
+}

@@ -1,0 +1,49 @@
+{
+  "milestone": "api-bootstrap",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 22,
+    "passed": 21,
+    "failed": 1,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-BOOT-001",
+    "VAL-BOOT-002",
+    "VAL-BOOT-003",
+    "VAL-BOOT-004",
+    "VAL-BOOT-005",
+    "VAL-BOOT-006",
+    "VAL-BOOT-007",
+    "VAL-BOOT-008",
+    "VAL-BOOT-009",
+    "VAL-BOOT-010",
+    "VAL-BOOT-011",
+    "VAL-BOOT-012",
+    "VAL-BOOT-013",
+    "VAL-BOOT-014",
+    "VAL-BOOT-015",
+    "VAL-BOOT-016",
+    "VAL-BOOT-018",
+    "VAL-BOOT-019",
+    "VAL-BOOT-020",
+    "VAL-BOOT-021",
+    "VAL-CROSS-010"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-BOOT-017",
+      "reason": "The test `prisma-document.mapper.spec.ts` passes and checks for proper space mapping string key, but misses the assertion for `DocumentResponseSchema.safeParse(response).success`."
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added flow validator guidance for CLI tests",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

@@ -107,3 +107,9 @@ curl http://localhost:3100/guides/v1/getting-started | grep "og:description"
 
 - Port 5432 is off-limits (another project's PostgreSQL)
 - Playwright `webServer` config in `playwright.config.ts` may need updating to include the API service at port 3333
+
+## Flow Validator Guidance: CLI
+- CLI tests are inherently read-only or self-contained. Concurrent validators can safely run pnpm scripts, inspect file contents, or query the database state.
+- For `pnpm install` or other mutating commands, they are safe because `init.sh` has already run them, so they should be fast and idempotent.
+- Use the provided dev database on 5434 or test database on 5435 for Prisma validations.
+- Keep tests within the monorepo directory.

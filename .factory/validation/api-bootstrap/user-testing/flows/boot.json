@@ -1,0 +1,30 @@
+{
+  "groupId": "boot",
+  "testedAt": "2026-03-20T20:15:00Z",
+  "isolation": {
+    "context": "No special isolation needed. You may start the api server using pnpm scripts or check if it starts successfully without errors."
+  },
+  "toolsUsed": ["CLI/pnpm"],
+  "assertions": [
+    {
+      "id": "VAL-BOOT-002",
+      "title": "NestJS app bootstraps without runtime errors",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run `pnpm --filter @emerald/api start:dev`",
+          "expected": "Server starts successfully and outputs 'Application running on: http://localhost:3333' with no stack traces",
+          "observed": "Server compiled and started successfully, outputted 'Application running on: http://localhost:3333', and no unhandled exceptions or stack traces were observed in the console"
+        }
+      ],
+      "evidence": {
+        "terminal-output": "api-bootstrap/boot/VAL-BOOT-002-terminal-output.txt",
+        "console-errors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed (VAL-BOOT-002: NestJS app bootstraps successfully without errors)"
+}

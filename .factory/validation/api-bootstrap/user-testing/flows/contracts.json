@@ -1,0 +1,107 @@
+{
+  "groupId": "contracts",
+  "testedAt": "2026-03-20T20:15:00Z",
+  "isolation": "No special isolation needed. Safe to run pnpm scripts concurrently. Work in the root directory.",
+  "toolsUsed": ["CLI/pnpm"],
+  "assertions": [
+    {
+      "id": "VAL-BOOT-006",
+      "title": "Existing Zod v3 contracts parse correctly under Zod v4",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm test -- --run", "expected": "Tests pass under Zod v4", "observed": "33 tests passed in contracts package" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-006-contracts-test.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-007",
+      "title": "DocumentContentSchema validates all supported block types",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm test contracts", "expected": "Tests pass", "observed": "Tests pass" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-006-contracts-test.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-008",
+      "title": "DocumentContentSchema rejects invalid block types",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm test contracts", "expected": "Tests pass", "observed": "Tests pass" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-006-contracts-test.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-009",
+      "title": "All new schemas exported from @emerald/contracts",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm typecheck", "expected": "Exit code 0", "observed": "All packages typechecked successfully with exit code 0" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-009-typecheck.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-012",
+      "title": "data-access exports REST client with configurable base URL",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm test data-access", "expected": "Tests pass", "observed": "data-access unit tests passed" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-012-data-access-test.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-013",
+      "title": "data-access exports query key factories",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm test data-access", "expected": "Tests pass", "observed": "data-access unit tests passed" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-012-data-access-test.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-017",
+      "title": "Prisma mapper aligns with Zod contract shape",
+      "status": "fail",
+      "steps": [
+        { "action": "Run unit test for mapper", "expected": "Mapper test passes and asserts DocumentResponseSchema.safeParse()", "observed": "Mapper test passes but does not assert DocumentResponseSchema.safeParse()" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-BOOT-017-mapper-test.txt"]
+      },
+      "issues": "The test `prisma-document.mapper.spec.ts` passes and checks for proper space mapping string key, but misses the assertion for `DocumentResponseSchema.safeParse(response).success`."
+    },
+    {
+      "id": "VAL-CROSS-010",
+      "title": "Existing 421 unit/integration tests still pass after all migrations",
+      "status": "pass",
+      "steps": [
+        { "action": "Run pnpm test -- --run", "expected": "0 failures", "observed": "441 tests passed with 0 failures" }
+      ],
+      "evidence": {
+        "terminal-output": ["api-bootstrap/contracts/VAL-CROSS-010-monorepo-test.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 8 assertions: 7 passed, 1 failed (VAL-BOOT-017: mapper test missing Zod schema assertion)."
+}

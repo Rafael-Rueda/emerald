@@ -1,0 +1,144 @@
+{
+  "groupId": "database",
+  "testedAt": "2026-03-20T20:15:00.000Z",
+  "isolation": {
+    "context": "No special isolation needed. Safe to run docker and prisma CLI commands. Use port 5434 and 5435 as described."
+  },
+  "toolsUsed": [
+    "CLI/docker/prisma",
+    "PowerShell"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-BOOT-003",
+      "title": "Docker Compose postgres-dev runs on port 5434",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run docker compose up -d",
+          "expected": "Container starts",
+          "observed": "Container sardius_postgres started"
+        },
+        {
+          "action": "Check port 5434",
+          "expected": "Port 5434 is listening",
+          "observed": "Test-NetConnection shows True"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "api-bootstrap/database/VAL-BOOT-003-postgres-dev-port.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-004",
+      "title": "Docker Compose postgres-test runs on port 5435",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run docker compose up -d",
+          "expected": "Container starts",
+          "observed": "Container sardius_postgres_test started"
+        },
+        {
+          "action": "Check port 5435",
+          "expected": "Port 5435 is listening",
+          "observed": "Test-NetConnection shows True"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "api-bootstrap/database/VAL-BOOT-004-postgres-test-port.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-010",
+      "title": "Prisma schema defines all required models",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run pnpm --filter @emerald/api prisma validate",
+          "expected": "Exits code 0, valid schema",
+          "observed": "Exited code 0, schema is valid"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "api-bootstrap/database/VAL-BOOT-010-prisma-validate.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-011",
+      "title": "Prisma client generates from schema",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run pnpm --filter @emerald/api prisma generate",
+          "expected": "Client generates without errors",
+          "observed": "Generated Prisma Client"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "api-bootstrap/database/VAL-BOOT-011-prisma-generate.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-016",
+      "title": "Prisma migration runs cleanly against postgres-dev",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run pnpm --filter @emerald/api prisma migrate deploy",
+          "expected": "Exits code 0",
+          "observed": "Exited code 0"
+        },
+        {
+          "action": "Inspect database tables",
+          "expected": "All expected tables present",
+          "observed": "users, files, spaces, documents, document_revisions, navigation_nodes, release_versions present"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "api-bootstrap/database/VAL-BOOT-016-prisma-migrate-deploy.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BOOT-020",
+      "title": "Prisma seed script populates required test data",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run pnpm --filter @emerald/api prisma db seed",
+          "expected": "Exits 0",
+          "observed": "Exited code 0"
+        },
+        {
+          "action": "Check database records",
+          "expected": "ADMIN user, VIEWER user, guides space, v1 version, getting-started document exist",
+          "observed": "All records verified via SQL queries"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "api-bootstrap/database/VAL-BOOT-020-prisma-seed.txt"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 6 assertions: 6 passed, 0 failed"
+}
