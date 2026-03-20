@@ -242,18 +242,15 @@ describe("ReadingShell — error navigation", () => {
   });
   afterAll(() => server.stop());
 
-  it("pushes navigation error content to sidebar context", async () => {
+  it("renders a stable non-success state and does not render article content", async () => {
     renderReadingShell();
-
-    // The article content should still render
-    expect(screen.getByTestId("article-content")).toBeInTheDocument();
 
     // Wait for the error to resolve and sidebar to receive error content
     await waitFor(() => {
-      const calls = mockSetSidebar.mock.calls;
-      const lastCall = calls[calls.length - 1];
-      expect(lastCall[0]).not.toBeNull();
+      expect(screen.getByTestId("navigation-error")).toBeInTheDocument();
     });
+
+    expect(screen.queryByTestId("article-content")).not.toBeInTheDocument();
   });
 });
 
@@ -270,17 +267,14 @@ describe("ReadingShell — malformed navigation", () => {
   });
   afterAll(() => server.stop());
 
-  it("pushes validation error content to sidebar context", async () => {
+  it("renders a stable validation-error state and does not render article content", async () => {
     renderReadingShell();
-
-    // The article content should still render
-    expect(screen.getByTestId("article-content")).toBeInTheDocument();
 
     // Wait for the validation error to resolve
     await waitFor(() => {
-      const calls = mockSetSidebar.mock.calls;
-      const lastCall = calls[calls.length - 1];
-      expect(lastCall[0]).not.toBeNull();
+      expect(screen.getByTestId("navigation-error")).toBeInTheDocument();
     });
+
+    expect(screen.queryByTestId("article-content")).not.toBeInTheDocument();
   });
 });

@@ -112,6 +112,54 @@ export function ReadingShell({
   // Show transition skeleton whenever document content is loading.
   const showTransition = isDocumentLoading;
 
+  const navigationFailureState =
+    navState.state === "not-found" ||
+    navState.state === "error" ||
+    navState.state === "validation-error"
+      ? navState
+      : null;
+
+  const articleContent = (() => {
+    if (navigationFailureState) {
+      switch (navigationFailureState.state) {
+        case "not-found":
+          return <NavigationError message="Navigation tree not found" />;
+        case "error":
+          return <NavigationError message={navigationFailureState.message} />;
+        case "validation-error":
+          return (
+            <NavigationError
+              message={navigationFailureState.message}
+              isValidationError
+            />
+          );
+      }
+    }
+
+    if (showTransition) {
+      return (
+        <div
+          className="animate-pulse space-y-4"
+          role="status"
+          aria-label="Loading new document"
+          data-testid="article-transition"
+        >
+          <div className="h-8 w-2/3 rounded bg-muted" />
+          <div className="space-y-3">
+            <div className="h-4 w-full rounded bg-muted" />
+            <div className="h-4 w-5/6 rounded bg-muted" />
+            <div className="h-4 w-4/6 rounded bg-muted" />
+          </div>
+          <span className="sr-only">Loading new document…</span>
+        </div>
+      );
+    }
+
+    return children;
+  })();
+
+  const showToc = !navigationFailureState;
+
   return (
     <div data-testid="reading-shell" className="flex flex-col gap-4">
       {/* Search + versioning regions */}
@@ -133,30 +181,15 @@ export function ReadingShell({
       <div className="flex gap-8">
         {/* Article region */}
         <div className="flex-1 min-w-0" data-testid="reading-shell-article">
-          {showTransition ? (
-            <div
-              className="animate-pulse space-y-4"
-              role="status"
-              aria-label="Loading new document"
-              data-testid="article-transition"
-            >
-              <div className="h-8 w-2/3 rounded bg-muted" />
-              <div className="space-y-3">
-                <div className="h-4 w-full rounded bg-muted" />
-                <div className="h-4 w-5/6 rounded bg-muted" />
-                <div className="h-4 w-4/6 rounded bg-muted" />
-              </div>
-              <span className="sr-only">Loading new document…</span>
-            </div>
-          ) : (
-            children
-          )}
+          {articleContent}
         </div>
 
         {/* TOC region */}
-        <div data-testid="reading-shell-toc">
-          <TableOfContents entries={tocEntries} />
-        </div>
+        {showToc ? (
+          <div data-testid="reading-shell-toc">
+            <TableOfContents entries={tocEntries} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
