@@ -68,6 +68,7 @@ function renderReadingShell(
     space: "guides",
     version: "v1",
     slug: "getting-started",
+    versionSelector: undefined,
     headings: [],
     isDocumentLoading: false,
     children: <div data-testid="article-content">Document content</div>,
@@ -122,6 +123,15 @@ describe("ReadingShell — success navigation", () => {
     expect(screen.getByTestId("reading-shell-toc")).toBeInTheDocument();
   });
 
+  it("renders the versioning region when version selector content is provided", () => {
+    renderReadingShell({
+      versionSelector: <div data-testid="version-selector-mock">Version selector</div>,
+    });
+
+    expect(screen.getByTestId("reading-shell-versioning")).toBeInTheDocument();
+    expect(screen.getByTestId("version-selector-mock")).toBeInTheDocument();
+  });
+
   it("renders empty TOC for heading-less documents", () => {
     renderReadingShell({ headings: [] });
     expect(screen.getByTestId("toc-empty")).toBeInTheDocument();
@@ -148,6 +158,34 @@ describe("ReadingShell — success navigation", () => {
     expect(screen.getByTestId("toc")).toBeInTheDocument();
     expect(screen.getByTestId("toc-entry-installation")).toBeInTheDocument();
     expect(screen.getByTestId("toc-entry-configuration")).toBeInTheDocument();
+  });
+
+  it("shows transition state on version changes while document loading", async () => {
+    const { rerender } = renderReadingShell({
+      version: "v1",
+      slug: "getting-started",
+      isDocumentLoading: false,
+      children: <div data-testid="article-content">V1 content</div>,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("article-content")).toBeInTheDocument();
+    });
+
+    rerender(
+      <ReadingShell
+        space="guides"
+        version="v2"
+        slug="getting-started"
+        headings={[]}
+        isDocumentLoading
+      >
+        <div data-testid="article-content">V2 content</div>
+      </ReadingShell>,
+    );
+
+    expect(screen.getByTestId("article-transition")).toBeInTheDocument();
+    expect(screen.queryByTestId("article-content")).not.toBeInTheDocument();
   });
 });
 

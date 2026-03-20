@@ -7,6 +7,11 @@ import { DocumentContent } from "@/modules/documentation/presentation/document-c
 import { DocumentUnavailable } from "@/modules/documentation/presentation/document-unavailable";
 import { DocumentError } from "@/modules/documentation/presentation/document-error";
 import { ReadingShell } from "@/modules/navigation";
+import {
+  VersionError,
+  VersionSelector,
+  useVersions,
+} from "@/modules/versioning";
 
 interface DocPageClientProps {
   space: string;
@@ -20,6 +25,7 @@ export function DocPageClient({ space, version, slug }: DocPageClientProps) {
     [space, version, slug],
   );
 
+  const versionState = useVersions(space);
   const viewState = useDocument(identity);
 
   // Determine headings from the document data (empty for non-success states)
@@ -29,6 +35,18 @@ export function DocPageClient({ space, version, slug }: DocPageClientProps) {
     }
     return [];
   }, [viewState]);
+
+  if (versionState.state === "loading") {
+    return <DocumentLoading />;
+  }
+
+  if (versionState.state === "not-found" || versionState.state === "error") {
+    return <VersionError />;
+  }
+
+  if (versionState.state === "validation-error") {
+    return <VersionError isValidationError />;
+  }
 
   // Render document content based on view state
   const documentContent = (() => {
@@ -59,6 +77,15 @@ export function DocPageClient({ space, version, slug }: DocPageClientProps) {
       space={space}
       version={version}
       slug={slug}
+      versionSelector={
+        <VersionSelector
+          space={space}
+          activeVersion={version}
+          slug={slug}
+          versions={versionState.data.versions}
+          disabled={viewState.state === "loading"}
+        />
+      }
       headings={headings}
       isDocumentLoading={viewState.state === "loading"}
     >

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useEffect, useRef } from "react";
+import React, { useMemo, useEffect } from "react";
 import type { DocumentHeading } from "@emerald/contracts";
 import { useNavigation } from "../application/use-navigation";
 import {
@@ -19,6 +19,8 @@ interface ReadingShellProps {
   space: string;
   version: string;
   slug: string;
+  /** Version selector region content. */
+  versionSelector?: React.ReactNode;
   /** Document headings for TOC (empty array for heading-less docs) */
   headings: DocumentHeading[];
   /** Whether the document content is still loading */
@@ -36,29 +38,20 @@ interface ReadingShellProps {
  * - Article: document content (passed as children)
  * - TOC: table of contents for headed documents, no-sections state otherwise
  *
- * During sidebar-driven route changes, shows a loading/transition overlay
- * on the article area so old content is never mixed with new navigation state.
+ * During initial and route-driven document loading, shows a transition overlay
+ * on the article area so stale content is never mixed with pending state.
  */
 export function ReadingShell({
   space,
   version,
   slug,
+  versionSelector,
   headings,
   isDocumentLoading,
   children,
 }: ReadingShellProps) {
   const navState = useNavigation(space, version);
   const setSidebar = useSetSidebar();
-  const prevSlugRef = useRef(slug);
-
-  // Detect sidebar-driven route change: slug changed but nav data is the same
-  const isRouteTransition =
-    prevSlugRef.current !== slug && navState.state === "success";
-
-  // Update the previous slug ref
-  useEffect(() => {
-    prevSlugRef.current = slug;
-  }, [slug]);
 
   // Build breadcrumbs from navigation data
   const breadcrumbs = useMemo(() => {
@@ -116,14 +109,19 @@ export function ReadingShell({
     };
   }, [sidebarContent, setSidebar]);
 
-  // Show transition skeleton when document is loading during route change
-  const showTransition = isDocumentLoading && isRouteTransition;
+  // Show transition skeleton whenever document content is loading.
+  const showTransition = isDocumentLoading;
 
   return (
     <div data-testid="reading-shell" className="flex flex-col gap-4">
-      {/* Search region */}
-      <div data-testid="reading-shell-search">
-        <SearchPanel currentRoute={{ space, version, slug }} />
+      {/* Search + versioning regions */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div data-testid="reading-shell-search" className="flex-1 min-w-0">
+          <SearchPanel currentRoute={{ space, version, slug }} />
+        </div>
+        {versionSelector ? (
+          <div data-testid="reading-shell-versioning">{versionSelector}</div>
+        ) : null}
       </div>
 
       {/* Breadcrumbs region */}
