@@ -1,13 +1,15 @@
+import { redirect } from "next/navigation";
+import {
+  MOCKED_DEFAULT_CONTEXT,
+  buildCanonicalPath,
+} from "@/modules/documentation";
+
+/**
+ * Root page — redirects to the canonical default docs route.
+ *
+ * The public docs entry point always resolves to the default
+ * space/version/slug so there is never a dead landing page.
+ */
 export default function HomePage() {
-  return (
-    <div className="max-w-3xl space-y-4">
-      <h1 className="text-3xl font-bold text-foreground">
-        Welcome to Emerald Docs
-      </h1>
-      <p className="text-muted-foreground">
-        Public documentation portal — under construction. Select a document
-        from the sidebar to get started.
-      </p>
-    </div>
-  );
+  redirect(buildCanonicalPath(MOCKED_DEFAULT_CONTEXT));
 }
