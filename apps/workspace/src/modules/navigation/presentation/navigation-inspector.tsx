@@ -8,6 +8,7 @@ import {
   useWorkspaceNavigationDetail,
   useWorkspaceNavigationList,
 } from "../application/use-workspace-navigation";
+import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 
 type ActionFeedback =
   | { tone: "success"; message: string }
@@ -189,30 +190,38 @@ export function NavigationInspector() {
           </h2>
 
           {listState.state === "loading" && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="navigation-list-loading">
-              Loading navigation records…
-            </p>
+            <AdminFeedbackState
+              testId="navigation-list-loading"
+              title="Loading navigation records"
+              message="Please wait while navigation data is fetched."
+            />
           )}
 
           {listState.state === "error" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="navigation-list-error">
-              Could not load navigation records. {listState.message}
-            </p>
+            <AdminFeedbackState
+              testId="navigation-list-error"
+              title="Could not load navigation records"
+              message={listState.message}
+              variant="destructive"
+            />
           )}
 
           {listState.state === "validation-error" && (
-            <p
-              className="mt-3 text-sm text-destructive"
-              data-testid="navigation-list-validation-error"
-            >
-              Navigation list payload is invalid. {listState.message}
-            </p>
+            <AdminFeedbackState
+              testId="navigation-list-validation-error"
+              title="Navigation list payload is invalid"
+              message={listState.message}
+              variant="destructive"
+            />
           )}
 
           {listState.state === "success" && listItems.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="navigation-list-empty">
-              No navigation records found.
-            </p>
+            <AdminFeedbackState
+              testId="navigation-list-empty"
+              title="No navigation records found"
+              message="This workspace has no navigation records to inspect yet."
+              variant="warning"
+            />
           )}
 
           {listState.state === "success" && listItems.length > 0 && (
@@ -289,36 +298,47 @@ export function NavigationInspector() {
           )}
 
           {listState.state === "success" && listItems.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Select a navigation item to inspect details.
-            </p>
+            <AdminFeedbackState
+              testId="navigation-detail-empty"
+              title="No selected navigation item"
+              message="Add or load navigation records to inspect detail fields."
+              variant="warning"
+            />
           )}
 
           {selectedNavigationId && detailState.state === "loading" && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="navigation-detail-loading">
-              Loading selected navigation item…
-            </p>
+            <AdminFeedbackState
+              testId="navigation-detail-loading"
+              title="Loading selected navigation item"
+              message="Please wait while the selected record details are fetched."
+            />
           )}
 
           {selectedNavigationId && detailState.state === "not-found" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="navigation-detail-not-found">
-              The selected navigation item could not be found.
-            </p>
+            <AdminFeedbackState
+              testId="navigation-detail-not-found"
+              title="Selected navigation item was not found"
+              message="The selected record no longer exists in the current workspace data."
+              variant="warning"
+            />
           )}
 
           {selectedNavigationId && detailState.state === "error" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="navigation-detail-error">
-              Failed to load selected navigation item. {detailState.message}
-            </p>
+            <AdminFeedbackState
+              testId="navigation-detail-error"
+              title="Failed to load selected navigation item"
+              message={detailState.message}
+              variant="destructive"
+            />
           )}
 
           {selectedNavigationId && detailState.state === "validation-error" && (
-            <p
-              className="mt-3 text-sm text-destructive"
-              data-testid="navigation-detail-validation-error"
-            >
-              Selected navigation payload is invalid. {detailState.message}
-            </p>
+            <AdminFeedbackState
+              testId="navigation-detail-validation-error"
+              title="Selected navigation payload is invalid"
+              message={detailState.message}
+              variant="destructive"
+            />
           )}
 
           {selectedNavigationId && detailState.state === "success" && (

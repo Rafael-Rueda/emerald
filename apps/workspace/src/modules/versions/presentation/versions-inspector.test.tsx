@@ -10,7 +10,7 @@ import {
 } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
+import { delay, HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { createAllHandlers } from "@emerald/mocks";
 import { AppProviders } from "@emerald/ui/providers";
@@ -68,6 +68,118 @@ describe("VersionsInspector", () => {
     expect(screen.getByTestId("version-detail-default")).toHaveTextContent("No");
     expect(screen.getByTestId("admin-section-versions")).toBeInTheDocument();
     expect(screen.getByText("Versions")).toBeInTheDocument();
+  });
+
+  it("shows a shared loading feedback state while the versions list request is pending", async () => {
+    server.use(...createAllHandlers({ workspaceVersions: "loading" }));
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("versions-list-loading")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("versions-list-loading").querySelector("[role='alert']")).not.toBeNull();
+    expect(screen.getByTestId("admin-section-versions")).toBeInTheDocument();
+  });
+
+  it("shows intentional list and detail empty states when no version records are returned", async () => {
+    server.use(...createAllHandlers({ workspaceVersions: "not-found" }));
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("versions-list-empty")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("version-detail-empty")).toBeInTheDocument();
+    expect(screen.queryByTestId("versions-list")).not.toBeInTheDocument();
+    expect(screen.getByTestId("versions-list-empty").querySelector("[role='alert']")).not.toBeNull();
+  });
+
+  it("shows a request-failure list state without rendering stale records", async () => {
+    server.use(...createAllHandlers({ workspaceVersions: "error" }));
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("versions-list-error")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("versions-list")).not.toBeInTheDocument();
+    expect(screen.getByTestId("versions-list-error").querySelector("[role='alert']")).not.toBeNull();
+  });
+
+  it("shows a schema-failure list state for malformed version payloads", async () => {
+    server.use(...createAllHandlers({ workspaceVersions: "malformed" }));
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("versions-list-validation-error")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("versions-list")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("versions-list-validation-error").querySelector("[role='alert']"),
+    ).not.toBeNull();
+  });
+
+  it("shows a loading state while selected version detail is pending", async () => {
+    server.use(
+      http.get("*/api/workspace/versions/:id", async () => {
+        await delay("infinite");
+        return HttpResponse.json({ id: "never-resolves" }, { status: 200 });
+      }),
+    );
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("versions-list")).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("version-detail-loading")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("version-detail-loading").querySelector("[role='alert']")).not.toBeNull();
+  });
+
+  it("shows a request-failure detail state for the selected version", async () => {
+    server.use(
+      http.get("*/api/workspace/versions/:id", () =>
+        HttpResponse.json({ error: "Failed detail" }, { status: 500 }),
+      ),
+    );
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("version-detail-error")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("version-detail-id")).not.toBeInTheDocument();
+    expect(screen.getByTestId("version-detail-error").querySelector("[role='alert']")).not.toBeNull();
+  });
+
+  it("shows a schema-failure detail state for malformed selected version payloads", async () => {
+    server.use(
+      http.get("*/api/workspace/versions/:id", () =>
+        HttpResponse.json({ id: 123, label: null }, { status: 200 }),
+      ),
+    );
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("version-detail-validation-error")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("version-detail-id")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("version-detail-validation-error").querySelector("[role='alert']"),
+    ).not.toBeNull();
   });
 
   it("publishes the selected version and updates visible status indicators", async () => {

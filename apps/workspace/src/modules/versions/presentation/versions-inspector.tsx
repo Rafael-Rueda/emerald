@@ -8,6 +8,7 @@ import {
   useWorkspaceVersionDetail,
   useWorkspaceVersionsList,
 } from "../application/use-workspace-versions";
+import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 
 type ActionFeedback =
   | { tone: "success"; message: string }
@@ -162,30 +163,38 @@ export function VersionsInspector() {
           </h2>
 
           {listState.state === "loading" && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="versions-list-loading">
-              Loading versions…
-            </p>
+            <AdminFeedbackState
+              testId="versions-list-loading"
+              title="Loading versions"
+              message="Please wait while version records are fetched."
+            />
           )}
 
           {listState.state === "error" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="versions-list-error">
-              Could not load versions. {listState.message}
-            </p>
+            <AdminFeedbackState
+              testId="versions-list-error"
+              title="Could not load versions"
+              message={listState.message}
+              variant="destructive"
+            />
           )}
 
           {listState.state === "validation-error" && (
-            <p
-              className="mt-3 text-sm text-destructive"
-              data-testid="versions-list-validation-error"
-            >
-              Version list payload is invalid. {listState.message}
-            </p>
+            <AdminFeedbackState
+              testId="versions-list-validation-error"
+              title="Version list payload is invalid"
+              message={listState.message}
+              variant="destructive"
+            />
           )}
 
           {listState.state === "success" && listState.data.versions.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="versions-list-empty">
-              No versions found.
-            </p>
+            <AdminFeedbackState
+              testId="versions-list-empty"
+              title="No versions found"
+              message="This workspace has no version records to inspect yet."
+              variant="warning"
+            />
           )}
 
           {listState.state === "success" && listState.data.versions.length > 0 && (
@@ -262,36 +271,47 @@ export function VersionsInspector() {
           )}
 
           {listState.state === "success" && listState.data.versions.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Select a version to inspect details.
-            </p>
+            <AdminFeedbackState
+              testId="version-detail-empty"
+              title="No selected version"
+              message="Add or load version records to inspect detail fields."
+              variant="warning"
+            />
           )}
 
           {selectedVersionId && detailState.state === "loading" && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="version-detail-loading">
-              Loading selected version…
-            </p>
+            <AdminFeedbackState
+              testId="version-detail-loading"
+              title="Loading selected version"
+              message="Please wait while the selected record details are fetched."
+            />
           )}
 
           {selectedVersionId && detailState.state === "not-found" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="version-detail-not-found">
-              The selected version could not be found.
-            </p>
+            <AdminFeedbackState
+              testId="version-detail-not-found"
+              title="Selected version was not found"
+              message="The selected record no longer exists in the current workspace data."
+              variant="warning"
+            />
           )}
 
           {selectedVersionId && detailState.state === "error" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="version-detail-error">
-              Failed to load selected version. {detailState.message}
-            </p>
+            <AdminFeedbackState
+              testId="version-detail-error"
+              title="Failed to load selected version"
+              message={detailState.message}
+              variant="destructive"
+            />
           )}
 
           {selectedVersionId && detailState.state === "validation-error" && (
-            <p
-              className="mt-3 text-sm text-destructive"
-              data-testid="version-detail-validation-error"
-            >
-              Selected version payload is invalid. {detailState.message}
-            </p>
+            <AdminFeedbackState
+              testId="version-detail-validation-error"
+              title="Selected version payload is invalid"
+              message={detailState.message}
+              variant="destructive"
+            />
           )}
 
           {selectedVersionId && detailState.state === "success" && (

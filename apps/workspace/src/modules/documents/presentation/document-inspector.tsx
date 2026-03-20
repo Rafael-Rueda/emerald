@@ -8,6 +8,7 @@ import {
   useWorkspaceDocumentDetail,
   useWorkspaceDocumentsList,
 } from "../application/use-workspace-documents";
+import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 
 type ActionFeedback =
   | { tone: "success"; message: string }
@@ -161,30 +162,38 @@ export function DocumentInspector() {
           </h2>
 
           {listState.state === "loading" && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="documents-list-loading">
-              Loading documents…
-            </p>
+            <AdminFeedbackState
+              testId="documents-list-loading"
+              title="Loading documents"
+              message="Please wait while document records are fetched."
+            />
           )}
 
           {listState.state === "error" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="documents-list-error">
-              Could not load documents. {listState.message}
-            </p>
+            <AdminFeedbackState
+              testId="documents-list-error"
+              title="Could not load documents"
+              message={listState.message}
+              variant="destructive"
+            />
           )}
 
           {listState.state === "validation-error" && (
-            <p
-              className="mt-3 text-sm text-destructive"
-              data-testid="documents-list-validation-error"
-            >
-              Document list payload is invalid. {listState.message}
-            </p>
+            <AdminFeedbackState
+              testId="documents-list-validation-error"
+              title="Document list payload is invalid"
+              message={listState.message}
+              variant="destructive"
+            />
           )}
 
           {listState.state === "success" && listState.data.documents.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="documents-list-empty">
-              No documents found.
-            </p>
+            <AdminFeedbackState
+              testId="documents-list-empty"
+              title="No documents found"
+              message="This workspace has no document records to inspect yet."
+              variant="warning"
+            />
           )}
 
           {listState.state === "success" && listState.data.documents.length > 0 && (
@@ -261,34 +270,47 @@ export function DocumentInspector() {
           )}
 
           {listState.state === "success" && listState.data.documents.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">Select a document to inspect details.</p>
+            <AdminFeedbackState
+              testId="document-detail-empty"
+              title="No selected document"
+              message="Add or load document records to inspect detail fields."
+              variant="warning"
+            />
           )}
 
           {selectedDocumentId && detailState.state === "loading" && (
-            <p className="mt-3 text-sm text-muted-foreground" data-testid="document-detail-loading">
-              Loading selected document…
-            </p>
+            <AdminFeedbackState
+              testId="document-detail-loading"
+              title="Loading selected document"
+              message="Please wait while the selected record details are fetched."
+            />
           )}
 
           {selectedDocumentId && detailState.state === "not-found" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="document-detail-not-found">
-              The selected document could not be found.
-            </p>
+            <AdminFeedbackState
+              testId="document-detail-not-found"
+              title="Selected document was not found"
+              message="The selected record no longer exists in the current workspace data."
+              variant="warning"
+            />
           )}
 
           {selectedDocumentId && detailState.state === "error" && (
-            <p className="mt-3 text-sm text-destructive" data-testid="document-detail-error">
-              Failed to load selected document. {detailState.message}
-            </p>
+            <AdminFeedbackState
+              testId="document-detail-error"
+              title="Failed to load selected document"
+              message={detailState.message}
+              variant="destructive"
+            />
           )}
 
           {selectedDocumentId && detailState.state === "validation-error" && (
-            <p
-              className="mt-3 text-sm text-destructive"
-              data-testid="document-detail-validation-error"
-            >
-              Selected document payload is invalid. {detailState.message}
-            </p>
+            <AdminFeedbackState
+              testId="document-detail-validation-error"
+              title="Selected document payload is invalid"
+              message={detailState.message}
+              variant="destructive"
+            />
           )}
 
           {selectedDocumentId && detailState.state === "success" && (
