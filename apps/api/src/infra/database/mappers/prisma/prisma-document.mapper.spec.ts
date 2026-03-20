@@ -5,6 +5,7 @@ import {
     ReleaseVersionStatus,
     type Space,
 } from "@prisma/client";
+import { DocumentResponseSchema } from "@emerald/contracts";
 
 import { PrismaDocumentMapper } from "./prisma-document.mapper";
 
@@ -68,5 +69,6 @@ describe("PrismaDocumentMapper", () => {
 
         expect(response.document.space).toBe("guides");
         expect(response.document.space).not.toBe("f7c9dd85-9259-47d7-9f96-669f9e39f570");
+        expect(DocumentResponseSchema.safeParse(response).success).toBe(true);
     });
 });

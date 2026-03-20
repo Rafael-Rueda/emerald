@@ -1,3 +1,5 @@
+import { SpaceSchema } from "@emerald/contracts";
+
 import { PrismaSpaceMapper } from "./prisma-space.mapper";
 
 describe("PrismaSpaceMapper", () => {
@@ -21,5 +23,6 @@ describe("PrismaSpaceMapper", () => {
             createdAt: "2026-03-20T12:00:00.000Z",
             updatedAt: "2026-03-20T12:00:00.000Z",
         });
+        expect(SpaceSchema.safeParse(response).success).toBe(true);
     });
 });
