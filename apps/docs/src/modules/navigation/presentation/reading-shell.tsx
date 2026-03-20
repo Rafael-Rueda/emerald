@@ -13,6 +13,7 @@ import { NavigationError } from "./navigation-error";
 import { Breadcrumbs } from "./breadcrumbs";
 import { TableOfContents } from "./table-of-contents";
 import { useSetSidebar } from "./sidebar-context";
+import { SearchPanel } from "@/modules/search";
 
 interface ReadingShellProps {
   space: string;
@@ -120,6 +121,11 @@ export function ReadingShell({
 
   return (
     <div data-testid="reading-shell" className="flex flex-col gap-4">
+      {/* Search region */}
+      <div data-testid="reading-shell-search">
+        <SearchPanel currentRoute={{ space, version, slug }} />
+      </div>
+
       {/* Breadcrumbs region */}
       <div data-testid="reading-shell-breadcrumbs">
         <Breadcrumbs items={breadcrumbs} space={space} version={version} />
