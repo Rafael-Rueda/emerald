@@ -45,7 +45,7 @@ Use this skill for public-surface features in `apps/docs`, especially:
   "verification": {
     "commandsRun": [
       {
-        "command": "pnpm test -- --project public-docs",
+        "command": "pnpm test -- --project docs",
         "exitCode": 0,
         "observation": "Public route, TOC, and boundary-state tests passed."
       },

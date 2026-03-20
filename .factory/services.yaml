@@ -10,21 +10,21 @@ commands:
 services:
   docs:
     start: pnpm --filter @emerald/docs dev --port 3100
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
     healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:3100 -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 3100
     depends_on: []
 
   workspace:
     start: pnpm --filter @emerald/workspace dev --port 3101
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3101 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3101 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
     healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:3101 -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 3101
     depends_on: []
 
   storybook:
     start: pnpm storybook -- --port 6100
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 6100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 6100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
     healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:6100 -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 6100
     depends_on: []
