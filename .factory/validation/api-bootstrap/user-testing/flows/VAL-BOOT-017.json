@@ -1,0 +1,44 @@
+{
+  "groupId": "VAL-BOOT-017",
+  "testedAt": "2026-03-20T20:21:00Z",
+  "isolation": {
+    "context": "CLI testing within monorepo root C:\\_Local\\_Web-Devlopment\\_Templates\\Rueda Gems\\Emerald"
+  },
+  "toolsUsed": [
+    "CLI",
+    "pnpm",
+    "jest",
+    "grep",
+    "read"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-BOOT-017",
+      "title": "Prisma mapper aligns with Zod contract shape",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Run unit test for mapper with jest",
+          "expected": "Mapper test passes and asserts DocumentResponseSchema.safeParse()",
+          "observed": "Mapper test passes, checks space string key but does not assert DocumentResponseSchema.safeParse() at all."
+        }
+      ],
+      "evidence": {
+        "terminal-output": "api-bootstrap/VAL-BOOT-017/terminal-output.txt"
+      },
+      "issues": "The test `prisma-document.mapper.spec.ts` passes and checks for proper space mapping string key, but misses the assertion for `DocumentResponseSchema.safeParse(response).success`."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The unit test `prisma-document.mapper.spec.ts` is skipped when running `pnpm --filter @emerald/api test:unit` because `jest.config.json` filters out `infra` paths. It only looks for tests inside `domain`.",
+      "resolved": true,
+      "resolution": "Ran jest explicitly targeting the spec file.",
+      "affectedAssertions": [
+        "VAL-BOOT-017"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 0 passed, 1 failed (VAL-BOOT-017: missing DocumentResponseSchema.safeParse assertion)."
+}
