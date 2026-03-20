@@ -33,6 +33,14 @@ const config: StorybookConfig = {
         __dirname,
         "../packages/ui/src/shells/index.ts"
       ),
+      "@emerald/ui/primitives": path.resolve(
+        __dirname,
+        "../packages/ui/src/primitives/index.ts"
+      ),
+      "@emerald/ui/lib/cn": path.resolve(
+        __dirname,
+        "../packages/ui/src/lib/cn.ts"
+      ),
       "@emerald/ui/styles": path.resolve(
         __dirname,
         "../packages/ui/src/styles"
