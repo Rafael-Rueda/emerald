@@ -30,6 +30,7 @@
         "seed": "ts-node prisma/seed.ts"
     },
     "dependencies": {
+        "@emerald/contracts": "workspace:*",
         "@google-cloud/storage": "^7.18.0",
         "@nestjs/common": "^11.0.1",
         "@nestjs/config": "^4.0.2",

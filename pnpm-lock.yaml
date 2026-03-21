@@ -65,6 +65,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@emerald/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@google-cloud/storage':
         specifier: ^7.18.0
         version: 7.19.0

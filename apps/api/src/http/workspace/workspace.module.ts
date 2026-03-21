@@ -1,8 +1,13 @@
 import { Module } from "@nestjs/common";
 
-import { WorkspaceDocumentsController } from "./controllers/workspace-documents.controller";
+import { DocumentsSharedModule } from "../@shared/modules/documents.module";
+import { DocumentsController } from "./controllers/documents.controller";
+import { RevisionsController } from "./controllers/revisions.controller";
+import { DocumentsService } from "./services/documents.service";
 
 @Module({
-    controllers: [WorkspaceDocumentsController],
+    imports: [DocumentsSharedModule],
+    controllers: [DocumentsController, RevisionsController],
+    providers: [DocumentsService],
 })
 export class WorkspaceModule {}

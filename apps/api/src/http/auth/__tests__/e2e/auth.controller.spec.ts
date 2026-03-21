@@ -1,18 +1,20 @@
 import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Test, TestingModule } from "@nestjs/testing";
-import { ROLES } from "@prisma/client";
+import { ReleaseVersionStatus, ROLES } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { ZodValidationPipe } from "nestjs-zod";
 import request from "supertest";
 
-import { PrismaService } from "@/infra/database/prisma/prisma.service";
 import { AppModule } from "@/http/app.module";
+import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
 describe("AuthController (e2e)", () => {
     let app: INestApplication;
     let prismaService: PrismaService;
     let jwtService: JwtService;
+    let authSpaceId: string;
+    let authReleaseVersionId: string;
 
     const googleAuthProviderMock = {
         getRedirectUrl: jest.fn(),
@@ -84,6 +86,45 @@ describe("AuthController (e2e)", () => {
                 roles: [ROLES.AUTHOR],
             },
         });
+
+        const space = await prismaService.space.upsert({
+            where: { key: "auth-e2e-space" },
+            update: {
+                name: "Auth E2E Space",
+                description: "Used by auth RBAC e2e tests",
+            },
+            create: {
+                key: "auth-e2e-space",
+                name: "Auth E2E Space",
+                description: "Used by auth RBAC e2e tests",
+            },
+        });
+
+        const releaseVersion = await prismaService.releaseVersion.upsert({
+            where: {
+                spaceId_key: {
+                    spaceId: space.id,
+                    key: "auth-v1",
+                },
+            },
+            update: {
+                label: "Auth Version 1",
+                status: ReleaseVersionStatus.PUBLISHED,
+                isDefault: true,
+                publishedAt: new Date(),
+            },
+            create: {
+                spaceId: space.id,
+                key: "auth-v1",
+                label: "Auth Version 1",
+                status: ReleaseVersionStatus.PUBLISHED,
+                isDefault: true,
+                publishedAt: new Date(),
+            },
+        });
+
+        authSpaceId = space.id;
+        authReleaseVersionId = releaseVersion.id;
     });
 
     afterAll(async () => {
@@ -206,13 +247,23 @@ describe("AuthController (e2e)", () => {
             const superAdminToken = await loginAndGetToken("admin@test.com");
 
             const listResponse = await request(app.getHttpServer())
-                .get("/api/workspace/documents")
+                .get(`/api/workspace/documents?spaceId=${authSpaceId}`)
                 .set("Authorization", `Bearer ${superAdminToken}`);
 
             const createResponse = await request(app.getHttpServer())
                 .post("/api/workspace/documents")
                 .set("Authorization", `Bearer ${superAdminToken}`)
-                .send({ title: "Auth Spec" });
+                .send({
+                    spaceId: authSpaceId,
+                    releaseVersionId: authReleaseVersionId,
+                    title: "Auth Spec",
+                    slug: `auth-spec-${Date.now()}`,
+                    content_json: {
+                        type: "doc",
+                        version: 1,
+                        children: [],
+                    },
+                });
 
             expect(listResponse.status).toBe(200);
             expect(createResponse.status).toBe(201);
@@ -224,7 +275,17 @@ describe("AuthController (e2e)", () => {
             const response = await request(app.getHttpServer())
                 .post("/api/workspace/documents")
                 .set("Authorization", `Bearer ${viewerToken}`)
-                .send({ title: "Blocked write" });
+                .send({
+                    spaceId: authSpaceId,
+                    releaseVersionId: authReleaseVersionId,
+                    title: "Blocked write",
+                    slug: `viewer-blocked-${Date.now()}`,
+                    content_json: {
+                        type: "doc",
+                        version: 1,
+                        children: [],
+                    },
+                });
 
             expect(response.status).toBe(403);
         });
