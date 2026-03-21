@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from "vitest";
 import { createTestServer } from "@emerald/test-utils";
 import { fetchSearch } from "./search-api";
 
@@ -63,5 +63,48 @@ describe("fetchSearch — malformed payload scenario", () => {
     if (result.status === "validation-error") {
       expect(result.message).toContain("Invalid search response");
     }
+  });
+});
+
+describe("fetchSearch URL resolution", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (window as Window & { __EMERALD_USE_MSW_FALLBACK__?: boolean })
+      .__EMERALD_USE_MSW_FALLBACK__;
+    delete process.env.NEXT_PUBLIC_API_URL;
+  });
+
+  it("uses NEXT_PUBLIC_API_URL as an absolute origin when configured", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3333///";
+
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 500 }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSearch("getting started");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3333/api/public/search?q=getting%20started",
+    );
+  });
+
+  it("falls back to relative MSW endpoint when offline fallback mode is active", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3333";
+    (window as Window & { __EMERALD_USE_MSW_FALLBACK__?: boolean })
+      .__EMERALD_USE_MSW_FALLBACK__ = true;
+
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 500 }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSearch("getting started");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/search?q=getting%20started",
+    );
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Search API client — infrastructure layer.
  *
- * Fetches search data from the MSW-backed API endpoint
+ * Fetches search data from the public API endpoint (or MSW fallback)
  * and validates the response with Zod at the boundary.
  */
 
@@ -16,11 +16,42 @@ export type SearchFetchResult =
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
+function resolveSearchRequestUrl(path: string): string {
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
+  if (!apiBaseUrl || shouldUseMswFallback()) {
+    return path;
+  }
+
+  return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
+}
+
+function shouldUseMswFallback(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return Boolean(
+    (window as Window & { __EMERALD_USE_MSW_FALLBACK__?: boolean })
+      .__EMERALD_USE_MSW_FALLBACK__,
+  );
+}
+
+function buildSearchRequestPath(query: string): string {
+  const encodedQuery = encodeURIComponent(query);
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
+  if (apiBaseUrl.length > 0 && !shouldUseMswFallback()) {
+    return `/api/public/search?q=${encodedQuery}`;
+  }
+
+  return `/api/search?q=${encodedQuery}`;
+}
+
 /**
  * Build the API path for searching documents by query.
  */
 export function buildSearchApiPath(query: string): string {
-  return `/api/search?q=${encodeURIComponent(query)}`;
+  const path = buildSearchRequestPath(query);
+  return resolveSearchRequestUrl(path);
 }
 
 /**
