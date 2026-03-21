@@ -1,0 +1,62 @@
+{
+  "groupId": "group-4",
+  "testedAt": "2026-03-20T12:00:00.000Z",
+  "isolation": {
+    "url": "http://localhost:3333",
+    "credentials": "admin@test.com"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-010",
+      "title": "POST /storage/upload returns a signed URL",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to get JWT via /auth/login", "expected": "JWT token returned", "observed": "Connection refused on port 3333" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "core-api/group-4/VAL-CORE-010-network.txt"
+      },
+      "issues": "API server is down (ECONNREFUSED). Cannot test assertion."
+    },
+    {
+      "id": "VAL-CORE-011",
+      "title": "POST /storage/upload with no file returns 400",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to get JWT via /auth/login", "expected": "JWT token returned", "observed": "Connection refused on port 3333" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "core-api/group-4/VAL-CORE-010-network.txt"
+      },
+      "issues": "API server is down (ECONNREFUSED). Cannot test assertion."
+    },
+    {
+      "id": "VAL-CORE-016",
+      "title": "File upload rejects non-image MIME types",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to get JWT via /auth/login", "expected": "JWT token returned", "observed": "Connection refused on port 3333" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "core-api/group-4/VAL-CORE-010-network.txt"
+      },
+      "issues": "API server is down (ECONNREFUSED). Cannot test assertion."
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "API server is not running on port 3333 (ECONNREFUSED on both 127.0.0.1 and ::1). According to instructions, I am only permitted to try non-disruptive fixes, so I have marked affected assertions as blocked.",
+      "affectedAssertions": ["VAL-CORE-010", "VAL-CORE-011", "VAL-CORE-016"],
+      "quickFixAttempted": "Attempted to use 127.0.0.1 instead of localhost to bypass IPv6 resolution issues, still connection refused."
+    }
+  ],
+  "summary": "Tested 3 assertions: 0 passed, 0 failed, 3 blocked due to API server being unreachable on port 3333."
+}

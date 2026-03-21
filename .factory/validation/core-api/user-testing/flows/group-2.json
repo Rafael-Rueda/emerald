@@ -1,0 +1,118 @@
+{
+  "groupId": "group-2",
+  "testedAt": "2026-03-20T22:40:00.000Z",
+  "isolation": {
+    "api_url": "http://localhost:3333",
+    "notes": "No shared mutating state. Safe to run."
+  },
+  "toolsUsed": [
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CORE-003",
+      "title": "GET /auth/google redirects to Google OAuth",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/auth/google",
+          "expected": "HTTP 302 redirect",
+          "observed": "Connection refused"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "Connection refused"
+      },
+      "issues": "API server returned Connection refused on all routes — backend appears to be down."
+    },
+    {
+      "id": "VAL-CORE-004",
+      "title": "POST /auth/login with valid credentials returns JWT",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "POST http://localhost:3333/auth/login",
+          "expected": "HTTP 200 with JWT",
+          "observed": "Connection refused"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "Connection refused"
+      },
+      "issues": "API server returned Connection refused on all routes — backend appears to be down."
+    },
+    {
+      "id": "VAL-CORE-005",
+      "title": "POST /auth/login with invalid credentials returns 401",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "POST http://localhost:3333/auth/login (invalid creds)",
+          "expected": "HTTP 401",
+          "observed": "Connection refused"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "Connection refused"
+      },
+      "issues": "API server returned Connection refused on all routes — backend appears to be down."
+    },
+    {
+      "id": "VAL-CORE-006",
+      "title": "POST /auth/login with malformed body returns 400",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "POST http://localhost:3333/auth/login (malformed body)",
+          "expected": "HTTP 400",
+          "observed": "Connection refused"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "Connection refused"
+      },
+      "issues": "API server returned Connection refused on all routes — backend appears to be down."
+    },
+    {
+      "id": "VAL-CORE-015",
+      "title": "GET /auth/google/callback upserts user and issues JWT",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/auth/google/callback?code=mock",
+          "expected": "JWT returned and user upserted",
+          "observed": "Connection refused"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "Connection refused"
+      },
+      "issues": "API server returned Connection refused on all routes — backend appears to be down."
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "API server returned Connection refused on port 3333 — backend is not running.",
+      "affectedAssertions": [
+        "VAL-CORE-003",
+        "VAL-CORE-004",
+        "VAL-CORE-005",
+        "VAL-CORE-006",
+        "VAL-CORE-015"
+      ],
+      "quickFixAttempted": "Retried requests, verified 127.0.0.1 instead of localhost, still Connection refused."
+    }
+  ],
+  "summary": "Tested 5 assertions: 0 passed, 5 blocked (API server down, Connection refused on port 3333)"
+}

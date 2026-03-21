@@ -1,0 +1,53 @@
+{
+  "groupId": "group-1",
+  "testedAt": "2026-03-20T12:00:00.000Z",
+  "isolation": {
+    "api_url": "http://localhost:3333",
+    "notes": "No shared mutating state. Safe to run."
+  },
+  "toolsUsed": ["curl", "node"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-001",
+      "title": "Health check returns 200",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {
+        "network": "none",
+        "terminalOutput": ["core-api/group-1/connection-refused.txt"]
+      },
+      "issues": "API server returned ECONNREFUSED on port 3333"
+    },
+    {
+      "id": "VAL-CORE-002",
+      "title": "Swagger/Scalar docs UI served at /docs",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {
+        "network": "none",
+        "terminalOutput": ["core-api/group-1/connection-refused.txt"]
+      },
+      "issues": "API server returned ECONNREFUSED on port 3333"
+    },
+    {
+      "id": "VAL-CORE-012",
+      "title": "CORS allows requests from localhost:3100 and localhost:3101",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {
+        "network": "none",
+        "terminalOutput": ["core-api/group-1/connection-refused.txt"]
+      },
+      "issues": "API server returned ECONNREFUSED on port 3333"
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "API server returned ECONNREFUSED on port 3333. The service appears to be down.",
+      "affectedAssertions": ["VAL-CORE-001", "VAL-CORE-002", "VAL-CORE-012"],
+      "quickFixAttempted": "Retried requests via Node.js script using both localhost and 127.0.0.1, still ECONNREFUSED."
+    }
+  ],
+  "summary": "Tested 3 assertions: 0 passed, 3 blocked (API server down)"
+}

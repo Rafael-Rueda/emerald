@@ -113,3 +113,12 @@ curl http://localhost:3100/guides/v1/getting-started | grep "og:description"
 - For `pnpm install` or other mutating commands, they are safe because `init.sh` has already run them, so they should be fast and idempotent.
 - Use the provided dev database on 5434 or test database on 5435 for Prisma validations.
 - Keep tests within the monorepo directory.
+
+## Flow Validator Guidance: core-api
+- Test against `http://localhost:3333`.
+- The API is fully started and ready.
+- You can use `curl` for HTTP requests.
+- For tests requiring authentication, first login via `/auth/login` to obtain a JWT token, and pass it via the `Authorization: Bearer <jwt>` header.
+- Credentials: `admin@test.com` / `password123` (SUPER_ADMIN) and `viewer@test.com` / `password123` (VIEWER).
+- Ensure any file uploads use the correct fields.
+- Assertions can be run safely in parallel as they operate on non-conflicting spaces or are read-only.

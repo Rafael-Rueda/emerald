@@ -1,0 +1,37 @@
+{
+  "groupId": "group-5",
+  "testedAt": "2026-03-20T22:45:00Z",
+  "isolation": {
+    "url": "http://localhost:3333",
+    "jwtUser": "admin@test.com",
+    "spaceKey": "group-5-space"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-017",
+      "title": "Spaces CRUD full lifecycle for SUPER_ADMIN",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Login to get JWT",
+          "expected": "HTTP 200 with accessToken",
+          "observed": "Connection refused (port 3333 is closed)"
+        }
+      ],
+      "evidence": {
+        "network": "core-api/group-5/VAL-CORE-017-01-login-error.txt"
+      },
+      "issues": "API server returned Connection refused on http://localhost:3333 requests — backend appears crashed or not started."
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "API server returned Connection refused on http://localhost:3333 requests — backend appears crashed or not started.",
+      "affectedAssertions": ["VAL-CORE-017"],
+      "quickFixAttempted": "Retried request directly via curl, still Connection refused."
+    }
+  ],
+  "summary": "Tested 1 assertion: 1 blocked (VAL-CORE-017: API server down)."
+}

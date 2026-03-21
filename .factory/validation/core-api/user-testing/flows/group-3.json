@@ -1,0 +1,135 @@
+{
+  "groupId": "group-3",
+  "testedAt": "2026-03-21T01:42:41.029Z",
+  "isolation": {
+    "target": "http://localhost:3333",
+    "seeds": [
+      "admin@test.com",
+      "viewer@test.com"
+    ]
+  },
+  "toolsUsed": [
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CORE-007",
+      "title": "Unauthenticated request to protected endpoint returns 401",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/workspace/documents without token",
+          "expected": "401 Unauthorized",
+          "observed": "401"
+        }
+      ],
+      "evidence": {
+        "network": "GET /api/workspace/documents -> 401",
+        "evidenceFiles": [
+          "core-api/group-3/VAL-CORE-007-unauth.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-008",
+      "title": "SUPER_ADMIN can access all protected endpoints",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET docs",
+          "expected": "Not 403",
+          "observed": "200"
+        },
+        {
+          "action": "POST spaces",
+          "expected": "Not 403",
+          "observed": "201"
+        },
+        {
+          "action": "PATCH user",
+          "expected": "Not 403",
+          "observed": "404"
+        }
+      ],
+      "evidence": {
+        "network": "GET docs -> 200, POST spaces -> 201, PATCH user -> 404",
+        "evidenceFiles": [
+          "core-api/group-3/VAL-CORE-008-get-docs.txt",
+          "core-api/group-3/VAL-CORE-008-post-space.txt",
+          "core-api/group-3/VAL-CORE-008-patch-user.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-009",
+      "title": "VIEWER role receives 403 on write operations",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST docs",
+          "expected": "403 Forbidden",
+          "observed": "403"
+        },
+        {
+          "action": "GET docs",
+          "expected": "200 OK",
+          "observed": "200"
+        }
+      ],
+      "evidence": {
+        "network": "POST docs -> 403, GET docs -> 200",
+        "evidenceFiles": [
+          "core-api/group-3/VAL-CORE-009-post-doc.txt",
+          "core-api/group-3/VAL-CORE-009-get-doc.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-013",
+      "title": "JWT uses RS256 algorithm",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Decode JWT header",
+          "expected": "alg is RS256",
+          "observed": "RS256"
+        }
+      ],
+      "evidence": {
+        "evidence": "Decoded header from adminToken"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-014",
+      "title": "Expired and tampered JWTs return 401",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET docs with tampered payload",
+          "expected": "401",
+          "observed": "401"
+        },
+        {
+          "action": "GET docs with fake signature",
+          "expected": "401",
+          "observed": "401"
+        }
+      ],
+      "evidence": {
+        "network": "Tampered -> 401, Fake sig -> 401",
+        "evidenceFiles": [
+          "core-api/group-3/VAL-CORE-014-tampered.txt",
+          "core-api/group-3/VAL-CORE-014-fake.txt"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 5 passed, 0 failed"
+}
