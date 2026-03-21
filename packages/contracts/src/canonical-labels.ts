@@ -1,4 +1,4 @@
-import type { AiContextChunk } from "./ai-context";
+import type { AiContextChunk } from "./ai-context.js";
 
 export interface CanonicalPathIdentity {
   space: string;

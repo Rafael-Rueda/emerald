@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DocumentContentSchema } from "./document-content";
+import { DocumentContentSchema } from "./document-content.js";
 
 /**
  * Zod contracts for document revisions.
