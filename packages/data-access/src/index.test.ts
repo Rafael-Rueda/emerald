@@ -124,6 +124,41 @@ describe("createApiClient", () => {
       expect.objectContaining({ method: "GET" }),
     );
   });
+
+  it("accepts publish responses returned as a workspace document payload", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({
+          id: "doc-1",
+          title: "Getting Started",
+          slug: "getting-started",
+          space: "guides",
+          spaceId: "space-guides",
+          releaseVersionId: "ver-v1",
+          status: "published",
+          content_json: null,
+          currentRevisionId: null,
+          createdBy: "author@test.com",
+          updatedBy: "author@test.com",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        }),
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient("http://localhost:3333");
+    const result = await client.publishWorkspaceDocument("doc-1");
+
+    expect(result).toEqual({
+      status: "success",
+      data: {
+        success: true,
+        message: "Document published successfully.",
+      },
+    });
+  });
 });
 
 describe("query key factories", () => {

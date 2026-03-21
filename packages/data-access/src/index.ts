@@ -170,6 +170,25 @@ const WorkspaceReleaseVersionListSchema = z
   })
   .transform((payload) => payload.versions);
 
+const WorkspacePublishDocumentResultSchema = z
+  .union([
+    MutationResultSchema,
+    WorkspaceDocumentEditorSchema,
+  ])
+  .transform((payload) => {
+    if ("success" in payload) {
+      return payload;
+    }
+
+    return {
+      success: payload.status === "published",
+      message:
+        payload.status === "published"
+          ? "Document published successfully."
+          : `Document status is ${payload.status}.`,
+    };
+  });
+
 function getEnvironmentApiUrl(): string {
   const globalWithProcess = globalThis as typeof globalThis & {
     process?: ProcessLike;
@@ -344,6 +363,28 @@ async function executeWorkspaceMutation(
   return result;
 }
 
+async function executeWorkspaceDocumentPublishMutation(
+  baseUrl: string,
+  path: string,
+): Promise<FetchResult<z.infer<typeof MutationResultSchema>>> {
+  const result = await request(baseUrl, path, WorkspacePublishDocumentResultSchema, {
+    method: "POST",
+  });
+
+  if (result.status !== "success") {
+    return result;
+  }
+
+  if (!result.data.success) {
+    return {
+      status: "error",
+      message: result.data.message,
+    };
+  }
+
+  return result;
+}
+
 export type ApiClient = ReturnType<typeof createApiClient>;
 export type WorkspaceDocumentEditor = z.infer<typeof WorkspaceDocumentEditorSchema>;
 export type WorkspaceRevision = z.infer<typeof WorkspaceRevisionSchema>;
@@ -480,7 +521,7 @@ export function createApiClient(baseUrl?: string) {
     },
 
     publishWorkspaceDocument(documentId: string) {
-      return executeWorkspaceMutation(
+      return executeWorkspaceDocumentPublishMutation(
         resolvedBaseUrl,
         `/api/workspace/documents/${encodeURIComponent(documentId)}/publish`,
       );

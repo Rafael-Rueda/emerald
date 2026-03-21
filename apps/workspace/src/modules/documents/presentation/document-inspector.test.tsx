@@ -53,6 +53,9 @@ describe("DocumentInspector", () => {
     expect(screen.getByTestId("document-list-item-doc-api-reference")).toHaveTextContent(
       "api-reference",
     );
+    expect(screen.getByTestId("document-list-item-doc-api-reference-status")).toHaveTextContent(
+      "Draft",
+    );
   });
 
   it("updates detail rendering when selecting a different record", async () => {
@@ -233,7 +236,7 @@ describe("DocumentInspector", () => {
 
       expect(
         screen.getByTestId("document-list-item-doc-api-reference-status"),
-      ).toHaveTextContent("published");
+      ).toHaveTextContent("Published");
       expect(screen.getByTestId("document-action-feedback-success")).toHaveTextContent(
         "Operation completed successfully.",
       );
@@ -290,7 +293,7 @@ describe("DocumentInspector", () => {
 
       expect(
         screen.getByTestId("document-list-item-doc-api-reference-status"),
-      ).toHaveTextContent("draft");
+      ).toHaveTextContent("Draft");
       expect(screen.getByTestId("document-action-feedback-error")).toHaveTextContent(
         "Request failed with status 500",
       );

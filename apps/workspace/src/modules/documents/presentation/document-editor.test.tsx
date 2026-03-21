@@ -11,7 +11,7 @@ import {
 } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
+import { delay, HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { AppProviders } from "@emerald/ui/providers";
 import type { DocumentContent } from "@emerald/contracts";
@@ -149,7 +149,7 @@ const revisionsResponse = {
   total: 2,
 };
 
-describe("DocumentEditor revision history", () => {
+describe("DocumentEditor", () => {
   const server = setupServer(
     http.get("*/api/workspace/spaces", () =>
       HttpResponse.json([
@@ -185,6 +185,9 @@ describe("DocumentEditor revision history", () => {
     ),
     http.get("*/api/workspace/documents/:id/revisions", () =>
       HttpResponse.json(revisionsResponse),
+    ),
+    http.post("*/api/workspace/documents/:id/publish", () =>
+      HttpResponse.json({ success: true, message: "Document published." }),
     ),
   );
 
@@ -285,5 +288,156 @@ describe("DocumentEditor revision history", () => {
         "Restored revision content",
       );
     });
+  });
+
+  it("renders a draft status badge in the editor header", async () => {
+    renderEditor();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent(
+        "Draft",
+      );
+    });
+  });
+
+  it("opens the publish confirmation dialog from the editor header", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^Publish$/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /^Publish$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("document-editor-publish-confirmation")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText("Publish this document? This will make it publicly visible."),
+    ).toBeInTheDocument();
+  });
+
+  it("cancels publish without sending a publish request", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    try {
+      renderEditor();
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /^Publish$/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /^Publish$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("document-editor-publish-confirmation")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("document-editor-publish-confirmation")).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent("Draft");
+      expect(
+        fetchSpy.mock.calls.some(
+          ([input, init]) =>
+            input === "/api/workspace/documents/doc-editor-1/publish"
+            && init?.method === "POST",
+        ),
+      ).toBe(false);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("confirms publish, sends the API call, and updates badge to published", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    server.use(
+      http.post("*/api/workspace/documents/:id/publish", async () => {
+        await delay(120);
+        return HttpResponse.json({ success: true, message: "Document published." });
+      }),
+    );
+
+    try {
+      renderEditor();
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /^Publish$/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /^Publish$/i }));
+      await user.click(screen.getByRole("button", { name: /^Confirm$/i }));
+
+      expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent("Published");
+
+      await waitFor(() => {
+        expect(screen.getByTestId("document-editor-publish-feedback-success")).toHaveTextContent(
+          "Document published.",
+        );
+      });
+
+      await waitFor(() => {
+        expect(
+          fetchSpy.mock.calls.some(
+            ([input, init]) =>
+              input === "/api/workspace/documents/doc-editor-1/publish"
+              && init?.method === "POST",
+          ),
+        ).toBe(true);
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("rolls back the optimistic published badge when publish fails", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/workspace/documents/:id/publish", () =>
+        HttpResponse.json({ error: "publish failed" }, { status: 500 }),
+      ),
+    );
+
+    renderEditor();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^Publish$/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /^Publish$/i }));
+    await user.click(screen.getByRole("button", { name: /^Confirm$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent("Draft");
+    });
+
+    expect(screen.getByTestId("document-editor-publish-feedback-error")).toHaveTextContent(
+      "Request failed with status 500",
+    );
+  });
+
+  it("disables publish button for already published documents", async () => {
+    server.use(
+      http.get("*/api/workspace/documents/:id", () =>
+        HttpResponse.json({
+          ...editorDocumentResponse,
+          status: "published",
+        }),
+      ),
+    );
+
+    renderEditor();
+
+    const publishButton = await screen.findByRole("button", { name: /^Publish$/i });
+    expect(publishButton).toBeDisabled();
+    expect(publishButton).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent("Published");
   });
 });

@@ -4,7 +4,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { DocumentContentSchema, type DocumentContent } from "@emerald/contracts";
+import {
+  DocumentContentSchema,
+  type DocumentContent,
+  type WorkspaceDocument,
+} from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import type { JSONContent } from "@tiptap/core";
 import {
@@ -23,7 +27,9 @@ import {
   fetchWorkspaceSpaces,
 } from "../infrastructure/workspace-documents-api";
 import { generateDocumentSlug } from "../domain/slug";
+import { usePublishWorkspaceDocumentAction } from "../application/use-workspace-documents";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
+import { DocumentStatusBadge } from "./document-status-badge";
 
 const EMPTY_EDITOR_CONTENT: JSONContent = {
   type: "doc",
@@ -39,6 +45,11 @@ interface DocumentEditorProps {
   mode: "create" | "edit";
   documentId?: string;
 }
+
+type ActionFeedback =
+  | { tone: "success"; message: string }
+  | { tone: "error"; message: string }
+  | null;
 
 function getAutosaveIndicatorLabel(status: "idle" | "saving" | "saved" | "save-failed" | "validation-error") {
   switch (status) {
@@ -120,6 +131,9 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false);
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [isRestoreConfirmationOpen, setIsRestoreConfirmationOpen] = useState(false);
+  const [isPublishConfirmationOpen, setIsPublishConfirmationOpen] = useState(false);
+  const [documentStatusOverride, setDocumentStatusOverride] = useState<WorkspaceDocument["status"] | null>(null);
+  const [publishFeedback, setPublishFeedback] = useState<ActionFeedback>(null);
 
   const spacesQuery = useQuery({
     queryKey: ["workspace", "spaces", "editor"],
@@ -147,6 +161,8 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const createMutation = useMutation({
     mutationFn: createWorkspaceDocumentDraft,
   });
+
+  const publishAction = usePublishWorkspaceDocumentAction();
 
   const revisionsQuery = useQuery({
     queryKey: ["workspace", "documents", "revisions", documentId ?? "none"],
@@ -235,6 +251,7 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
     setReleaseVersionId(documentQuery.data.data.releaseVersionId);
     setEditorJson(fromDocumentContent(documentQuery.data.data.content_json));
     setEditorResetVersion(0);
+    setDocumentStatusOverride(null);
   }, [documentQuery.data, mode]);
 
   const sortedRevisions = useMemo(() => {
@@ -303,6 +320,57 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
     setEditorJson(fromDocumentContent(selectedRevision.content_json));
     setEditorResetVersion((currentValue) => currentValue + 1);
     setIsRestoreConfirmationOpen(false);
+  }
+
+  const resolvedDocumentStatus: WorkspaceDocument["status"] =
+    mode === "edit" && documentQuery.data?.status === "success"
+      ? documentStatusOverride ?? documentQuery.data.data.status
+      : "draft";
+
+  const isPublishButtonDisabled =
+    mode !== "edit"
+    || documentQuery.data?.status !== "success"
+    || publishAction.isPending
+    || resolvedDocumentStatus === "published";
+
+  function openPublishConfirmation() {
+    if (isPublishButtonDisabled) {
+      return;
+    }
+
+    setPublishFeedback(null);
+    setIsPublishConfirmationOpen(true);
+  }
+
+  async function handleConfirmPublishDocument() {
+    if (mode !== "edit" || documentQuery.data?.status !== "success") {
+      return;
+    }
+
+    const currentDocumentId = documentQuery.data.data.id;
+    const previousStatus = documentStatusOverride ?? documentQuery.data.data.status;
+
+    setIsPublishConfirmationOpen(false);
+    setPublishFeedback(null);
+    setDocumentStatusOverride("published");
+
+    try {
+      const result = await publishAction.mutateAsync(currentDocumentId);
+
+      if (result.status === "success") {
+        setPublishFeedback({ tone: "success", message: result.data.message });
+        return;
+      }
+
+      setDocumentStatusOverride(previousStatus);
+      setPublishFeedback({ tone: "error", message: result.message });
+    } catch (error) {
+      setDocumentStatusOverride(previousStatus);
+      setPublishFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Unknown mutation failure",
+      });
+    }
   }
 
   useEffect(() => {
@@ -419,18 +487,39 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
           Documents
         </p>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {mode === "create" ? "Create Document" : "Edit Document"}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-foreground">
+              {mode === "create" ? "Create Document" : "Edit Document"}
+            </h1>
+            <DocumentStatusBadge
+              status={resolvedDocumentStatus}
+              testId="document-editor-status-badge"
+            />
+          </div>
           <div className="flex items-center gap-3 text-sm">
             {mode === "edit" && (
-              <button
-                type="button"
-                onClick={toggleRevisionHistory}
-                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
-              >
-                {isRevisionHistoryOpen ? "Close Revision History" : "Revision History"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={toggleRevisionHistory}
+                  className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
+                >
+                  {isRevisionHistoryOpen ? "Close Revision History" : "Revision History"}
+                </button>
+                <button
+                  type="button"
+                  onClick={openPublishConfirmation}
+                  disabled={isPublishButtonDisabled}
+                  aria-disabled={isPublishButtonDisabled}
+                  className={cn(
+                    "rounded-md border border-border px-3 py-1.5 text-sm",
+                    "hover:bg-accent",
+                    "disabled:cursor-not-allowed disabled:opacity-60",
+                  )}
+                >
+                  {publishAction.isPending ? "Publishing…" : "Publish"}
+                </button>
+              </>
             )}
             <span
               className={cn(
@@ -457,7 +546,58 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
             {autosave.message}
           </p>
         )}
+        {publishFeedback && (
+          <div
+            role={publishFeedback.tone === "error" ? "alert" : "status"}
+            data-testid={`document-editor-publish-feedback-${publishFeedback.tone}`}
+            className={cn(
+              "fixed right-4 top-4 z-50 rounded-md border px-3 py-2 text-sm shadow-md",
+              publishFeedback.tone === "success"
+                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                : "border-destructive/40 bg-destructive/10 text-destructive",
+            )}
+          >
+            {publishFeedback.message}
+          </div>
+        )}
       </header>
+
+      {isPublishConfirmationOpen && mode === "edit" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="document-editor-publish-title"
+          data-testid="document-editor-publish-confirmation"
+        >
+          <div className="w-full max-w-md space-y-4 rounded-lg border border-border bg-background p-5 shadow-lg">
+            <h3 id="document-editor-publish-title" className="text-lg font-semibold text-foreground">
+              Confirm publish
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Publish this document? This will make it publicly visible.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPublishConfirmationOpen(false)}
+                className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleConfirmPublishDocument();
+                }}
+                className="rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {mode === "edit" && isRevisionHistoryOpen && (
         <section

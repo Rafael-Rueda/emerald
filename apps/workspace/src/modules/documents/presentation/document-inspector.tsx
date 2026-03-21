@@ -14,6 +14,7 @@ import {
   useWorkspaceDocumentsList,
 } from "../application/use-workspace-documents";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
+import { DocumentStatusBadge } from "./document-status-badge";
 
 type ActionFeedback =
   | { tone: "success"; message: string }
@@ -243,9 +244,10 @@ export function DocumentInspector() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {pathLabel} •{" "}
-                        <span data-testid={`document-list-item-${document.id}-status`}>
-                          {status}
-                        </span>
+                        <DocumentStatusBadge
+                          status={status}
+                          testId={`document-list-item-${document.id}-status`}
+                        />
                       </p>
                     </button>
                   </li>
