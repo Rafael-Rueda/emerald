@@ -39,3 +39,10 @@ storybook-static/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Temporary validator/worker scripts (root-level only)
+/transcript_out.txt
+/get-token.js
+/test-api*.js
+/update-state.js
+/create-dirs.js
