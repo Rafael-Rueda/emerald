@@ -250,6 +250,16 @@ describe("DocumentsController + RevisionsController (e2e)", () => {
         );
     });
 
+    it("returns 404 when document does not exist", async () => {
+        const authorToken = await loginAndGetToken(authorEmail);
+
+        const response = await request(app.getHttpServer())
+            .get("/api/workspace/documents/00000000-0000-0000-0000-000000000000")
+            .set("Authorization", `Bearer ${authorToken}`);
+
+        expect(response.status).toBe(404);
+    });
+
     it("lists paginated documents by space", async () => {
         const authorToken = await loginAndGetToken(authorEmail);
 
@@ -318,6 +328,13 @@ describe("DocumentsController + RevisionsController (e2e)", () => {
         expect(secondPublish.status).toBe(200);
         expect(firstPublish.body.status).toBe("published");
         expect(secondPublish.body.status).toBe("published");
+
+        const getPublished = await request(app.getHttpServer())
+            .get(`/api/workspace/documents/${documentId}`)
+            .set("Authorization", `Bearer ${authorToken}`);
+
+        expect(getPublished.status).toBe(200);
+        expect(getPublished.body.status).toBe("published");
     });
 
     it("creates and lists revisions", async () => {
@@ -353,13 +370,44 @@ describe("DocumentsController + RevisionsController (e2e)", () => {
         expect(listRevisionsResponse.body.total).toBeGreaterThanOrEqual(2);
     });
 
+    it("returns 422 when revision content_json is invalid", async () => {
+        const authorToken = await loginAndGetToken(authorEmail);
+        const createResponse = await createDocument(authorToken, {
+            title: "Invalid Revision",
+        });
+
+        const documentId = createResponse.body.id as string;
+
+        const response = await request(app.getHttpServer())
+            .post(`/api/workspace/documents/${documentId}/revisions`)
+            .set("Authorization", `Bearer ${authorToken}`)
+            .send({
+                content_json: {
+                    type: "unknown_block",
+                },
+            });
+
+        expect(response.status).toBe(422);
+    });
+
     it("blocks VIEWER from write operations", async () => {
+        const authorToken = await loginAndGetToken(authorEmail);
         const viewerToken = await loginAndGetToken(viewerEmail);
 
-        const response = await createDocument(viewerToken, {
+        const createResponse = await createDocument(viewerToken, {
             title: "Viewer Blocked",
         });
 
-        expect(response.status).toBe(403);
+        expect(createResponse.status).toBe(403);
+
+        const authorDocument = await createDocument(authorToken, {
+            title: "Viewer Publish Blocked",
+        });
+
+        const publishResponse = await request(app.getHttpServer())
+            .post(`/api/workspace/documents/${authorDocument.body.id}/publish`)
+            .set("Authorization", `Bearer ${viewerToken}`);
+
+        expect(publishResponse.status).toBe(403);
     });
 });
