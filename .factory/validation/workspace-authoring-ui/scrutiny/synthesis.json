@@ -1,0 +1,70 @@
+{
+  "milestone": "workspace-authoring-ui",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": { "passed": true, "command": "pnpm test -- --run --maxWorkers=8", "exitCode": 0 },
+    "typecheck": { "passed": true, "command": "pnpm typecheck", "exitCode": 0 },
+    "lint": { "passed": true, "command": "pnpm lint", "exitCode": 0 }
+  },
+  "reviewsSummary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added knowledge about missing GCP service account json breaking local upload route to gcp-storage-mocking.md.",
+      "sourceFeature": "version-management-ui"
+    },
+    {
+      "target": "library",
+      "description": "Added knowledge about requiring .js extensions in ESM shared packages to typescript-nodenext-esm.md.",
+      "sourceFeature": "workspace-api-connection"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document PowerShell specific behaviors: explicitly quote strings for agent-browser (e.g., \"@e6\"), and don't use '&' for background tasks (use fireAndForget). Provide guidance on reading fireAndForget temp logs on Windows.",
+      "evidence": "Multiple features (revision-history-ui, document-editor-with-autosave) hit PowerShell-specific errors.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/workspace-authoring-worker",
+      "suggestion": "Add a fallback step for verifying UI changes using custom Playwright scripts if agent-browser fails to bind or is unavailable.",
+      "evidence": "Features tiptap-editor-integration, document-editor-with-autosave, and version-management-ui all resorted to custom Playwright scripts.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/workspace-authoring-worker",
+      "suggestion": "Allow an initial alignment pass before strict UI TDD for features that heavily change data shapes.",
+      "evidence": "navigation-tree-editor-ui required deviating from strict TDD to align contracts and mocks first.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the convention of using a dual-cookie strategy (one httpOnly, one client-accessible) for cross-origin authentication proxying in the workspace.",
+      "evidence": "Implemented in workspace-api-connection as an effective security convention.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "The worker had to use a scripted Playwright approach...",
+      "reason": "duplicate of the agent-browser fallback suggestion"
+    },
+    {
+      "observation": "The worker was unable to use the agent-browser tool due to an EACCES error...",
+      "reason": "duplicate of the agent-browser fallback suggestion"
+    },
+    {
+      "observation": "The worker wrote and executed a custom Playwright script...",
+      "reason": "duplicate of the agent-browser fallback suggestion"
+    }
+  ],
+  "previousRound": null
+}
