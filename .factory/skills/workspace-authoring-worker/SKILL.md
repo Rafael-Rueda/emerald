@@ -99,6 +99,22 @@ For every manual check, record in interactiveChecks.
 - Drag-and-drop: use `dnd-kit` (preferred, lightweight) or `@hello-pangea/dnd`
 - Do NOT remove existing workspace module test files — update them to work with the new API
 
+## Browser Verification (Windows)
+
+**Primary:** Use the `agent-browser` Skill for interactive checks.
+
+**Fallback (if agent-browser fails with EACCES/port binding):** Write a temporary Playwright script and remove it after verification:
+```typescript
+// tmp-verify.ts (delete after use)
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: false });
+// ... verify behavior
+await browser.close();
+```
+Run with: `pnpm exec ts-node --project tsconfig.json tmp-verify.ts`
+
+**Important:** Always delete temporary verification scripts before committing. They must not appear in `git status --short` at commit time.
+
 ## Example Handoff
 
 ```json
