@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { buildDocumentIdentity, useDocument } from "@/modules/documentation";
+import type { Document } from "@emerald/contracts";
 import { DocumentLoading } from "@/modules/documentation/presentation/document-loading";
 import { DocumentContent } from "@/modules/documentation/presentation/document-content";
 import { DocumentUnavailable } from "@/modules/documentation/presentation/document-unavailable";
@@ -17,24 +17,28 @@ interface DocPageClientProps {
   space: string;
   version: string;
   slug: string;
+  initialDocumentState:
+    | { state: "success"; document: Document }
+    | { state: "not-found" }
+    | { state: "error"; message: string }
+    | { state: "validation-error"; message: string };
 }
 
-export function DocPageClient({ space, version, slug }: DocPageClientProps) {
-  const identity = useMemo(
-    () => buildDocumentIdentity(space, version, slug),
-    [space, version, slug],
-  );
-
+export function DocPageClient({
+  space,
+  version,
+  slug,
+  initialDocumentState,
+}: DocPageClientProps) {
   const versionState = useVersions(space);
-  const viewState = useDocument(identity);
 
   // Determine headings from the document data (empty for non-success states)
   const headings = useMemo(() => {
-    if (viewState.state === "success") {
-      return viewState.data.document.headings;
+    if (initialDocumentState.state === "success") {
+      return initialDocumentState.document.headings;
     }
     return [];
-  }, [viewState]);
+  }, [initialDocumentState]);
 
   if (versionState.state === "loading") {
     return <DocumentLoading />;
@@ -50,24 +54,25 @@ export function DocPageClient({ space, version, slug }: DocPageClientProps) {
 
   // Render document content based on view state
   const documentContent = (() => {
-    switch (viewState.state) {
-      case "loading":
-        return <DocumentLoading />;
+    switch (initialDocumentState.state) {
       case "success":
-        return <DocumentContent document={viewState.data.document} />;
+        return <DocumentContent document={initialDocumentState.document} />;
       case "not-found":
         return (
           <DocumentUnavailable
-            space={identity.space}
-            version={identity.version}
-            slug={identity.slug}
+            space={space}
+            version={version}
+            slug={slug}
           />
         );
       case "error":
-        return <DocumentError message={viewState.message} />;
+        return <DocumentError message={initialDocumentState.message} />;
       case "validation-error":
         return (
-          <DocumentError message={viewState.message} isValidationError />
+          <DocumentError
+            message={initialDocumentState.message}
+            isValidationError
+          />
         );
     }
   })();
@@ -83,11 +88,11 @@ export function DocPageClient({ space, version, slug }: DocPageClientProps) {
           activeVersion={version}
           slug={slug}
           versions={versionState.data.versions}
-          disabled={viewState.state === "loading"}
+          disabled={false}
         />
       }
       headings={headings}
-      isDocumentLoading={viewState.state === "loading"}
+      isDocumentLoading={false}
     >
       {documentContent}
     </ReadingShell>

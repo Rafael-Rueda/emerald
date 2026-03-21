@@ -7,6 +7,7 @@ import { GetRevisionsUseCase } from "@/domain/documents/application/use-cases/ge
 import { ListDocumentsUseCase } from "@/domain/documents/application/use-cases/list-documents.use-case";
 import { PublishDocumentUseCase } from "@/domain/documents/application/use-cases/publish-document.use-case";
 import { UpdateDocumentUseCase } from "@/domain/documents/application/use-cases/update-document.use-case";
+import { GetVersionByIdUseCase } from "@/domain/versions/application/use-cases/get-version-by-id.use-case";
 import { DocumentPresenter, DocumentRevisionPresenter } from "@/http/workspace/presenters/document.presenter";
 import {
     CreateDocumentBodyDTO,
@@ -32,6 +33,8 @@ export class DocumentsService {
         private createRevisionUseCase: CreateRevisionUseCase,
         @Inject("GetRevisionsUseCase")
         private getRevisionsUseCase: GetRevisionsUseCase,
+        @Inject("GetVersionByIdUseCase")
+        private getVersionByIdUseCase: GetVersionByIdUseCase,
     ) {}
 
     async create(body: CreateDocumentBodyDTO, userId: string) {
@@ -119,7 +122,20 @@ export class DocumentsService {
             throw new BadRequestException(error.message);
         }
 
-        return DocumentPresenter.toHTTP(result.value.document);
+        const publishedDocument = result.value.document;
+        const releaseVersion = await this.getVersionByIdUseCase.execute({
+            versionId: publishedDocument.releaseVersionId,
+        });
+
+        if (!releaseVersion.isLeft()) {
+            await this.revalidatePublicDocumentPath({
+                space: publishedDocument.spaceKey,
+                version: releaseVersion.value.version.key,
+                slug: publishedDocument.slug,
+            });
+        }
+
+        return DocumentPresenter.toHTTP(publishedDocument);
     }
 
     async createRevision(documentId: string, body: CreateRevisionBodyDTO, userId: string) {
@@ -162,5 +178,32 @@ export class DocumentsService {
             revisions,
             total: revisions.length,
         };
+    }
+
+    private async revalidatePublicDocumentPath(identity: { space: string; version: string; slug: string }) {
+        const docsAppUrl = (process.env.DOCS_APP_URL ?? "http://localhost:3100").trim().replace(/\/+$/, "");
+        const revalidateSecret = (process.env.DOCS_REVALIDATE_SECRET ?? "emerald-local-revalidate-secret").trim();
+
+        const path = `/${identity.space}/${identity.version}/${identity.slug}`;
+
+        try {
+            const response = await fetch(`${docsAppUrl}/api/revalidate`, {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json",
+                    "x-revalidate-secret": revalidateSecret,
+                },
+                body: JSON.stringify({ path }),
+            });
+
+            if (!response.ok) {
+                console.warn(
+                    `[documents.publish] public docs revalidation failed for ${path}: ${response.status}`,
+                );
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            console.warn(`[documents.publish] unable to revalidate public docs path ${path}: ${errorMessage}`);
+        }
     }
 }

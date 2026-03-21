@@ -11,6 +11,7 @@ import {
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { renderWithProviders, createTestServer } from "@emerald/test-utils";
+import { documentGettingStarted } from "@emerald/mocks";
 import { DocPageClient } from "./doc-page-client";
 
 beforeEach(() => {
@@ -68,7 +69,15 @@ describe("DocPageClient — version metadata success", () => {
 
   it("shows active version and available options on resolved docs pages", async () => {
     renderWithProviders(
-      <DocPageClient space="guides" version="v1" slug="getting-started" />,
+      <DocPageClient
+        space="guides"
+        version="v1"
+        slug="getting-started"
+        initialDocumentState={{
+          state: "success",
+          document: documentGettingStarted,
+        }}
+      />,
     );
 
     await waitFor(() => {
@@ -82,7 +91,12 @@ describe("DocPageClient — version metadata success", () => {
 
   it("keeps selected target version context when target slug is unavailable", async () => {
     renderWithProviders(
-      <DocPageClient space="guides" version="v2" slug="api-reference" />,
+      <DocPageClient
+        space="guides"
+        version="v2"
+        slug="api-reference"
+        initialDocumentState={{ state: "not-found" }}
+      />,
     );
 
     await waitFor(() => {
@@ -108,7 +122,15 @@ describe("DocPageClient — malformed version metadata", () => {
 
   it("shows version metadata error state instead of partial rendering", async () => {
     renderWithProviders(
-      <DocPageClient space="guides" version="v1" slug="getting-started" />,
+      <DocPageClient
+        space="guides"
+        version="v1"
+        slug="getting-started"
+        initialDocumentState={{
+          state: "success",
+          document: documentGettingStarted,
+        }}
+      />,
     );
 
     await waitFor(() => {

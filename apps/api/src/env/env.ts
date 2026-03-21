@@ -19,6 +19,9 @@ export const envSchema = z.object({
     GOOGLE_OAUTH2_CLIENT_SECRET: z.string(),
     GOOGLE_OAUTH2_REDIRECT_URL: z.string(),
 
+    DOCS_APP_URL: z.url().optional(),
+    DOCS_REVALIDATE_SECRET: z.string().min(1).optional(),
+
     // GCP Storage
     GCP_BUCKET_NAME: z.string().optional(),
     GCP_KEY_FILE_PATH: z.string().optional(),
