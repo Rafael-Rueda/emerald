@@ -1,11 +1,10 @@
 import {
+    BadRequestException,
     Body,
     Controller,
     Delete,
     Get,
-    MaxFileSizeValidator,
     Param,
-    ParseFilePipe,
     Post,
     Query,
     UploadedFile,
@@ -38,16 +37,24 @@ import { StorageService } from "../services/storage.service";
 import type { Env } from "@/env/env";
 import { Validator } from "@/http/@shared/decorators/validator.decorator";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const BYTES_PER_MB = 1024 * 1024;
+const DEFAULT_MAX_FILE_SIZE_MB = 10;
+const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"];
 
 @ApiTags("Storage")
 @ApiBearerAuth("JWT-auth")
-@Controller("storage")
+@Controller("/api/storage")
 export class StorageController {
     constructor(
         private storageService: StorageService,
         private configService: ConfigService<Env, true>,
     ) {}
+
+    private getMaxFileSizeBytes() {
+        const maxFileSizeMb =
+            this.configService.get("MAX_FILE_SIZE_MB", { infer: true }) ?? DEFAULT_MAX_FILE_SIZE_MB;
+        return maxFileSizeMb * BYTES_PER_MB;
+    }
 
     @Post("upload")
     @UseInterceptors(FileInterceptor("file"))
@@ -63,7 +70,7 @@ export class StorageController {
                 file: {
                     type: "string",
                     format: "binary",
-                    description: "File to upload (max 10MB)",
+                    description: "Image file to upload (max size configured by MAX_FILE_SIZE_MB)",
                 },
                 entityType: {
                     type: "string",
@@ -84,18 +91,15 @@ export class StorageController {
         },
     })
     @ApiResponse({ status: 201, description: "File uploaded successfully", type: UploadResponseDTO })
-    @ApiResponse({ status: 400, description: "Validation error or invalid file type" })
+    @ApiResponse({ status: 400, description: "Missing file, invalid MIME type, or oversized file" })
     @ApiResponse({ status: 401, description: "Unauthorized" })
-    @ApiResponse({ status: 413, description: "File too large" })
-    async upload(
-        @UploadedFile(
-            new ParseFilePipe({
-                validators: [new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE })],
-            }),
-        )
-        file: Express.Multer.File,
-        @Body() body: UploadFileBodyDTO,
-    ) {
+    async upload(@UploadedFile() file: Express.Multer.File | undefined, @Body() body: UploadFileBodyDTO) {
+        if (!file) {
+            throw new BadRequestException("File is required");
+        }
+
+        const maxSizeBytes = this.getMaxFileSizeBytes();
+
         const result = await this.storageService.upload({
             entityType: body.entityType,
             entityId: body.entityId,
@@ -103,20 +107,12 @@ export class StorageController {
             file,
             environment: this.configService.get("NODE_ENV", { infer: true }) ?? "development",
             validationOptions: {
-                allowedMimeTypes: ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"],
-                maxSizeBytes: MAX_FILE_SIZE,
+                allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES,
+                maxSizeBytes,
             },
         });
 
-        return {
-            id: result.file.id.toString(),
-            filename: result.file.filename,
-            path: result.file.path.toString(),
-            mimeType: result.file.mimeType,
-            size: result.file.size,
-            width: result.file.width ?? null,
-            height: result.file.height ?? null,
-        };
+        return { url: result.url };
     }
 
     @Get("file/:fileId")

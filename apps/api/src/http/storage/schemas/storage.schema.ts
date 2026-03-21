@@ -54,13 +54,7 @@ export const fileResponseSchema = z.object({
 export class FileResponseDTO extends createZodDto(fileResponseSchema) {}
 
 export const uploadResponseSchema = z.object({
-    id: z.uuid().describe("File unique identifier"),
-    filename: z.string().describe("Original filename"),
-    path: z.string().describe("Storage path"),
-    mimeType: z.string().describe("File MIME type"),
-    size: z.number().describe("File size in bytes"),
-    width: z.number().nullable().describe("Image width in pixels"),
-    height: z.number().nullable().describe("Image height in pixels"),
+    url: z.url().describe("Public URL for the uploaded file"),
 });
 
 export class UploadResponseDTO extends createZodDto(uploadResponseSchema) {}

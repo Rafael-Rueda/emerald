@@ -30,7 +30,13 @@ interface UploadFileRequest {
 
 type UploadFileError = InvalidFileTypeError | FileTooLargeError | InvalidImageDimensionsError | StorageUploadError;
 
-type UploadFileResponse = Either<UploadFileError, { file: File }>;
+type UploadFileResponse = Either<
+    UploadFileError,
+    {
+        file: File;
+        url: string;
+    }
+>;
 
 export class UploadFileUseCase {
     constructor(
@@ -59,7 +65,12 @@ export class UploadFileUseCase {
 
             if (!validationResult.isValid) {
                 if (validationResult.error?.includes("type")) {
-                    return Left.call(new InvalidFileTypeError(validationResult.detectedMimeType));
+                    return Left.call(
+                        new InvalidFileTypeError(
+                            validationResult.detectedMimeType,
+                            validationOptions.allowedMimeTypes,
+                        ),
+                    );
                 }
                 if (validationResult.error?.includes("size")) {
                     return Left.call(new FileTooLargeError(buffer.length, validationOptions.maxSizeBytes ?? 0));
@@ -77,7 +88,7 @@ export class UploadFileUseCase {
         // Detect MIME type
         let detectedMimeType = await this.fileValidator.detectMimeType(buffer);
         if (!detectedMimeType) {
-            return Left.call(new InvalidFileTypeError());
+            return Left.call(new InvalidFileTypeError(undefined, validationOptions?.allowedMimeTypes));
         }
 
         // Process image: optimize/resize if requested (only save optimized version)
@@ -113,13 +124,17 @@ export class UploadFileUseCase {
         // Build file path
         const filePath = FilePath.build(entityType, entityId, filename, environment);
 
+        let uploadedFileUrl = "";
+
         // Upload to storage (only the optimized version)
         try {
             const stream = Readable.from(finalBuffer);
-            await this.storageProvider.uploadStream(stream, {
+            const uploadResult = await this.storageProvider.uploadStream(stream, {
                 path: filePath.toString(),
                 mimeType: detectedMimeType,
             });
+
+            uploadedFileUrl = uploadResult.publicUrl;
         } catch (error) {
             return Left.call(new StorageUploadError(error instanceof Error ? error.message : "Unknown error"));
         }
@@ -146,6 +161,6 @@ export class UploadFileUseCase {
         // Dispatch domain events (FileUploadedEvent)
         DomainEvents.dispatchEventsForAggregate(file.id);
 
-        return Right.call({ file: savedFile });
+        return Right.call({ file: savedFile, url: uploadedFileUrl });
     }
 }

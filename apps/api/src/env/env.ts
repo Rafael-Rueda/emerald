@@ -9,6 +9,7 @@ if (process.env.NODE_ENV !== "test") {
 export const envSchema = z.object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.coerce.number().int().positive().default(3333),
+    MAX_FILE_SIZE_MB: z.coerce.number().positive().default(10),
     DATABASE_URL: z.string(),
 
     JWT_PRIVATE_KEY: z.base64(),

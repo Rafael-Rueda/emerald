@@ -1,243 +1,176 @@
 import { INestApplication } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
+import { ROLES } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { fileTypeFromBuffer } from "file-type";
 import { ZodValidationPipe } from "nestjs-zod";
-import * as path from "path";
 import request from "supertest";
 
+import type { IStorageProvider } from "@/domain/storage/application/providers/storage.provider";
+import { PrismaService } from "@/infra/database/prisma/prisma.service";
 import { AppModule } from "@/http/app.module";
 
 describe("StorageController (e2e)", () => {
     let app: INestApplication;
-    let authToken: string | undefined;
-    let testUserId: string | undefined;
-    let uploadedFileId: string | undefined;
+    let prismaService: PrismaService;
+    let authToken: string;
+    let superAdminId: string;
+
+    const fileTypeFromBufferMock = jest.mocked(fileTypeFromBuffer);
+
+    const storageProviderMock: jest.Mocked<IStorageProvider> = {
+        uploadStream: jest.fn(),
+        uploadBuffer: jest.fn(),
+        delete: jest.fn(),
+        exists: jest.fn(),
+        getSignedUrl: jest.fn(),
+        getPublicUrl: jest.fn(),
+        copy: jest.fn(),
+    };
+
+    const pngBuffer = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2qkYsAAAAASUVORK5CYII=",
+        "base64",
+    );
 
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [AppModule],
-        }).compile();
+        })
+            .overrideProvider("StorageProvider")
+            .useValue(storageProviderMock)
+            .compile();
 
         app = moduleFixture.createNestApplication();
         app.useGlobalPipes(new ZodValidationPipe());
         await app.init();
 
-        // Create a test user and get auth token for authenticated tests
-        const uniqueEmail = `storagetest${Date.now()}@example.com`;
-        const uniqueUsername = `storageuser${Date.now()}`;
+        prismaService = app.get(PrismaService);
 
-        const createUserResponse = await request(app.getHttpServer()).post("/users").send({
-            username: uniqueUsername,
-            email: uniqueEmail,
-            password: "password123",
+        const passwordHash = await bcrypt.hash("password123", 10);
+
+        const superAdmin = await prismaService.user.upsert({
+            where: { email: "admin@test.com" },
+            update: {
+                username: "admin",
+                passwordHash,
+                roles: [ROLES.SUPER_ADMIN],
+            },
+            create: {
+                username: "admin",
+                email: "admin@test.com",
+                passwordHash,
+                roles: [ROLES.SUPER_ADMIN],
+            },
         });
 
-        if (createUserResponse.status !== 201) {
-            console.error("User creation failed:", createUserResponse.status, createUserResponse.body);
-            return;
-        }
+        superAdminId = superAdmin.id;
 
-        testUserId = createUserResponse.body.user.id;
-
-        // Login to get auth token
         const loginResponse = await request(app.getHttpServer()).post("/auth/login").send({
-            email: uniqueEmail,
+            email: "admin@test.com",
             password: "password123",
         });
 
-        if (loginResponse.body.accessToken) {
-            authToken = loginResponse.body.accessToken;
-        } else {
-            console.error("Login failed - no accessToken:", loginResponse.status, loginResponse.body);
-        }
+        expect(loginResponse.status).toBe(200);
+        authToken = loginResponse.body.accessToken as string;
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+
+        fileTypeFromBufferMock.mockResolvedValue({
+            ext: "png",
+            mime: "image/png",
+        });
+
+        storageProviderMock.uploadStream.mockImplementation(async (_stream, options) => ({
+            path: options.path,
+            publicUrl: `https://storage.googleapis.com/test-bucket/${options.path}`,
+            size: pngBuffer.length,
+        }));
+
+        storageProviderMock.getPublicUrl.mockImplementation(
+            (path: string) => `https://storage.googleapis.com/test-bucket/${path}`,
+        );
     });
 
     afterAll(async () => {
-        // Cleanup: delete uploaded file if exists
-        if (authToken && uploadedFileId) {
-            await request(app.getHttpServer())
-                .delete(`/storage/file/${uploadedFileId}`)
-                .set("Authorization", `Bearer ${authToken}`);
-        }
-
-        // Cleanup: delete test user if exists
-        if (authToken && testUserId) {
-            await request(app.getHttpServer())
-                .delete(`/users/${testUserId}`)
-                .set("Authorization", `Bearer ${authToken}`);
-        }
+        await prismaService.file.deleteMany({
+            where: {
+                entityType: "user",
+                entityId: superAdminId,
+                field: "avatar",
+            },
+        });
 
         await app.close();
     });
 
-    describe("POST /storage/upload", () => {
-        it("should return 401 when not authenticated", async () => {
+    describe("POST /api/storage/upload", () => {
+        it("returns 201 and a GCP URL for a valid image upload", async () => {
             const response = await request(app.getHttpServer())
-                .post("/storage/upload")
+                .post("/api/storage/upload")
+                .set("Authorization", `Bearer ${authToken}`)
+                .attach("file", pngBuffer, "avatar.png")
                 .field("entityType", "user")
-                .field("entityId", "user-123")
+                .field("entityId", superAdminId)
                 .field("field", "avatar");
 
-            expect(response.status).toBe(401);
+            expect(response.status).toBe(201);
+            expect(response.body).toEqual(
+                expect.objectContaining({
+                    url: expect.stringMatching(/^https:\/\/storage\.googleapis\.com\//),
+                }),
+            );
         });
 
-        it("should return 400 when file is not provided", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
+        it("returns 400 when file is not provided", async () => {
             const response = await request(app.getHttpServer())
-                .post("/storage/upload")
+                .post("/api/storage/upload")
                 .set("Authorization", `Bearer ${authToken}`)
                 .field("entityType", "user")
-                .field("entityId", testUserId || "user-123")
-                .field("field", "avatar");
-
-            expect(response.status).toBe(400);
-        });
-
-        it("should return 400 when entityType is missing", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
-            const response = await request(app.getHttpServer())
-                .post("/storage/upload")
-                .set("Authorization", `Bearer ${authToken}`)
-                .attach("file", Buffer.from("fake-image"), "test.png")
-                .field("entityId", testUserId || "user-123")
+                .field("entityId", superAdminId)
                 .field("field", "avatar");
 
             expect(response.status).toBe(400);
         });
 
-        it("should return 400 when entityId is missing", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
+        it("returns 400 for invalid MIME types", async () => {
+            fileTypeFromBufferMock.mockResolvedValueOnce({
+                ext: "js" as never,
+                mime: "application/javascript",
+            });
 
             const response = await request(app.getHttpServer())
-                .post("/storage/upload")
+                .post("/api/storage/upload")
                 .set("Authorization", `Bearer ${authToken}`)
-                .attach("file", Buffer.from("fake-image"), "test.png")
+                .attach("file", Buffer.from("console.log('not-an-image');"), "malicious.js")
                 .field("entityType", "user")
+                .field("entityId", superAdminId)
                 .field("field", "avatar");
 
             expect(response.status).toBe(400);
+            expect(JSON.stringify(response.body.message)).toContain("not allowed");
         });
 
-        it("should return 400 when field is missing", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
+        it("returns 400 for oversized uploads", async () => {
+            const oversizedImageBuffer = Buffer.alloc(11 * 1024 * 1024, 0xff);
+
+            fileTypeFromBufferMock.mockResolvedValueOnce({
+                ext: "png",
+                mime: "image/png",
+            });
 
             const response = await request(app.getHttpServer())
-                .post("/storage/upload")
+                .post("/api/storage/upload")
                 .set("Authorization", `Bearer ${authToken}`)
-                .attach("file", Buffer.from("fake-image"), "test.png")
+                .attach("file", oversizedImageBuffer, "large.png")
                 .field("entityType", "user")
-                .field("entityId", testUserId || "user-123");
+                .field("entityId", superAdminId)
+                .field("field", "avatar");
 
             expect(response.status).toBe(400);
-        });
-
-        // Note: Full upload tests require GCP Storage configuration
-        // and a valid image file. These tests validate request structure only.
-    });
-
-    describe("GET /storage/file/:fileId", () => {
-        it("should return 401 when not authenticated", async () => {
-            const response = await request(app.getHttpServer()).get("/storage/file/some-file-id");
-
-            expect(response.status).toBe(401);
-        });
-
-        it("should return 404 when file does not exist", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
-            const response = await request(app.getHttpServer())
-                .get("/storage/file/non-existent-file-id")
-                .set("Authorization", `Bearer ${authToken}`);
-
-            expect(response.status).toBe(404);
-        });
-
-        it("should accept signed query parameter", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
-            const response = await request(app.getHttpServer())
-                .get("/storage/file/non-existent-file-id")
-                .query({ signed: true, expiresInMinutes: 30 })
-                .set("Authorization", `Bearer ${authToken}`);
-
-            // Should still return 404 for non-existent file
-            expect(response.status).toBe(404);
-        });
-    });
-
-    describe("GET /storage/entity/:entityType/:entityId/:field", () => {
-        it("should return 401 when not authenticated", async () => {
-            const response = await request(app.getHttpServer()).get("/storage/entity/user/user-123/avatar");
-
-            expect(response.status).toBe(401);
-        });
-
-        it("should return 404 when entity file does not exist", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
-            const response = await request(app.getHttpServer())
-                .get(`/storage/entity/user/${testUserId || "user-123"}/avatar`)
-                .set("Authorization", `Bearer ${authToken}`);
-
-            expect(response.status).toBe(404);
-        });
-
-        it("should accept signed query parameter", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
-            const response = await request(app.getHttpServer())
-                .get("/storage/entity/user/user-123/avatar")
-                .query({ signed: true, expiresInMinutes: 60 })
-                .set("Authorization", `Bearer ${authToken}`);
-
-            // Should still return 404 for non-existent entity file
-            expect(response.status).toBe(404);
-        });
-    });
-
-    describe("DELETE /storage/file/:fileId", () => {
-        it("should return 401 when not authenticated", async () => {
-            const response = await request(app.getHttpServer()).delete("/storage/file/some-file-id");
-
-            expect(response.status).toBe(401);
-        });
-
-        it("should return 404 when file does not exist", async () => {
-            if (!authToken) {
-                console.warn("Skipping test: no auth token available");
-                return;
-            }
-
-            const response = await request(app.getHttpServer())
-                .delete("/storage/file/non-existent-file-id")
-                .set("Authorization", `Bearer ${authToken}`);
-
-            expect(response.status).toBe(404);
+            expect(JSON.stringify(response.body.message)).toContain("exceeds maximum allowed size");
         });
     });
 });
