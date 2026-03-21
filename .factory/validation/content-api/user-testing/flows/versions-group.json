@@ -1,0 +1,23 @@
+{
+  "milestone": "content-api",
+  "group": "versions-group",
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "powershell"
+  ],
+  "results": {
+    "VAL-CONTENT-014": {
+      "status": "pass",
+      "evidence": "content-api/versions-group/VAL-CONTENT-014-create.json"
+    },
+    "VAL-CONTENT-015": {
+      "status": "pass",
+      "evidence": "content-api/versions-group/VAL-CONTENT-015-get-versions.json"
+    },
+    "VAL-CONTENT-023": {
+      "status": "pass",
+      "evidence": "content-api/versions-group/VAL-CONTENT-023-error.json"
+    }
+  }
+}

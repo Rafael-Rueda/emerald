@@ -1,0 +1,33 @@
+{
+  "milestone": "content-api",
+  "group": "public-group",
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["curl"],
+  "results": {
+    "VAL-CONTENT-016": {
+      "status": "pass",
+      "evidence": "content-api/public-group/VAL-CONTENT-016-public-get-document.txt"
+    },
+    "VAL-CONTENT-017": {
+      "status": "pass",
+      "evidence": "content-api/public-group/VAL-CONTENT-017-public-get-draft.txt"
+    },
+    "VAL-CONTENT-018": {
+      "status": "pass",
+      "evidence": "content-api/public-group/VAL-CONTENT-018-search-match.txt"
+    },
+    "VAL-CONTENT-019": {
+      "status": "pass",
+      "evidence": "content-api/public-group/VAL-CONTENT-019-search-nomatch.txt"
+    },
+    "VAL-CONTENT-024": {
+      "status": "pass",
+      "evidence": "content-api/public-group/VAL-CONTENT-024-public-versions.txt"
+    },
+    "VAL-CONTENT-025": {
+      "status": "pass",
+      "evidence": "content-api/public-group/VAL-CONTENT-025-search-draft.txt"
+    }
+  }
+}

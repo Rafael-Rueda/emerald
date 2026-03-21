@@ -1,0 +1,83 @@
+{
+  "milestone": "content-api",
+  "group": "docs-group",
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "curl"
+  ],
+  "results": {
+    "VAL-CONTENT-001": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-001.txt"
+      }
+    },
+    "VAL-CONTENT-002": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-002.txt"
+      }
+    },
+    "VAL-CONTENT-003": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-003.txt"
+      }
+    },
+    "VAL-CONTENT-004": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-004.txt"
+      }
+    },
+    "VAL-CONTENT-005": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-005.txt"
+      }
+    },
+    "VAL-CONTENT-006": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-006.txt"
+      }
+    },
+    "VAL-CONTENT-007": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-007.txt"
+      }
+    },
+    "VAL-CONTENT-008": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-008.txt"
+      }
+    },
+    "VAL-CONTENT-009": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-009.txt"
+      }
+    },
+    "VAL-CONTENT-010": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-010.txt"
+      }
+    },
+    "VAL-CONTENT-020": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-020.txt"
+      }
+    },
+    "VAL-CONTENT-021": {
+      "status": "pass",
+      "evidence": {
+        "network": "content-api/docs-group/VAL-CONTENT-021.txt"
+      }
+    }
+  }
+}

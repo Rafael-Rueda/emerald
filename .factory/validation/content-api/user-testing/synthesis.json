@@ -1,0 +1,42 @@
+{
+  "milestone": "content-api",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-CONTENT-001",
+    "VAL-CONTENT-002",
+    "VAL-CONTENT-003",
+    "VAL-CONTENT-004",
+    "VAL-CONTENT-005",
+    "VAL-CONTENT-006",
+    "VAL-CONTENT-007",
+    "VAL-CONTENT-008",
+    "VAL-CONTENT-009",
+    "VAL-CONTENT-010",
+    "VAL-CONTENT-020",
+    "VAL-CONTENT-021",
+    "VAL-CONTENT-011",
+    "VAL-CONTENT-012",
+    "VAL-CONTENT-013",
+    "VAL-CONTENT-022",
+    "VAL-CONTENT-016",
+    "VAL-CONTENT-017",
+    "VAL-CONTENT-018",
+    "VAL-CONTENT-019",
+    "VAL-CONTENT-024",
+    "VAL-CONTENT-025",
+    "VAL-CONTENT-014",
+    "VAL-CONTENT-015",
+    "VAL-CONTENT-023"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null
+}

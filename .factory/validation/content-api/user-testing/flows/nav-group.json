@@ -1,0 +1,38 @@
+{
+  "milestone": "content-api",
+  "group": "nav-group",
+  "frictions": [
+    {
+      "description": "Navigation nodes require a slug and nodeType. Validation threw 400s when trying to post raw payload from assertions. Needed to add 'slug' and 'nodeType'='group'.",
+      "resolved": true,
+      "resolution": "Updated test payloads to include 'slug' and 'nodeType'.",
+      "affectedAssertions": ["VAL-CONTENT-011", "VAL-CONTENT-012", "VAL-CONTENT-013"]
+    },
+    {
+      "description": "Circular reference logic is robust: moving a node under another node only triggers circular reference if it's an ancestor. Tests needed to create a fresh child and parent properly.",
+      "resolved": true,
+      "resolution": "Created a dedicated test script to accurately map a fresh node under another and reverse the reference to assert the 400.",
+      "affectedAssertions": ["VAL-CONTENT-022"]
+    }
+  ],
+  "blockers": [],
+  "toolsUsed": ["powershell", "Invoke-RestMethod", "node"],
+  "results": {
+    "VAL-CONTENT-011": {
+      "status": "pass",
+      "evidence": "content-api/nav-group/VAL-CONTENT-011-post-nav.json"
+    },
+    "VAL-CONTENT-012": {
+      "status": "pass",
+      "evidence": "content-api/nav-group/VAL-CONTENT-012-get-nav-tree.json"
+    },
+    "VAL-CONTENT-013": {
+      "status": "pass",
+      "evidence": "content-api/nav-group/VAL-CONTENT-013-move-node-response.json, content-api/nav-group/VAL-CONTENT-013-moved-tree.json"
+    },
+    "VAL-CONTENT-022": {
+      "status": "pass",
+      "evidence": "content-api/nav-group/VAL-CONTENT-022-circular-reference.json"
+    }
+  }
+}
