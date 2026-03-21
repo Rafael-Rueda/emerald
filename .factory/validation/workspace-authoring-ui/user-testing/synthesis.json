@@ -1,0 +1,23 @@
+{
+  "milestone": "workspace-authoring-ui",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 20,
+    "passed": 19,
+    "failed": 0,
+    "blocked": 1
+  },
+  "passedAssertions": [
+    "VAL-WS-001", "VAL-WS-002", "VAL-WS-003", "VAL-WS-004", "VAL-WS-005", "VAL-WS-006", "VAL-WS-007", "VAL-WS-008", "VAL-WS-009", "VAL-WS-010", "VAL-WS-011", "VAL-WS-012", "VAL-WS-013", "VAL-WS-014", "VAL-WS-016", "VAL-WS-017", "VAL-WS-018", "VAL-WS-019", "VAL-WS-020"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-WS-015",
+      "blockedBy": "API server returned 400 Bad Request on /api/storage/upload because gcp-service-account.json is missing."
+    }
+  ],
+  "appliedUpdates": [],
+  "previousRound": null
+}
