@@ -40,6 +40,7 @@ const VERSION_QUERY_KEY_ROOT = ["versions"] as const;
 const SEARCH_QUERY_KEY_ROOT = ["search"] as const;
 const SPACES_QUERY_KEY_ROOT = ["spaces"] as const;
 const WORKSPACE_QUERY_KEY_ROOT = ["workspace"] as const;
+const WORKSPACE_AUTH_CLIENT_COOKIE_NAME = "emerald_workspace_auth_token_client";
 
 export const documentQueryKeys = {
   all: (): typeof DOCUMENT_QUERY_KEY_ROOT => DOCUMENT_QUERY_KEY_ROOT,
@@ -147,6 +148,45 @@ function buildRequestUrl(baseUrl: string, path: string): string {
   return `${baseUrl}${normalizedPath}`;
 }
 
+function shouldRetryWorkspaceRequestWithRelativePath(
+  baseUrl: string,
+  path: string,
+): boolean {
+  if (!baseUrl) {
+    return false;
+  }
+
+  return /^\/api\/workspace(?:\/|$)/.test(path);
+}
+
+function readAuthCookieToken(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookies = document.cookie.split(";");
+
+  for (const cookie of cookies) {
+    const [rawName, ...rawValue] = cookie.trim().split("=");
+    if (rawName !== WORKSPACE_AUTH_CLIENT_COOKIE_NAME) {
+      continue;
+    }
+
+    const value = rawValue.join("=");
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 async function request<TSchema extends z.ZodTypeAny>(
   baseUrl: string,
   path: string,
@@ -154,17 +194,44 @@ async function request<TSchema extends z.ZodTypeAny>(
   init?: RequestInit,
 ): Promise<FetchResult<z.infer<TSchema>>> {
   let response: Response;
+  const requestUrl = buildRequestUrl(baseUrl, path);
+  const requestInit: RequestInit = {
+    method: init?.method ?? "GET",
+    ...init,
+  };
+
+  if (baseUrl) {
+    const token = readAuthCookieToken();
+
+    if (token) {
+      const headers = new Headers(requestInit.headers);
+
+      if (!headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      requestInit.headers = headers;
+    }
+  }
 
   try {
-    response = await fetch(buildRequestUrl(baseUrl, path), {
-      method: init?.method ?? "GET",
-      ...init,
-    });
+    response = await fetch(requestUrl, requestInit);
   } catch (error) {
-    return {
-      status: "error",
-      message: error instanceof Error ? error.message : "Network error",
-    };
+    if (shouldRetryWorkspaceRequestWithRelativePath(baseUrl, path)) {
+      try {
+        response = await fetch(buildRequestUrl("", path), requestInit);
+      } catch {
+        return {
+          status: "error",
+          message: error instanceof Error ? error.message : "Network error",
+        };
+      }
+    } else {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Network error",
+      };
+    }
   }
 
   if (response.status === 404) {
@@ -266,10 +333,10 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
-    getWorkspaceDocuments() {
+    getWorkspaceDocuments(spaceId: string) {
       return request(
         resolvedBaseUrl,
-        "/api/workspace/documents",
+        `/api/workspace/documents?spaceId=${encodeURIComponent(spaceId)}`,
         WorkspaceDocumentListSchema,
       );
     },
@@ -289,10 +356,10 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
-    getWorkspaceNavigation() {
+    getWorkspaceNavigation(spaceId: string) {
       return request(
         resolvedBaseUrl,
-        "/api/workspace/navigation",
+        `/api/workspace/navigation?spaceId=${encodeURIComponent(spaceId)}`,
         WorkspaceNavigationListSchema,
       );
     },
@@ -312,10 +379,10 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
-    getWorkspaceVersions() {
+    getWorkspaceVersions(spaceId: string) {
       return request(
         resolvedBaseUrl,
-        "/api/workspace/versions",
+        `/api/workspace/versions?spaceId=${encodeURIComponent(spaceId)}`,
         WorkspaceVersionListSchema,
       );
     },
@@ -347,7 +414,10 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
-    async getAiContext(entityType: string, entityId: string) {
+    async getAiContext(
+      entityType: string,
+      entityId: string,
+    ): Promise<FetchResult<z.infer<typeof AiContextResponseSchema>>> {
       const result = await request(
         resolvedBaseUrl,
         `/api/workspace/ai-context/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`,
@@ -363,7 +433,7 @@ export function createApiClient(baseUrl?: string) {
         result.data.entityId !== entityId
       ) {
         return {
-          status: "validation-error",
+          status: "validation-error" as const,
           message: "Invalid AI context response: payload scope mismatch",
         };
       }

@@ -24,11 +24,27 @@ const API_BASE = "*/api/workspace";
 export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
   const scenarios = resolveScenarios(config);
 
+  const wsSpaces = [
+    {
+      id: "space-guides",
+      key: "guides",
+      name: "Guides",
+      description: "Product and developer guides",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ];
+
   const wsDocuments = [wsDocGettingStarted, wsDocApiReference];
   const wsNavItems = [wsNavGettingStarted, wsNavApiReference];
   const wsVersionItems = [wsVersionV1, wsVersionV2];
 
   return [
+    // Spaces list: GET /api/workspace/spaces
+    http.get(`${API_BASE}/spaces`, async () => {
+      return HttpResponse.json(wsSpaces);
+    }),
+
     // Document list: GET /api/workspace/documents
     http.get(`${API_BASE}/documents`, async () => {
       const scenarioResponse = await applyScenario(

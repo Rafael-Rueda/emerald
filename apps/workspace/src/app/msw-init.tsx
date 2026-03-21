@@ -1,6 +1,32 @@
 "use client";
 
+import React from "react";
 import { useEffect, useState } from "react";
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+
+async function shouldUseRealApi(): Promise<boolean> {
+  if (!API_BASE_URL) {
+    return false;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 1_500);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 /**
  * Client component that lazily initializes MSW in the browser.
@@ -18,10 +44,16 @@ export function MswInit({ children }: { children: React.ReactNode }) {
     async function init() {
       if (typeof window === "undefined") return;
 
-      const { createMswWorker } = await import("@emerald/mocks/browser");
-      const worker = createMswWorker();
-      await worker.start({ onUnhandledRequest: "bypass" });
-      setReady(true);
+      try {
+        const useRealApi = await shouldUseRealApi();
+        if (!useRealApi) {
+          const { createMswWorker } = await import("@emerald/mocks/browser");
+          const worker = createMswWorker();
+          await worker.start({ onUnhandledRequest: "bypass" });
+        }
+      } finally {
+        setReady(true);
+      }
     }
 
     init();

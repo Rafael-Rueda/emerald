@@ -87,6 +87,43 @@ describe("createApiClient", () => {
       expect.objectContaining({ method: "GET" }),
     );
   });
+
+  it("retries workspace requests on relative path when absolute API is offline", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          documents: [
+            {
+              id: "doc-getting-started",
+              title: "Getting Started",
+              slug: "getting-started",
+              space: "guides",
+              status: "published",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        }),
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient("http://localhost:3333");
+    const result = await client.getWorkspaceDocuments("space-guides");
+
+    expect(result.status).toBe("success");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:3333/api/workspace/documents?spaceId=space-guides",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/workspace/documents?spaceId=space-guides",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
 });
 
 describe("query key factories", () => {

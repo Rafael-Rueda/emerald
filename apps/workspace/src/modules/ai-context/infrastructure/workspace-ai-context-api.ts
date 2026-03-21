@@ -1,7 +1,9 @@
 import {
-  AiContextResponseSchema,
   type AiContextResponse,
 } from "@emerald/contracts";
+import { createApiClient } from "@emerald/data-access";
+
+const workspaceApiClient = createApiClient(process.env.NEXT_PUBLIC_API_URL);
 
 export interface AiContextScope {
   entityType: string;
@@ -16,58 +18,19 @@ export type WorkspaceAiContextFetchResult =
 export async function fetchWorkspaceAiContext(
   scope: AiContextScope,
 ): Promise<WorkspaceAiContextFetchResult> {
-  let response: Response;
+  const result = await workspaceApiClient.getAiContext(
+    scope.entityType,
+    scope.entityId,
+  );
 
-  try {
-    response = await fetch(
-      `/api/workspace/ai-context/${encodeURIComponent(scope.entityType)}/${encodeURIComponent(scope.entityId)}`,
-    );
-  } catch (error) {
-    return {
-      status: "error",
-      message: error instanceof Error ? error.message : "Network error",
-    };
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
   }
-
-  if (!response.ok) {
-    return {
-      status: "error",
-      message: `Request failed with status ${response.status}`,
-    };
-  }
-
-  let json: unknown;
-
-  try {
-    json = await response.json();
-  } catch {
-    return {
-      status: "validation-error",
-      message: "Failed to parse response as JSON",
-    };
-  }
-
-  const parsed = AiContextResponseSchema.safeParse(json);
-
-  if (!parsed.success) {
-    return {
-      status: "validation-error",
-      message: `Invalid AI context response: ${parsed.error.message}`,
-    };
-  }
-
-  if (
-    parsed.data.entityType !== scope.entityType ||
-    parsed.data.entityId !== scope.entityId
-  ) {
-    return {
-      status: "validation-error",
-      message: "Invalid AI context response: payload scope mismatch",
-    };
-  }
-
-  return {
-    status: "success",
-    data: parsed.data,
-  };
 }
