@@ -1,0 +1,53 @@
+{
+  "milestone": "content-api",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": { "passed": true, "command": "pnpm test -- --run --maxWorkers=8", "exitCode": 0 },
+    "typecheck": { "passed": true, "command": "pnpm typecheck", "exitCode": 0 },
+    "lint": { "passed": true, "command": "pnpm lint", "exitCode": 0 },
+    "api_test_unit": { "passed": true, "command": "pnpm --filter @emerald/api test:unit", "exitCode": 0 },
+    "api_test_e2e": { "passed": true, "command": "pnpm --filter @emerald/api test:e2e", "exitCode": 0 }
+  },
+  "reviewsSummary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Remove dependencies on `jq` and `curl` in bash snippets. Provide Node.js script fallbacks for JSON parsing, and PowerShell-compatible alternatives (`Invoke-RestMethod`) for curl, as Windows environments lack `jq` and handle `curl` aliases poorly.",
+      "evidence": "Features documents-domain-api and navigation-domain-api failed to execute provided `jq` and `curl` instructions.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills/api-domain-worker",
+      "suggestion": "Update Jest specific test invocation commands to use `--testPathPatterns` instead of `--testPathPattern` for Jest v30 compatibility, and wrap args correctly for PowerShell execution.",
+      "evidence": "Features versions-domain-api and public-read-endpoints noted false negatives or syntax errors using the provided testing flags.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify whether CQRS-style read-model bypasses of the domain layer (directly injecting PrismaService into Controllers/Services for simple reads) are allowed, as `AGENTS.md` currently strictly mandates Use-Case + Either pattern for all contexts.",
+      "evidence": "Feature public-read-endpoints bypassed domain use-cases for read-only routes to save overhead.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Acknowledge that strict red-first TDD sequencing is often bypassed by workers in non-interactive mode in favor of batching implementation and testing to reduce overhead.",
+      "evidence": "Multiple features (public-read-endpoints, versions-domain-api) explicitly deviated from the TDD sequencing rules.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Worker documented API runtime boot issue in library.",
+      "reason": "already-documented-by-worker"
+    }
+  ],
+  "previousRound": null
+}

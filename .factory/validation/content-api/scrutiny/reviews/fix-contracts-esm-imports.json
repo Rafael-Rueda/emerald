@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-contracts-esm-imports",
+  "reviewedAt": "2026-03-21T05:10:00.000Z",
+  "commitId": "ac88ea31326849eff4331d6332f84b4c47ad5991",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly updated the barrel exports in packages/contracts/src/index.ts to use explicit .js extensions, resolving the NodeNext ESM module resolution issue. All unit tests and typechecks pass.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Simple ESM fix cleanly implemented."
+}
