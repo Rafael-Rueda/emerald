@@ -1,0 +1,177 @@
+{
+  "groupId": "group1",
+  "testedAt": "2026-03-21T08:34:57.270Z",
+  "isolation": {
+    "appUrl": "http://localhost:3101",
+    "apiUrl": "http://localhost:3333",
+    "credentials": "admin@test.com / password123"
+  },
+  "toolsUsed": [
+    "playwright"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-WS-001",
+      "title": "Documents list page shows real data",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to /admin/documents",
+          "expected": "Documents list loads",
+          "observed": "Loaded successfully"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-001-documents-list.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/workspace/documents -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-002",
+      "title": "Create Document button navigates to editor",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Click Create Document",
+          "expected": "Navigates to editor",
+          "observed": "Navigated and editor loaded"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-002-click-create.png",
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-002-editor-loaded.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-008",
+      "title": "New document starts as draft",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check status badge",
+          "expected": "Shows Draft",
+          "observed": "Shows Draft"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-008-draft-badge.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-003",
+      "title": "TipTap editor accepts all supported block types",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Click all insert block buttons",
+          "expected": "Blocks are inserted",
+          "observed": "Blocks inserted"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-003-blocks.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-004",
+      "title": "Autosave fires 2 seconds after last keystroke",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Type text and wait 2s",
+          "expected": "POST request fired and indicator shows saved",
+          "observed": "POST request fired successfully"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-004-017-autosaved.png"
+        ],
+        "consoleErrors": "none",
+        "network": "POST /revisions -> 201"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-017",
+      "title": "TipTap content serializes to valid DocumentContentSchema",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check autosave request body",
+          "expected": "content_json present and accepted by API",
+          "observed": "API returned 201, schema valid"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-004-017-autosaved.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-020",
+      "title": "Autosave debounce fires once for rapid typing",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Rapidly type 10 characters",
+          "expected": "Exactly 1 POST request sent",
+          "observed": "1 request sent (count: 1)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-020-debounce.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WS-005",
+      "title": "Autosave failure shows error state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Mock 500 on autosave and wait",
+          "expected": "UI shows error state",
+          "observed": "UI shows error state"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\workspace-authoring-ui\\group1\\VAL-WS-005-autosave-error.png"
+        ],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": []
+}

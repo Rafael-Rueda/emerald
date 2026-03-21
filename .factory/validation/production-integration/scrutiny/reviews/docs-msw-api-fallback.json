@@ -1,0 +1,26 @@
+{
+  "featureId": "docs-msw-api-fallback",
+  "reviewedAt": "2026-03-21T09:30:00.000Z",
+  "commitId": "22e14ff658ba016a6f644dc96ca7c938d3580a4c",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation perfectly satisfies all requirements for the `docs-msw-api-fallback` feature. It updates all infrastructure API modules to resolve absolute requests pointing to the public endpoints when the API is available, while defaulting back to relative MSW-handled requests when fallback mode is active. An intelligent payload normalization layer was added to adapt the differing public API payloads to the existing Zod contracts seamlessly. The MSW initialization routine correctly uses a 1500ms timeout on the health check to gate the MSW worker startup, preventing redundant MSW interception.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The `frontend-integration-worker` skill file lacks documentation about payload adaptation. The worker noted that 'docs-msw-api-fallback should include public endpoint adaptation + fallback-mode relative routing, since base-URL-only changes can break offline MSW behavior'. The worker had to independently deduce that `GET /api/public/*` payload structures required normalization to match the existing MSW contracts expected by the frontend.",
+      "evidence": "Worker's handoff skillFeedback object details this deviation from TDD. Also visible in the `normalizeDocumentResponse` and similar functions introduced in the `*-api.ts` files."
+    },
+    {
+      "area": "services",
+      "observation": "The full `pnpm lint` command fails in the local environment due to pre-existing untracked files (e.g. `e2e/*.spec.ts`, `run-services.js`, `temp-assertions.js`) created by external test or environment validation processes. This affects the worker's ability to cleanly run repository-wide lint checks.",
+      "evidence": "Worker verification step 6 recorded: 'pnpm lint ... Fails on pre-existing untracked validation/helper files ... unrelated to this feature’s committed files.'"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Passed. The worker implemented the conditional MSW initialization correctly and robustly handled URL resolution and payload adaptation between real online public API endpoints and the offline MSW mocks."
+}

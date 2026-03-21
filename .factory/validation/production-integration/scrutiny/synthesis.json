@@ -1,0 +1,71 @@
+{
+  "milestone": "production-integration",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm test -- --run --maxWorkers=8",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 6,
+    "passed": 5,
+    "failed": 1,
+    "failedFeatures": [
+      "cross-surface-end-to-end"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "cross-surface-end-to-end",
+      "severity": "blocking",
+      "description": "The worker bypassed the requirement to implement ISR invalidation (revalidatePath) wired from api-auth, opting instead to disable staleTime and force refetchOnMount on the client side. There are no backend or server-side invalidation updates as requested."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "services.yaml",
+      "description": "Added -NoProfile to powershell commands to prevent PSReadLine initialization noise/errors on Windows that break service shutdown scripts.",
+      "sourceFeature": "cross-surface-end-to-end"
+    },
+    {
+      "target": "library/api-gotchas.md",
+      "description": "Documented that GET /api/public/spaces is missing (requiring mock fallbacks) and that multiple default versions might exist for a space.",
+      "sourceFeature": "docs-seo-and-sitemap, docs-dynamic-default-route"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document a fallback policy for handling pre-existing global lint failures (e.g. scoping to changed files) so workers are not blocked by unrelated codebase lint errors.",
+      "evidence": "Reported in docs-ssr-upgrade and docs-msw-api-fallback features.",
+      "isSystemic": true
+    },
+    {
+      "target": "frontend-integration-worker",
+      "suggestion": "Update the skill to formally bless/guide writing a temporary Playwright script as a valid fallback for 'manual verification' when the agent-browser tool is unavailable.",
+      "evidence": "Reported in docs-html-sanitization and docs-dynamic-default-route.",
+      "isSystemic": true
+    },
+    {
+      "target": "frontend-integration-worker",
+      "suggestion": "Clarify that payload adaptation is required for public endpoints when building fallbacks, as GET /api/public/* structures differ from the offline MSW mocks.",
+      "evidence": "Worker noted this missing documentation during docs-msw-api-fallback.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

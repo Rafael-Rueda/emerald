@@ -1,0 +1,21 @@
+{
+  "featureId": "docs-seo-and-sitemap",
+  "reviewedAt": "2026-03-21T11:05:00.000Z",
+  "commitId": "7130f4c25d5364915b3dfd24e4cc5c5d473e7d4a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation successfully adds SEO metadata and a dynamic sitemap according to the feature requirements. Metadata includes the standard and Open Graph tags extracted from server-fetched content or falling back to a default SVG. The sitemap securely filters out draft and archived documents.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "The public API lacks a GET /api/public/spaces endpoint. Because of this, sitemap.ts and doc-page-server-data.ts in the production Next.js app rely on importing allDocuments from @emerald/mocks to determine KNOWN_SPACES. This creates a coupling between production code and mock data for space discovery.",
+      "evidence": "In apps/docs/src/app/sitemap.ts: `import { allDocuments } from \"@emerald/mocks\"; const KNOWN_SPACES = Array.from(new Set(allDocuments.map((document) => document.space)));`"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passed. Successfully implemented SEO metadata extraction and published-only sitemap generation."
+}

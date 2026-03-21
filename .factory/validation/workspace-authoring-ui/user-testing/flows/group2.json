@@ -1,0 +1,13 @@
+{
+  "group": "group2",
+  "testedAssertions": [
+    { "id": "VAL-WS-006", "status": "pass" },
+    { "id": "VAL-WS-007", "status": "pass" },
+    { "id": "VAL-WS-009", "status": "pass" },
+    { "id": "VAL-WS-010", "status": "pass" },
+    { "id": "VAL-WS-018", "status": "pass" },
+    { "id": "VAL-WS-019", "status": "pass" }
+  ],
+  "frictions": [],
+  "blockers": []
+}

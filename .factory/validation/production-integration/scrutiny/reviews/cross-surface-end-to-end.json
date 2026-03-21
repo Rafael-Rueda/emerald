@@ -1,0 +1,33 @@
+{
+  "featureId": "cross-surface-end-to-end",
+  "reviewedAt": "2026-03-21T13:06:00.000Z",
+  "commitId": "51862ea736055662f094dff55e47f5631534d824",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The E2E test suite was correctly added to cover cross-surface validations. However, the worker failed to implement the explicitly requested ISR invalidation via revalidatePath.",
+    "issues": [
+      {
+        "file": "apps/docs/src/modules/navigation/application/use-navigation.ts",
+        "line": 54,
+        "severity": "blocking",
+        "description": "The worker bypassed the requirement to implement ISR invalidation (revalidatePath) wired from api-auth, opting instead to disable staleTime and force refetchOnMount on the client side. There are no backend or server-side invalidation updates as requested."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Worker did not follow the skill procedure (Write Tests First), opting to fix query freshness first to stabilize the cross-surface validation spec.",
+      "evidence": "Transcript handoff.skillFeedback.deviations confirms deviation from Step 3."
+    },
+    {
+      "area": "services",
+      "observation": "Worker experienced issues with PowerShell profile noise causing timeouts during port-kill commands in local service shutdowns.",
+      "evidence": "Transcript handoff.discoveredIssues suggests using `powershell -NoProfile` in .factory/services.yaml to avoid PSReadLine interference on Windows."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The worker built the requested cross-surface Playwright validations correctly, but failed to implement the required ISR invalidation (revalidatePath). Instead of calling revalidation endpoints, the worker simply disabled client-side cache for public data queries. This is a blocking failure."
+}

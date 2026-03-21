@@ -1,0 +1,21 @@
+{
+  "featureId": "docs-ssr-upgrade",
+  "reviewedAt": "2026-03-21T10:55:00Z",
+  "commitId": "6f6eb6315b170179d0d9b6e42a658e29963404e7",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature successfully upgrades the public docs document page to use Next.js Server Components for SSR/ISR. The `page.tsx` was correctly refactored to fetch data server-side, `generateStaticParams` and `revalidate = 60` were added. The cache invalidation flow was implemented via a `/api/revalidate` route and properly triggered from the API's publish service. All requirements appear to be met cleanly with no blocking issues.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Worker encountered pre-existing lint errors in the 'e2e' directory that caused the global 'pnpm lint' step to fail, despite the feature code being clean. Worker scoped linting to just the changed files to proceed. Worker suggested adding a fallback policy to the skill for handling pre-existing global lint failures.",
+      "evidence": "Worker's handoff includes discovered issue regarding pre-existing e2e lint errors and suggests documenting a fallback policy in the skill."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature docs-ssr-upgrade passed review. SSR/ISR implementation meets all requirements and cache invalidation endpoint was correctly implemented and wired to the API publish action."
+}

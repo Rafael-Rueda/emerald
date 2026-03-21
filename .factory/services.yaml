@@ -19,41 +19,41 @@ services:
   postgres-dev:
     start: docker compose -f apps/api/docker-compose.yml up -d postgres
     stop: docker compose -f apps/api/docker-compose.yml stop postgres
-    healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:5434 -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue).StatusCode; docker compose -f apps/api/docker-compose.yml ps postgres"
+    healthcheck: powershell -NoProfile -Command "(Invoke-WebRequest -Uri http://localhost:5434 -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue).StatusCode; docker compose -f apps/api/docker-compose.yml ps postgres"
     port: 5434
     depends_on: []
 
   postgres-test:
     start: docker compose -f apps/api/docker-compose.yml up -d postgres-test
     stop: docker compose -f apps/api/docker-compose.yml stop postgres-test
-    healthcheck: powershell -Command "docker compose -f apps/api/docker-compose.yml ps postgres-test"
+    healthcheck: powershell -NoProfile -Command "docker compose -f apps/api/docker-compose.yml ps postgres-test"
     port: 5435
     depends_on: []
 
   api:
     start: pnpm --filter @emerald/api start:dev
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3333 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
-    healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:3333/health -UseBasicParsing -TimeoutSec 5).StatusCode"
+    stop: powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3333 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
+    healthcheck: powershell -NoProfile -Command "(Invoke-WebRequest -Uri http://localhost:3333/health -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 3333
     depends_on: [postgres-dev]
 
   docs:
     start: pnpm --filter @emerald/docs dev --port 3100
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
-    healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:3100 -UseBasicParsing -TimeoutSec 5).StatusCode"
+    stop: powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
+    healthcheck: powershell -NoProfile -Command "(Invoke-WebRequest -Uri http://localhost:3100 -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 3100
     depends_on: []
 
   workspace:
     start: pnpm --filter @emerald/workspace dev --port 3101
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 3101 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
-    healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:3101 -UseBasicParsing -TimeoutSec 5).StatusCode"
+    stop: powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 3101 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
+    healthcheck: powershell -NoProfile -Command "(Invoke-WebRequest -Uri http://localhost:3101 -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 3101
     depends_on: []
 
   storybook:
     start: pnpm storybook -- --port 6100
-    stop: powershell -Command "Get-NetTCPConnection -LocalPort 6100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
-    healthcheck: powershell -Command "(Invoke-WebRequest -Uri http://localhost:6100 -UseBasicParsing -TimeoutSec 5).StatusCode"
+    stop: powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 6100 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id `$_.OwningProcess -Force }"
+    healthcheck: powershell -NoProfile -Command "(Invoke-WebRequest -Uri http://localhost:6100 -UseBasicParsing -TimeoutSec 5).StatusCode"
     port: 6100
     depends_on: []

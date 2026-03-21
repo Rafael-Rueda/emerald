@@ -1,0 +1,19 @@
+{
+  "group": "group3",
+  "testedAssertions": [
+    { "id": "VAL-WS-011", "status": "pass" },
+    { "id": "VAL-WS-012", "status": "pass" },
+    { "id": "VAL-WS-013", "status": "pass" },
+    { "id": "VAL-WS-014", "status": "pass" },
+    { "id": "VAL-WS-015", "status": "blocked" },
+    { "id": "VAL-WS-016", "status": "pass" }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "API server returned 400 Bad Request on /api/storage/upload because gcp-service-account.json is missing. The upload cannot be completed without it.",
+      "affectedAssertions": ["VAL-WS-015"],
+      "quickFixAttempted": "Attempted to upload a valid PNG, verified that it fails consistently due to missing credentials on backend."
+    }
+  ]
+}
