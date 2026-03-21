@@ -82,6 +82,8 @@ describe("SearchPanel — successful search", () => {
     expect(
       screen.getByTestId("search-result-link-sr-getting-started-v2"),
     ).toHaveAttribute("href", "/guides/v2/getting-started");
+
+    expect(screen.getAllByTestId("search-result-item")).toHaveLength(2);
   });
 });
 

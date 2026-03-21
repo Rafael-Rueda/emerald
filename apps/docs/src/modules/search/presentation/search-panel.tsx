@@ -146,30 +146,32 @@ export function SearchPanel({ currentRoute }: SearchPanelProps) {
 
                 return (
                   <li key={result.id} data-testid={`search-result-${result.id}`}>
-                    <Link
-                      href={result.routePath}
-                      className="block rounded-md border border-border p-3 transition-colors hover:bg-accent"
-                      data-testid={`search-result-link-${result.id}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-foreground">{result.title}</p>
-                        {isCurrentPage && (
-                          <span
-                            className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary"
-                            data-testid={`search-result-current-${result.id}`}
-                          >
-                            Current page
-                          </span>
-                        )}
-                      </div>
-                      <p
-                        className="text-xs text-muted-foreground"
-                        data-testid={`search-result-context-${result.id}`}
+                    <div data-testid="search-result-item">
+                      <Link
+                        href={result.routePath}
+                        className="block rounded-md border border-border p-3 transition-colors hover:bg-accent"
+                        data-testid={`search-result-link-${result.id}`}
                       >
-                        {result.routeContext}
-                      </p>
-                      <p className="mt-1 text-sm text-foreground">{result.snippet}</p>
-                    </Link>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-foreground">{result.title}</p>
+                          {isCurrentPage && (
+                            <span
+                              className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                              data-testid={`search-result-current-${result.id}`}
+                            >
+                              Current page
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          className="text-xs text-muted-foreground"
+                          data-testid={`search-result-context-${result.id}`}
+                        >
+                          {result.routeContext}
+                        </p>
+                        <p className="mt-1 text-sm text-foreground">{result.snippet}</p>
+                      </Link>
+                    </div>
                   </li>
                 );
               })}
