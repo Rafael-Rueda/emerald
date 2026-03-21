@@ -25,7 +25,9 @@ Use Playwright directly (`pnpm test:e2e -- --project=chromium`) via test files i
 
 ## Pre-Test Setup (validators must do this before testing)
 
-```bash
+**CRITICAL: Always poll for readiness after starting services. Never assume a fixed sleep is enough.**
+
+```powershell
 # 1. Start Emerald PostgreSQL
 docker compose -f apps/api/docker-compose.yml up -d
 
@@ -33,19 +35,40 @@ docker compose -f apps/api/docker-compose.yml up -d
 pnpm --filter @emerald/api prisma migrate deploy
 pnpm --filter @emerald/api prisma db seed
 
-# 3. Start API
+# 3. Start API in background
+$apiJob = Start-Job { Set-Location "C:\_Local\_Web-Devlopment\_Templates\Rueda Gems\Emerald"; pnpm dev:api }
+
+# 4. WAIT for API to be ready (poll /health up to 60s)
+$ready = $false
+for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Seconds 2
+    try {
+        $r = Invoke-WebRequest -Uri "http://localhost:3333/health" -TimeoutSec 3 -ErrorAction Stop
+        if ($r.StatusCode -eq 200) { $ready = $true; break }
+    } catch {}
+}
+if (-not $ready) { Write-Error "API did not start within 60s" }
+
+# 5. (Optional) Start frontend apps
+$docsJob = Start-Job { Set-Location "C:\_Local\_Web-Devlopment\_Templates\Rueda Gems\Emerald"; pnpm dev:docs }
+$wsJob = Start-Job { Set-Location "C:\_Local\_Web-Devlopment\_Templates\Rueda Gems\Emerald"; pnpm dev:workspace }
+Start-Sleep -Seconds 15  # give Next.js time to compile
+
+# 6. Verify health before spawning flow validators
+curl.exe http://localhost:3333/health  # must return { "status": "ok" }
+```
+
+**On Linux/macOS (bash):**
+```bash
+docker compose -f apps/api/docker-compose.yml up -d
+pnpm --filter @emerald/api prisma migrate deploy
+pnpm --filter @emerald/api prisma db seed
 pnpm dev:api &
-sleep 5
-
-# 4. Start frontend apps
-pnpm dev:docs &
-pnpm dev:workspace &
-sleep 8
-
-# 5. Verify health
-curl http://localhost:3333/health  # must return { status: 'ok' }
-curl -o /dev/null -s -w "%{http_code}" http://localhost:3100  # must return 200/301
-curl -o /dev/null -s -w "%{http_code}" http://localhost:3101  # must return 200
+# Poll for readiness
+for i in $(seq 1 30); do
+  sleep 2
+  curl -sf http://localhost:3333/health && break
+done
 ```
 
 ## Test Credentials (from seed)
