@@ -12,6 +12,7 @@ import {
   wsVersionList,
   wsVersionV1,
   wsVersionV2,
+  wsDocumentRevisions,
   mutationSuccess,
   mutationFailure,
 } from "../fixtures";
@@ -74,6 +75,27 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       }
 
       return HttpResponse.json(doc);
+    }),
+
+    // Document revisions list: GET /api/workspace/documents/:id/revisions
+    http.get(`${API_BASE}/documents/:id/revisions`, async ({ params }) => {
+      const scenarioResponse = await applyScenario(
+        scenarios.workspaceDocuments,
+        { revisions: "broken" },
+      );
+      if (scenarioResponse) return scenarioResponse;
+
+      const documentId = String(params.id ?? "");
+      const revisions = wsDocumentRevisions[documentId as keyof typeof wsDocumentRevisions];
+
+      if (!revisions) {
+        return HttpResponse.json({ revisions: [], total: 0 });
+      }
+
+      return HttpResponse.json({
+        revisions,
+        total: revisions.length,
+      });
     }),
 
     // Navigation list: GET /api/workspace/navigation

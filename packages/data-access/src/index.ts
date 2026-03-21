@@ -146,6 +146,12 @@ const WorkspaceRevisionSchema = z.object({
   createdAt: z.string(),
 });
 
+const WorkspaceRevisionListSchema = z
+  .object({
+    revisions: z.array(WorkspaceRevisionSchema),
+  })
+  .transform((payload) => payload.revisions);
+
 const WorkspaceReleaseVersionSchema = z.object({
   id: z.string(),
   spaceId: z.string(),
@@ -462,6 +468,14 @@ export function createApiClient(baseUrl?: string) {
           },
           body: JSON.stringify(payload),
         },
+      );
+    },
+
+    getWorkspaceDocumentRevisions(documentId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/documents/${encodeURIComponent(documentId)}/revisions`,
+        WorkspaceRevisionListSchema,
       );
     },
 

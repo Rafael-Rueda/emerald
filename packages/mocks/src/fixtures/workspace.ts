@@ -1,4 +1,5 @@
 import type {
+  DocumentContent,
   WorkspaceDocument,
   WorkspaceDocumentList,
   WorkspaceNavigation,
@@ -33,6 +34,53 @@ export const wsDocApiReference: WorkspaceDocument = {
 export const wsDocumentList: WorkspaceDocumentList = {
   documents: [wsDocGettingStarted, wsDocApiReference],
 };
+
+function createParagraphContent(text: string): DocumentContent {
+  return {
+    type: "doc",
+    version: 1,
+    children: [
+      {
+        type: "paragraph",
+        children: [{ type: "text", text }],
+      },
+    ],
+  };
+}
+
+export const wsDocumentRevisions = {
+  "doc-getting-started": [
+    {
+      id: "rev-getting-started-2",
+      documentId: "doc-getting-started",
+      revisionNumber: 2,
+      content_json: createParagraphContent("Getting Started latest revision"),
+      createdBy: "admin@test.com",
+      changeNote: "Updated intro section",
+      createdAt: "2025-01-16T10:00:00Z",
+    },
+    {
+      id: "rev-getting-started-1",
+      documentId: "doc-getting-started",
+      revisionNumber: 1,
+      content_json: createParagraphContent("Getting Started initial revision"),
+      createdBy: "admin@test.com",
+      changeNote: "Initial draft",
+      createdAt: "2025-01-15T10:00:00Z",
+    },
+  ],
+  "doc-api-reference": [
+    {
+      id: "rev-api-reference-1",
+      documentId: "doc-api-reference",
+      revisionNumber: 1,
+      content_json: createParagraphContent("API Reference initial revision"),
+      createdBy: "admin@test.com",
+      changeNote: "Initial draft",
+      createdAt: "2025-01-20T14:30:00Z",
+    },
+  ],
+} as const;
 
 export const wsNavGettingStarted: WorkspaceNavigation = {
   id: "nav-getting-started",

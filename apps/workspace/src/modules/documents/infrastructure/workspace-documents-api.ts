@@ -83,6 +83,12 @@ export type WorkspaceDocumentRevisionCreateResult =
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
+export type WorkspaceDocumentRevisionsFetchResult =
+  | { status: "success"; data: WorkspaceRevision[] }
+  | { status: "not-found" }
+  | { status: "error"; message: string }
+  | { status: "validation-error"; message: string };
+
 export async function fetchWorkspaceDocumentsList(): Promise<WorkspaceDocumentsListFetchResult> {
   const spaceIdResult = await resolveWorkspaceSpaceId();
 
@@ -213,6 +219,23 @@ export async function createWorkspaceDocumentRevision(payload: {
       return { status: "error", message: result.message };
     case "not-found":
       return { status: "error", message: "Request failed with status 404" };
+  }
+}
+
+export async function fetchWorkspaceDocumentRevisions(
+  documentId: string,
+): Promise<WorkspaceDocumentRevisionsFetchResult> {
+  const result = await workspaceApiClient.getWorkspaceDocumentRevisions(documentId);
+
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "not-found":
+      return { status: "not-found" };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
   }
 }
 

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { DocumentContentSchema } from "@emerald/contracts";
+import { DocumentContentSchema, type DocumentContent } from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import type { JSONContent } from "@tiptap/core";
 import {
@@ -17,6 +17,7 @@ import { useUnsavedChangesGuard } from "../application/use-unsaved-changes-guard
 import {
   createWorkspaceDocumentDraft,
   createWorkspaceDocumentRevision,
+  fetchWorkspaceDocumentRevisions,
   fetchWorkspaceDocumentEditor,
   fetchWorkspaceReleaseVersions,
   fetchWorkspaceSpaces,
@@ -54,6 +55,56 @@ function getAutosaveIndicatorLabel(status: "idle" | "saving" | "saved" | "save-f
   }
 }
 
+function extractRevisionPreview(content: DocumentContent): string {
+  function collectTextBlocks(blocks: DocumentContent["children"]): string {
+    for (const block of blocks) {
+      if (block.type === "paragraph" || block.type === "heading") {
+        const text = block.children.map((child) => child.text).join(" ").trim();
+        if (text) {
+          return text;
+        }
+      }
+
+      if (block.type === "code_block") {
+        const code = block.code.trim();
+        if (code) {
+          return code;
+        }
+      }
+
+      if (block.type === "ordered_list" || block.type === "unordered_list") {
+        for (const item of block.items) {
+          const text = item.children.map((child) => child.text).join(" ").trim();
+          if (text) {
+            return text;
+          }
+        }
+      }
+
+      if (block.type === "callout") {
+        const nested = collectTextBlocks(block.children);
+        if (nested) {
+          return nested;
+        }
+      }
+
+      if (block.type === "tabs") {
+        for (const tab of block.items) {
+          const nested = collectTextBlocks(tab.children);
+          if (nested) {
+            return nested;
+          }
+        }
+      }
+    }
+
+    return "";
+  }
+
+  const preview = collectTextBlocks(content.children);
+  return preview || "No textual preview available for this revision.";
+}
+
 export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -64,7 +115,11 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const [editorJson, setEditorJson] = useState<JSONContent | null>(
     mode === "create" ? EMPTY_EDITOR_CONTENT : null,
   );
+  const [editorResetVersion, setEditorResetVersion] = useState(0);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false);
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
+  const [isRestoreConfirmationOpen, setIsRestoreConfirmationOpen] = useState(false);
 
   const spacesQuery = useQuery({
     queryKey: ["workspace", "spaces", "editor"],
@@ -91,6 +146,14 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
 
   const createMutation = useMutation({
     mutationFn: createWorkspaceDocumentDraft,
+  });
+
+  const revisionsQuery = useQuery({
+    queryKey: ["workspace", "documents", "revisions", documentId ?? "none"],
+    queryFn: () => fetchWorkspaceDocumentRevisions(documentId ?? ""),
+    enabled: mode === "edit" && isRevisionHistoryOpen && typeof documentId === "string",
+    retry: false,
+    staleTime: 30_000,
   });
 
   const saveRevision = useCallback(async ({
@@ -171,7 +234,76 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
     setSpaceId(documentQuery.data.data.spaceId);
     setReleaseVersionId(documentQuery.data.data.releaseVersionId);
     setEditorJson(fromDocumentContent(documentQuery.data.data.content_json));
+    setEditorResetVersion(0);
   }, [documentQuery.data, mode]);
+
+  const sortedRevisions = useMemo(() => {
+    if (revisionsQuery.data?.status !== "success") {
+      return [];
+    }
+
+    return [...revisionsQuery.data.data].sort((first, second) => {
+      const firstDate = new Date(first.createdAt).getTime();
+      const secondDate = new Date(second.createdAt).getTime();
+
+      if (firstDate === secondDate) {
+        return second.revisionNumber - first.revisionNumber;
+      }
+
+      return secondDate - firstDate;
+    });
+  }, [revisionsQuery.data]);
+
+  useEffect(() => {
+    if (sortedRevisions.length === 0) {
+      setSelectedRevisionId(null);
+      return;
+    }
+
+    if (!selectedRevisionId || !sortedRevisions.some((revision) => revision.id === selectedRevisionId)) {
+      setSelectedRevisionId(sortedRevisions[0].id);
+    }
+  }, [selectedRevisionId, sortedRevisions]);
+
+  const selectedRevision = useMemo(
+    () => sortedRevisions.find((revision) => revision.id === selectedRevisionId) ?? null,
+    [selectedRevisionId, sortedRevisions],
+  );
+
+  const selectedRevisionPreview = useMemo(
+    () => (selectedRevision ? extractRevisionPreview(selectedRevision.content_json) : ""),
+    [selectedRevision],
+  );
+
+  function toggleRevisionHistory() {
+    setIsRevisionHistoryOpen((currentValue) => {
+      const nextValue = !currentValue;
+
+      if (!nextValue) {
+        setIsRestoreConfirmationOpen(false);
+      }
+
+      return nextValue;
+    });
+  }
+
+  function openRestoreConfirmation() {
+    if (!selectedRevision) {
+      return;
+    }
+
+    setIsRestoreConfirmationOpen(true);
+  }
+
+  function confirmRestoreRevision() {
+    if (!selectedRevision) {
+      return;
+    }
+
+    setEditorJson(fromDocumentContent(selectedRevision.content_json));
+    setEditorResetVersion((currentValue) => currentValue + 1);
+    setIsRestoreConfirmationOpen(false);
+  }
 
   useEffect(() => {
     if (mode !== "create" || isSlugManuallyEdited) {
@@ -291,6 +423,15 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
             {mode === "create" ? "Create Document" : "Edit Document"}
           </h1>
           <div className="flex items-center gap-3 text-sm">
+            {mode === "edit" && (
+              <button
+                type="button"
+                onClick={toggleRevisionHistory}
+                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
+              >
+                {isRevisionHistoryOpen ? "Close Revision History" : "Revision History"}
+              </button>
+            )}
             <span
               className={cn(
                 "rounded-md border px-2 py-1",
@@ -317,6 +458,148 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
           </p>
         )}
       </header>
+
+      {mode === "edit" && isRevisionHistoryOpen && (
+        <section
+          className="space-y-3 rounded-lg border border-border bg-card p-4"
+          data-testid="document-editor-revision-history-panel"
+        >
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Revision history
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Select a revision to preview and restore its content.
+            </p>
+          </div>
+
+          {(revisionsQuery.isLoading || revisionsQuery.isPending) && (
+            <p className="text-sm text-muted-foreground" data-testid="document-editor-revision-history-loading">
+              Loading revisions...
+            </p>
+          )}
+
+          {revisionsQuery.data?.status === "not-found" && (
+            <p className="text-sm text-muted-foreground" data-testid="document-editor-revision-history-empty">
+              No revisions found for this document.
+            </p>
+          )}
+
+          {(revisionsQuery.data?.status === "error"
+            || revisionsQuery.data?.status === "validation-error") && (
+            <p className="text-sm text-destructive" data-testid="document-editor-revision-history-error">
+              {revisionsQuery.data.message}
+            </p>
+          )}
+
+          {revisionsQuery.data?.status === "success" && sortedRevisions.length === 0 && (
+            <p className="text-sm text-muted-foreground" data-testid="document-editor-revision-history-empty">
+              No revisions found for this document.
+            </p>
+          )}
+
+          {revisionsQuery.data?.status === "success" && sortedRevisions.length > 0 && (
+            <div className="grid gap-3 lg:grid-cols-[18rem_1fr]">
+              <div className="space-y-2" data-testid="document-editor-revision-list">
+                {sortedRevisions.map((revision) => {
+                  const isSelected = revision.id === selectedRevisionId;
+
+                  return (
+                    <button
+                      key={revision.id}
+                      type="button"
+                      className={cn(
+                        "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                        isSelected
+                          ? "border-primary bg-accent text-foreground"
+                          : "border-border text-muted-foreground hover:bg-accent",
+                      )}
+                      onClick={() => setSelectedRevisionId(revision.id)}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="block font-medium text-foreground">
+                        Revision #{revision.revisionNumber}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {revision.createdAt}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-3 rounded-md border border-border bg-background p-3" data-testid="document-editor-revision-preview">
+                {selectedRevision ? (
+                  <>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        Revision #{selectedRevision.revisionNumber}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Created at {selectedRevision.createdAt}
+                      </p>
+                    </div>
+
+                    <p className="text-sm text-foreground" data-testid="document-editor-revision-preview-text">
+                      {selectedRevisionPreview}
+                    </p>
+
+                    <button
+                      type="button"
+                      className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+                      onClick={openRestoreConfirmation}
+                    >
+                      Restore this revision
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Select a revision to preview.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {isRestoreConfirmationOpen && selectedRevision && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="document-editor-restore-title"
+          data-testid="document-editor-restore-confirmation"
+        >
+          <div className="w-full max-w-md space-y-4 rounded-lg border border-border bg-background p-5 shadow-lg">
+            <h3 id="document-editor-restore-title" className="text-lg font-semibold text-foreground">
+              Restore revision #{selectedRevision.revisionNumber}?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Restoring this revision will replace the current editor content.
+            </p>
+            {autosave.isDirty && (
+              <p className="text-sm text-destructive">
+                Your current unsaved changes will be discarded.
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsRestoreConfirmationOpen(false)}
+                className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRestoreRevision}
+                className="rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90"
+              >
+                Confirm restore
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {spacesQuery.data?.status === "error" && (
         <AdminFeedbackState
@@ -423,6 +706,7 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
             Editor
           </h2>
           <EditorContent
+            key={`${mode}-${documentId ?? "new"}-${editorResetVersion}`}
             initialContent={editorJson ?? EMPTY_EDITOR_CONTENT}
             onChange={setEditorJson}
           />
