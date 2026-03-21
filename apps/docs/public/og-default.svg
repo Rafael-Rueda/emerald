@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Emerald Docs</title>
+  <desc id="desc">Default Open Graph image for Emerald documentation pages.</desc>
+  <defs>
+    <linearGradient id="emeraldGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#emeraldGradient)" />
+  <text x="96" y="290" fill="#d1fae5" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">Emerald Docs</text>
+  <text x="96" y="360" fill="#a7f3d0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="32">Production-ready documentation platform</text>
+</svg>

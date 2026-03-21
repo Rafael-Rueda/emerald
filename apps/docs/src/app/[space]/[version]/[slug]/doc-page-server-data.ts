@@ -15,6 +15,8 @@ import type { DocumentIdentity } from "@/modules/documentation";
 import { buildDocumentIdentity } from "@/modules/documentation";
 
 const DEFAULT_PAGE_TITLE = "Emerald Docs";
+const DEFAULT_DOCS_ORIGIN = "http://localhost:3100";
+const DEFAULT_OG_IMAGE_PATH = "/og-default.svg";
 
 const PUBLIC_DOCUMENT_RESPONSE_SCHEMA = z.object({
   document: z.object({
@@ -73,6 +75,38 @@ export interface StaticDocumentParams {
 
 function resolveApiBaseUrl() {
   return (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
+}
+
+export function resolveDocsSiteOrigin() {
+  const fromEnv = (process.env.NEXT_PUBLIC_DOCS_URL ?? "").trim().replace(/\/+$/, "");
+
+  if (!fromEnv) {
+    return DEFAULT_DOCS_ORIGIN;
+  }
+
+  try {
+    return new URL(fromEnv).toString().replace(/\/+$/, "");
+  } catch {
+    return DEFAULT_DOCS_ORIGIN;
+  }
+}
+
+function toPlainText(html: string) {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function toAbsoluteUrl(value: string, origin: string) {
+  try {
+    return new URL(value, origin).toString();
+  } catch {
+    return null;
+  }
+}
+
+function extractFirstImageSource(html: string) {
+  const imageMatch = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+  const source = imageMatch?.[1]?.trim();
+  return source && source.length > 0 ? source : null;
 }
 
 function extractHeadingsFromHtml(html: string) {
@@ -377,4 +411,28 @@ export function buildFallbackPageTitle(slug: string) {
     .join(" ");
 
   return label.length > 0 ? `${label} | ${DEFAULT_PAGE_TITLE}` : DEFAULT_PAGE_TITLE;
+}
+
+export function buildDocumentDescription(html: string, maxLength = 160) {
+  const plainText = toPlainText(html);
+
+  if (!plainText) {
+    return "Read technical documentation on Emerald Docs.";
+  }
+
+  return plainText.slice(0, maxLength);
+}
+
+export function buildDocumentOgImage(html: string) {
+  const origin = resolveDocsSiteOrigin();
+  const documentImage = extractFirstImageSource(html);
+
+  if (documentImage) {
+    const absoluteDocumentImage = toAbsoluteUrl(documentImage, origin);
+    if (absoluteDocumentImage) {
+      return absoluteDocumentImage;
+    }
+  }
+
+  return `${origin}${DEFAULT_OG_IMAGE_PATH}`;
 }

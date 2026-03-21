@@ -11,10 +11,13 @@ import type { Metadata } from "next";
 import { buildDocumentIdentity } from "@/modules/documentation";
 import { DocPageClient } from "./doc-page-client";
 import {
+  buildDocumentDescription,
+  buildDocumentOgImage,
   buildDocumentPageTitle,
   buildFallbackPageTitle,
   fetchServerDocumentState,
   generateKnownDocumentStaticParams,
+  resolveDocsSiteOrigin,
 } from "./doc-page-server-data";
 
 export const revalidate = 60;
@@ -34,17 +37,42 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
   const { space, version, slug } = await params;
   const identity = buildDocumentIdentity(space, version, slug);
+  const metadataBase = new URL(resolveDocsSiteOrigin());
 
   const documentState = await fetchServerDocumentState(identity);
 
   if (documentState.state === "success") {
+    const title = buildDocumentPageTitle(documentState.document.title);
+    const description = buildDocumentDescription(documentState.document.body);
+    const image = buildDocumentOgImage(documentState.document.body);
+
     return {
-      title: buildDocumentPageTitle(documentState.document.title),
+      metadataBase,
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: "article",
+        images: [image],
+      },
     };
   }
 
+  const title = buildFallbackPageTitle(slug);
+  const description = "Read technical documentation on Emerald Docs.";
+  const image = buildDocumentOgImage("");
+
   return {
-    title: buildFallbackPageTitle(slug),
+    metadataBase,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      images: [image],
+    },
   };
 }
 
