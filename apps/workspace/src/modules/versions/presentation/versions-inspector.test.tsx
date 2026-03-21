@@ -3,21 +3,131 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
   vi,
 } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { createAllHandlers } from "@emerald/mocks";
 import { AppProviders } from "@emerald/ui/providers";
+import type { WorkspaceReleaseVersion } from "@emerald/data-access";
 import { VersionsInspector } from "./versions-inspector";
 
+const baseVersions: WorkspaceReleaseVersion[] = [
+  {
+    id: "ver-v1",
+    spaceId: "space-guides",
+    key: "v1",
+    label: "Version 1",
+    status: "published",
+    isDefault: true,
+    publishedAt: "2026-01-01T00:00:00.000Z",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "ver-v2",
+    spaceId: "space-guides",
+    key: "v2-draft",
+    label: "Version 2 Draft",
+    status: "draft",
+    isDefault: false,
+    publishedAt: null,
+    createdAt: "2026-02-01T00:00:00.000Z",
+    updatedAt: "2026-02-01T00:00:00.000Z",
+  },
+];
+
 describe("VersionsInspector", () => {
-  const server = setupServer(...createAllHandlers({ workspaceVersions: "success" }));
+  let versions = structuredClone(baseVersions);
+
+  const server = setupServer(
+    http.get("*/api/workspace/spaces", () =>
+      HttpResponse.json([
+        {
+          id: "space-guides",
+          key: "guides",
+          name: "Guides",
+          description: "Workspace guides",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ]),
+    ),
+    http.get("*/api/workspace/versions", () =>
+      HttpResponse.json({ versions }),
+    ),
+    http.post("*/api/workspace/versions", async ({ request }) => {
+      const body = await request.json() as {
+        spaceId: string;
+        key: string;
+        label: string;
+      };
+
+      const duplicate = versions.some((version) => version.key === body.key);
+      if (duplicate) {
+        return HttpResponse.json({ message: "Version key already exists" }, { status: 409 });
+      }
+
+      const now = "2026-03-21T00:00:00.000Z";
+      const created: WorkspaceReleaseVersion = {
+        id: "ver-created",
+        spaceId: body.spaceId,
+        key: body.key,
+        label: body.label,
+        status: "draft",
+        isDefault: false,
+        publishedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      versions = [...versions, created];
+      return HttpResponse.json(created, { status: 201 });
+    }),
+    http.post("*/api/workspace/versions/:id/publish", ({ params }) => {
+      const versionId = String(params.id ?? "");
+      const targetVersion = versions.find((version) => version.id === versionId);
+
+      if (!targetVersion) {
+        return HttpResponse.json({ message: "Not found" }, { status: 404 });
+      }
+
+      const published: WorkspaceReleaseVersion = {
+        ...targetVersion,
+        status: "published",
+        publishedAt: "2026-03-22T00:00:00.000Z",
+        updatedAt: "2026-03-22T00:00:00.000Z",
+      };
+
+      versions = versions.map((version) => (
+        version.id === versionId ? published : version
+      ));
+
+      return HttpResponse.json(published);
+    }),
+    http.post("*/api/workspace/versions/:id/set-default", ({ params }) => {
+      const versionId = String(params.id ?? "");
+      const targetVersion = versions.find((version) => version.id === versionId);
+
+      if (!targetVersion) {
+        return HttpResponse.json({ message: "Not found" }, { status: 404 });
+      }
+
+      versions = versions.map((version) => ({
+        ...version,
+        isDefault: version.id === versionId,
+      }));
+
+      const updatedTarget = versions.find((version) => version.id === versionId);
+
+      return HttpResponse.json(updatedTarget);
+    }),
+  );
 
   function renderInspector() {
     return render(
@@ -31,259 +141,158 @@ describe("VersionsInspector", () => {
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
 
-  it("renders at least two visibly distinguishable records", async () => {
+  beforeEach(() => {
+    versions = structuredClone(baseVersions);
+  });
+
+  it("lists versions with label, key, status, and default badge", async () => {
     renderInspector();
 
     await waitFor(() => {
       expect(screen.getByTestId("versions-list")).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: /^v1/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^v2/i })).toBeInTheDocument();
+    expect(screen.getByTestId("version-label-ver-v1")).toHaveTextContent("Version 1");
+    expect(screen.getByTestId("version-key-ver-v1")).toHaveTextContent("v1");
+    expect(screen.getByTestId("version-status-ver-v1")).toHaveTextContent("published");
+    expect(screen.getByTestId("version-default-badge-ver-v1")).toBeInTheDocument();
 
-    expect(screen.getByTestId("version-list-item-ver-v1")).toHaveTextContent(
-      "published",
-    );
-    expect(screen.getByTestId("version-list-item-ver-v2")).toHaveTextContent("draft");
+    expect(screen.getByTestId("version-label-ver-v2")).toHaveTextContent("Version 2 Draft");
+    expect(screen.getByTestId("version-key-ver-v2")).toHaveTextContent("v2-draft");
+    expect(screen.getByTestId("version-status-ver-v2")).toHaveTextContent("draft");
   });
 
-  it("updates detail rendering when selecting a different record", async () => {
+  it("auto-generates a key from label and creates a new version", async () => {
     const user = userEvent.setup();
-    renderInspector();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await waitFor(() => {
-      expect(screen.getByTestId("version-detail-id")).toHaveTextContent("ver-v1");
-    });
+    try {
+      renderInspector();
 
-    await user.click(screen.getByRole("button", { name: /^v2/i }));
+      await user.click(screen.getByRole("button", { name: /New Version/i }));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("version-detail-id")).toHaveTextContent("ver-v2");
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId("versions-create-dialog")).toBeInTheDocument();
+      });
 
-    expect(screen.getByTestId("version-detail-label")).toHaveTextContent("v2");
-    expect(screen.getByTestId("version-detail-slug")).toHaveTextContent("v2");
-    expect(screen.getByTestId("version-detail-space")).toHaveTextContent("guides");
-    expect(screen.getByTestId("version-detail-status")).toHaveTextContent("draft");
-    expect(screen.getByTestId("version-detail-default")).toHaveTextContent("No");
-    expect(screen.getByTestId("admin-section-versions")).toBeInTheDocument();
-    expect(screen.getByText("Versions")).toBeInTheDocument();
+      await user.type(screen.getByTestId("versions-create-label"), "Version 3");
+
+      expect(screen.getByTestId("versions-create-key")).toHaveValue("v3");
+
+      await user.click(screen.getByRole("button", { name: /Create version/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("version-key-ver-created")).toHaveTextContent("v3");
+      });
+
+      expect(screen.getByTestId("version-action-feedback-success")).toHaveTextContent(
+        "Version v3 created successfully.",
+      );
+
+      await waitFor(() => {
+        expect(
+          fetchSpy.mock.calls.some(
+            ([input, init]) =>
+              input === "/api/workspace/versions" && init?.method === "POST",
+          ),
+        ).toBe(true);
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
-  it("shows a shared loading feedback state while the versions list request is pending", async () => {
-    server.use(...createAllHandlers({ workspaceVersions: "loading" }));
-
-    renderInspector();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("versions-list-loading")).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId("versions-list-loading").querySelector("[role='alert']")).not.toBeNull();
-    expect(screen.getByTestId("admin-section-versions")).toBeInTheDocument();
-  });
-
-  it("shows intentional list and detail empty states when no version records are returned", async () => {
-    server.use(...createAllHandlers({ workspaceVersions: "not-found" }));
-
-    renderInspector();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("versions-list-empty")).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId("version-detail-empty")).toBeInTheDocument();
-    expect(screen.queryByTestId("versions-list")).not.toBeInTheDocument();
-    expect(screen.getByTestId("versions-list-empty").querySelector("[role='alert']")).not.toBeNull();
-  });
-
-  it("shows a request-failure list state without rendering stale records", async () => {
-    server.use(...createAllHandlers({ workspaceVersions: "error" }));
+  it("shows duplicate key error when creating a version with an existing key", async () => {
+    const user = userEvent.setup();
 
     renderInspector();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("versions-list-error")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId("versions-list")).not.toBeInTheDocument();
-    expect(screen.getByTestId("versions-list-error").querySelector("[role='alert']")).not.toBeNull();
-  });
-
-  it("shows a schema-failure list state for malformed version payloads", async () => {
-    server.use(...createAllHandlers({ workspaceVersions: "malformed" }));
-
-    renderInspector();
+    await user.click(screen.getByRole("button", { name: /New Version/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("versions-list-validation-error")).toBeInTheDocument();
+      expect(screen.getByTestId("versions-create-dialog")).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId("versions-list")).not.toBeInTheDocument();
-    expect(
-      screen.getByTestId("versions-list-validation-error").querySelector("[role='alert']"),
-    ).not.toBeNull();
+    await user.type(screen.getByTestId("versions-create-label"), "Version 1");
+    await user.clear(screen.getByTestId("versions-create-key"));
+    await user.type(screen.getByTestId("versions-create-key"), "v1");
+
+    await user.click(screen.getByRole("button", { name: /Create version/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("versions-create-error")).toHaveTextContent(
+        'Version key "v1" already exists for this space.',
+      );
+    });
   });
 
-  it("shows a loading state while selected version detail is pending", async () => {
+  it("publishes draft versions with optimistic status update", async () => {
+    const user = userEvent.setup();
+
     server.use(
-      http.get("*/api/workspace/versions/:id", async () => {
-        await delay("infinite");
-        return HttpResponse.json({ id: "never-resolves" }, { status: 200 });
+      http.post("*/api/workspace/versions/:id/publish", async ({ params }) => {
+        const versionId = String(params.id ?? "");
+        await delay(180);
+
+        const current = versions.find((version) => version.id === versionId);
+        if (!current) {
+          return HttpResponse.json({ message: "Not found" }, { status: 404 });
+        }
+
+        const updated: WorkspaceReleaseVersion = {
+          ...current,
+          status: "published",
+          publishedAt: "2026-03-25T00:00:00.000Z",
+          updatedAt: "2026-03-25T00:00:00.000Z",
+        };
+
+        versions = versions.map((version) => (
+          version.id === versionId ? updated : version
+        ));
+
+        return HttpResponse.json(updated);
       }),
     );
 
     renderInspector();
 
     await waitFor(() => {
-      expect(screen.getByTestId("versions-list")).toBeInTheDocument();
+      expect(screen.getByTestId("version-status-ver-v2")).toHaveTextContent("draft");
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId("version-detail-loading")).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId("version-detail-loading").querySelector("[role='alert']")).not.toBeNull();
-  });
-
-  it("shows a request-failure detail state for the selected version", async () => {
-    server.use(
-      http.get("*/api/workspace/versions/:id", () =>
-        HttpResponse.json({ error: "Failed detail" }, { status: 500 }),
-      ),
+    await user.click(
+      within(screen.getByTestId("version-list-item-ver-v2")).getByRole("button", {
+        name: /^Publish$/i,
+      }),
     );
 
-    renderInspector();
+    expect(screen.getByTestId("version-status-ver-v2")).toHaveTextContent("published");
 
     await waitFor(() => {
-      expect(screen.getByTestId("version-detail-error")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId("version-detail-id")).not.toBeInTheDocument();
-    expect(screen.getByTestId("version-detail-error").querySelector("[role='alert']")).not.toBeNull();
-  });
-
-  it("shows a schema-failure detail state for malformed selected version payloads", async () => {
-    server.use(
-      http.get("*/api/workspace/versions/:id", () =>
-        HttpResponse.json({ id: 123, label: null }, { status: 200 }),
-      ),
-    );
-
-    renderInspector();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("version-detail-validation-error")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId("version-detail-id")).not.toBeInTheDocument();
-    expect(
-      screen.getByTestId("version-detail-validation-error").querySelector("[role='alert']"),
-    ).not.toBeNull();
-  });
-
-  it("publishes the selected version and updates visible status indicators", async () => {
-    const user = userEvent.setup();
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-
-    try {
-      renderInspector();
-
-      await waitFor(() => {
-        expect(screen.getByTestId("version-detail-id")).toHaveTextContent("ver-v1");
-      });
-
-      await user.click(screen.getByRole("button", { name: /^v2/i }));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
-          "draft",
-        );
-      });
-
-      await user.click(
-        screen.getByRole("button", { name: /Publish selected version/i }),
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
-          "published",
-        );
-      });
-
-      expect(screen.getByTestId("version-list-item-ver-v2-status")).toHaveTextContent(
-        "published",
-      );
       expect(screen.getByTestId("version-action-feedback-success")).toHaveTextContent(
-        "Operation completed successfully.",
+        "Version v2-draft is now published.",
       );
-
-      await waitFor(() => {
-        expect(
-          fetchSpy.mock.calls.some(
-            ([input, init]) =>
-              input === "/api/workspace/versions/ver-v2/publish" &&
-              init?.method === "POST",
-          ),
-        ).toBe(true);
-      });
-    } finally {
-      fetchSpy.mockRestore();
-    }
+    });
   });
 
-  it("rolls back optimistic version publish when the mutation fails", async () => {
+  it("sets selected version as default and removes default from previous one", async () => {
     const user = userEvent.setup();
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    server.use(
-      http.post("*/api/workspace/versions/:id/publish", () =>
-        HttpResponse.json({ error: "Mutation failed" }, { status: 500 }),
-      ),
+
+    renderInspector();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("version-default-badge-ver-v1")).toBeInTheDocument();
+    });
+
+    const targetVersionItem = screen.getByTestId("version-list-item-ver-v2");
+    await user.click(
+      within(targetVersionItem).getByRole("button", { name: /^Set default$/i }),
     );
 
-    try {
-      renderInspector();
+    await waitFor(() => {
+      expect(screen.getByTestId("version-default-badge-ver-v2")).toBeInTheDocument();
+    });
 
-      await waitFor(() => {
-        expect(screen.getByTestId("version-detail-id")).toHaveTextContent("ver-v1");
-      });
-
-      await user.click(screen.getByRole("button", { name: /^v2/i }));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
-          "draft",
-        );
-      });
-
-      await user.click(
-        screen.getByRole("button", { name: /Publish selected version/i }),
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("version-detail-status")).toHaveTextContent(
-          "draft",
-        );
-      });
-
-      expect(screen.getByTestId("version-list-item-ver-v2-status")).toHaveTextContent(
-        "draft",
-      );
-      expect(screen.getByTestId("version-action-feedback-error")).toHaveTextContent(
-        "Request failed with status 500",
-      );
-
-      await waitFor(() => {
-        expect(
-          fetchSpy.mock.calls.some(
-            ([input, init]) =>
-              input === "/api/workspace/versions/ver-v2/publish" &&
-              init?.method === "POST",
-          ),
-        ).toBe(true);
-      });
-    } finally {
-      fetchSpy.mockRestore();
-    }
+    expect(screen.queryByTestId("version-default-badge-ver-v1")).not.toBeInTheDocument();
   });
 });

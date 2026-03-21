@@ -1,17 +1,16 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  buildCanonicalVersionLabel,
-  type WorkspaceVersion,
-} from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
+  useCreateWorkspaceVersionAction,
   usePublishWorkspaceVersionAction,
-  useWorkspaceVersionDetail,
+  useSetDefaultWorkspaceVersionAction,
   useWorkspaceVersionsList,
 } from "../application/use-workspace-versions";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
+import { generateVersionKeyFromLabel } from "../domain/version-key";
+import type { WorkspaceReleaseVersion } from "@emerald/data-access";
 
 type ActionFeedback =
   | { tone: "success"; message: string }
@@ -37,341 +36,389 @@ function formatTimestamp(value: string): string {
 
 export function VersionsInspector() {
   const listState = useWorkspaceVersionsList();
+  const createAction = useCreateWorkspaceVersionAction();
   const publishAction = usePublishWorkspaceVersionAction();
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
-    null,
-  );
-  const [versionStatusOverrides, setVersionStatusOverrides] = useState<
-    Record<string, WorkspaceVersion["status"]>
-  >({});
+  const setDefaultAction = useSetDefaultWorkspaceVersionAction();
+
+  const [versions, setVersions] = useState<WorkspaceReleaseVersion[]>([]);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newVersionLabel, setNewVersionLabel] = useState("");
+  const [newVersionKey, setNewVersionKey] = useState("");
+  const [isKeyManuallyEdited, setIsKeyManuallyEdited] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [publishingVersionId, setPublishingVersionId] = useState<string | null>(null);
+  const [settingDefaultVersionId, setSettingDefaultVersionId] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
 
-  const listVersions = useMemo(() => {
-    if (listState.state !== "success") {
-      return [];
-    }
-
-    return listState.data.versions;
-  }, [listState]);
+  const listVersions = listState.state === "success" ? listState.data : null;
 
   useEffect(() => {
-    if (listVersions.length === 0) {
-      setSelectedVersionId(null);
+    if (!listVersions) {
       return;
     }
 
-    setSelectedVersionId((currentSelectedId) => {
-      if (
-        currentSelectedId &&
-        listVersions.some((version) => version.id === currentSelectedId)
-      ) {
-        return currentSelectedId;
-      }
-
-      return listVersions[0].id;
-    });
+    setVersions(listVersions);
   }, [listVersions]);
 
-  useEffect(() => {
-    const validIds = new Set(listVersions.map((version) => version.id));
+  const sortedVersions = useMemo(
+    () => [...versions].sort((first, second) => first.key.localeCompare(second.key)),
+    [versions],
+  );
 
-    setVersionStatusOverrides((currentOverrides) => {
-      let hasChanges = false;
-      const nextOverrides: Record<string, WorkspaceVersion["status"]> = {};
-
-      for (const [versionId, status] of Object.entries(currentOverrides)) {
-        if (validIds.has(versionId)) {
-          nextOverrides[versionId] = status;
-          continue;
-        }
-
-        hasChanges = true;
-      }
-
-      return hasChanges ? nextOverrides : currentOverrides;
-    });
-  }, [listVersions]);
-
-  const detailState = useWorkspaceVersionDetail(selectedVersionId);
-
-  function getEffectiveStatus(versionId: string, baseStatus: WorkspaceVersion["status"]) {
-    return versionStatusOverrides[versionId] ?? baseStatus;
+  function openCreateDialog() {
+    setNewVersionLabel("");
+    setNewVersionKey("");
+    setIsKeyManuallyEdited(false);
+    setCreateError(null);
+    setIsCreateDialogOpen(true);
   }
 
-  const selectedVersionStatus =
-    selectedVersionId && detailState.state === "success"
-      ? getEffectiveStatus(detailState.data.id, detailState.data.status)
-      : null;
+  function normalizeVersionKey(value: string): string {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
 
-  async function handlePublishSelectedVersion() {
-    if (!selectedVersionId || detailState.state !== "success") {
+  function replaceVersion(targetVersion: WorkspaceReleaseVersion) {
+    setVersions((currentVersions) => currentVersions.map((version) => (
+      version.id === targetVersion.id ? targetVersion : version
+    )));
+  }
+
+  function applyDefaultVersion(versionId: string) {
+    setVersions((currentVersions) => currentVersions.map((version) => ({
+      ...version,
+      isDefault: version.id === versionId,
+    })));
+  }
+
+  function applyOptimisticPublish(versionId: string) {
+    setVersions((currentVersions) => currentVersions.map((version) => (
+      version.id === versionId
+        ? {
+          ...version,
+          status: "published",
+          publishedAt: version.publishedAt ?? new Date().toISOString(),
+        }
+        : version
+    )));
+  }
+
+  async function handleCreateVersion(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const label = newVersionLabel.trim();
+    const key = normalizeVersionKey(newVersionKey);
+
+    if (!label) {
+      setCreateError("Version label is required.");
       return;
     }
 
-    const versionId = detailState.data.id;
-    const previousStatus = getEffectiveStatus(versionId, detailState.data.status);
-    const nextStatus: WorkspaceVersion["status"] = "published";
+    if (!key) {
+      setCreateError("Version key is required.");
+      return;
+    }
+
+    setCreateError(null);
+    setActionFeedback(null);
+
+    const result = await createAction.mutateAsync({
+      label,
+      key,
+    });
+
+    if (result.status === "success") {
+      setVersions((currentVersions) => [...currentVersions, result.data]);
+      setActionFeedback({
+        tone: "success",
+        message: `Version ${result.data.key} created successfully.`,
+      });
+      setIsCreateDialogOpen(false);
+      return;
+    }
+
+    if (/409|already exists/i.test(result.message)) {
+      setCreateError(`Version key "${key}" already exists for this space.`);
+      return;
+    }
+
+    setCreateError(result.message);
+  }
+
+  async function handlePublishVersion(versionId: string) {
+    const previousVersions = versions;
 
     setActionFeedback(null);
-    setVersionStatusOverrides((currentOverrides) => ({
-      ...currentOverrides,
-      [versionId]: nextStatus,
-    }));
+    setPublishingVersionId(versionId);
+    applyOptimisticPublish(versionId);
 
-    try {
-      const result = await publishAction.mutateAsync(versionId);
+    const result = await publishAction.mutateAsync(versionId);
 
-      if (result.status === "success") {
-        setActionFeedback({
-          tone: "success",
-          message: result.data.message,
-        });
-        return;
-      }
-
-      setVersionStatusOverrides((currentOverrides) => ({
-        ...currentOverrides,
-        [versionId]: previousStatus,
-      }));
+    if (result.status === "success") {
+      replaceVersion(result.data);
+      setPublishingVersionId(null);
       setActionFeedback({
-        tone: "error",
-        message: result.message,
+        tone: "success",
+        message: `Version ${result.data.key} is now published.`,
       });
-    } catch (error) {
-      setVersionStatusOverrides((currentOverrides) => ({
-        ...currentOverrides,
-        [versionId]: previousStatus,
-      }));
-      setActionFeedback({
-        tone: "error",
-        message: error instanceof Error ? error.message : "Unknown mutation failure",
-      });
+      return;
     }
+
+    setVersions(previousVersions);
+    setPublishingVersionId(null);
+    setActionFeedback({
+      tone: "error",
+      message: result.message,
+    });
+  }
+
+  async function handleSetDefaultVersion(versionId: string) {
+    const previousVersions = versions;
+
+    setActionFeedback(null);
+    setSettingDefaultVersionId(versionId);
+    applyDefaultVersion(versionId);
+
+    const result = await setDefaultAction.mutateAsync(versionId);
+
+    if (result.status === "success") {
+      replaceVersion(result.data);
+      applyDefaultVersion(result.data.id);
+      setSettingDefaultVersionId(null);
+      setActionFeedback({
+        tone: "success",
+        message: `Version ${result.data.key} is now the default.`,
+      });
+      return;
+    }
+
+    setVersions(previousVersions);
+    setSettingDefaultVersionId(null);
+    setActionFeedback({
+      tone: "error",
+      message: result.message,
+    });
   }
 
   return (
     <section className="space-y-4" data-testid="admin-section-versions">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">Versions</h1>
+      <header className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-foreground">Versions</h1>
+          <button
+            type="button"
+            onClick={openCreateDialog}
+            className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            New Version
+          </button>
+        </div>
         <p className="text-muted-foreground">
-          Inspect mocked version records and compare release metadata for the
-          selected version.
+          Manage release versions for the selected space, publish drafts, and set the
+          default version shown in docs.
         </p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_1fr]">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Records
-          </h2>
+      {actionFeedback?.tone === "success" && (
+        <p className="text-sm text-emerald-600" data-testid="version-action-feedback-success">
+          {actionFeedback.message}
+        </p>
+      )}
 
-          {listState.state === "loading" && (
-            <AdminFeedbackState
-              testId="versions-list-loading"
-              title="Loading versions"
-              message="Please wait while version records are fetched."
-            />
-          )}
+      {actionFeedback?.tone === "error" && (
+        <p className="text-sm text-destructive" data-testid="version-action-feedback-error">
+          {actionFeedback.message}
+        </p>
+      )}
 
-          {listState.state === "error" && (
-            <AdminFeedbackState
-              testId="versions-list-error"
-              title="Could not load versions"
-              message={listState.message}
-              variant="destructive"
-            />
-          )}
+      {listState.state === "loading" && (
+        <AdminFeedbackState
+          testId="versions-list-loading"
+          title="Loading versions"
+          message="Please wait while version records are fetched."
+        />
+      )}
 
-          {listState.state === "validation-error" && (
-            <AdminFeedbackState
-              testId="versions-list-validation-error"
-              title="Version list payload is invalid"
-              message={listState.message}
-              variant="destructive"
-            />
-          )}
+      {listState.state === "error" && (
+        <AdminFeedbackState
+          testId="versions-list-error"
+          title="Could not load versions"
+          message={listState.message}
+          variant="destructive"
+        />
+      )}
 
-          {listState.state === "success" && listState.data.versions.length === 0 && (
-            <AdminFeedbackState
-              testId="versions-list-empty"
-              title="No versions found"
-              message="This workspace has no version records to inspect yet."
-              variant="warning"
-            />
-          )}
+      {listState.state === "validation-error" && (
+        <AdminFeedbackState
+          testId="versions-list-validation-error"
+          title="Version list payload is invalid"
+          message={listState.message}
+          variant="destructive"
+        />
+      )}
 
-          {listState.state === "success" && listState.data.versions.length > 0 && (
-            <ul className="mt-3 space-y-2" data-testid="versions-list">
-              {listState.data.versions.map((version) => {
-                const isSelected = selectedVersionId === version.id;
-                const status = getEffectiveStatus(version.id, version.status);
-                const versionLabel = buildCanonicalVersionLabel(version.label);
+      {listState.state === "success" && sortedVersions.length === 0 && (
+        <AdminFeedbackState
+          testId="versions-list-empty"
+          title="No versions found"
+          message="Create your first release version to begin managing version lifecycles."
+          variant="warning"
+        />
+      )}
 
-                return (
-                  <li
-                    key={version.id}
-                    className="list-none"
-                    data-testid={`version-list-item-${version.id}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVersionId(version.id)}
-                      aria-pressed={isSelected}
-                      className={cn(
-                        "w-full rounded-md border px-3 py-2 text-left transition-colors",
-                        "border-border text-foreground hover:bg-accent",
-                        isSelected && "border-primary bg-accent",
-                      )}
+      {listState.state === "success" && sortedVersions.length > 0 && (
+        <ul className="space-y-3" data-testid="versions-list">
+          {sortedVersions.map((version) => (
+            <li
+              key={version.id}
+              className="rounded-lg border border-border bg-card p-4"
+              data-testid={`version-list-item-${version.id}`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-base font-semibold text-foreground" data-testid={`version-label-${version.id}`}>
+                      {version.label}
+                    </p>
+                    <span
+                      className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                      data-testid={`version-key-${version.id}`}
                     >
-                      <p className="text-sm font-medium">{versionLabel}</p>
-                      <p className="text-xs text-muted-foreground">
-                        <span data-testid={`version-list-item-${version.id}-status`}>
-                          {status}
-                        </span>
-                        {version.isDefault ? " • default" : ""}
-                      </p>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+                      {version.key}
+                    </span>
+                    {version.isDefault && (
+                      <span
+                        className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+                        data-testid={`version-default-badge-${version.id}`}
+                      >
+                        Default
+                      </span>
+                    )}
+                  </div>
 
-        <div className="rounded-lg border border-border bg-card p-4" data-testid="version-detail">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Selected version
-          </h2>
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span data-testid={`version-status-${version.id}`}>{version.status}</span>
+                    <span>Created {formatTimestamp(version.createdAt)}</span>
+                    <span>Updated {formatTimestamp(version.updatedAt)}</span>
+                  </div>
+                </div>
 
-          {selectedVersionId && detailState.state === "success" && (
-            <div className="mt-3 space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void handlePublishSelectedVersion();
-                }}
-                disabled={publishAction.isPending || selectedVersionStatus === "published"}
-                className={cn(
-                  "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-                  "border-border text-foreground hover:bg-accent",
-                  "disabled:cursor-not-allowed disabled:opacity-60",
-                )}
-              >
-                {publishAction.isPending ? "Publishing…" : "Publish selected version"}
-              </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handlePublishVersion(version.id);
+                    }}
+                    disabled={publishingVersionId === version.id || version.status === "published"}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-sm",
+                      "border-border hover:bg-accent",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    )}
+                  >
+                    {publishingVersionId === version.id ? "Publishing…" : "Publish"}
+                  </button>
 
-              {actionFeedback?.tone === "success" && (
-                <p className="text-sm text-emerald-600" data-testid="version-action-feedback-success">
-                  {actionFeedback.message}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSetDefaultVersion(version.id);
+                    }}
+                    disabled={settingDefaultVersionId === version.id || version.isDefault}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-sm",
+                      "border-border hover:bg-accent",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    )}
+                  >
+                    {settingDefaultVersionId === version.id ? "Setting default…" : "Set default"}
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isCreateDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="versions-create-dialog-title"
+          data-testid="versions-create-dialog"
+        >
+          <div className="w-full max-w-md rounded-lg border border-border bg-background p-5 shadow-lg">
+            <h2 id="versions-create-dialog-title" className="text-lg font-semibold text-foreground">
+              Create Version
+            </h2>
+
+            <form className="mt-4 space-y-3" onSubmit={handleCreateVersion}>
+              <label className="block space-y-1 text-sm">
+                <span className="text-muted-foreground">Label</span>
+                <input
+                  type="text"
+                  value={newVersionLabel}
+                  onChange={(event) => {
+                    const nextLabel = event.target.value;
+                    setNewVersionLabel(nextLabel);
+
+                    if (!isKeyManuallyEdited) {
+                      setNewVersionKey(generateVersionKeyFromLabel(nextLabel));
+                    }
+                  }}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                  data-testid="versions-create-label"
+                />
+              </label>
+
+              <label className="block space-y-1 text-sm">
+                <span className="text-muted-foreground">Key</span>
+                <input
+                  type="text"
+                  value={newVersionKey}
+                  onChange={(event) => {
+                    setIsKeyManuallyEdited(true);
+                    setNewVersionKey(normalizeVersionKey(event.target.value));
+                  }}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                  data-testid="versions-create-key"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-generated from label (example: Version 2 → v2). You can edit it.
+                </p>
+              </label>
+
+              {createError && (
+                <p className="text-sm text-destructive" data-testid="versions-create-error">
+                  {createError}
                 </p>
               )}
 
-              {actionFeedback?.tone === "error" && (
-                <p className="text-sm text-destructive" data-testid="version-action-feedback-error">
-                  {actionFeedback.message}
-                </p>
-              )}
-            </div>
-          )}
-
-          {listState.state === "success" && listState.data.versions.length === 0 && (
-            <AdminFeedbackState
-              testId="version-detail-empty"
-              title="No selected version"
-              message="Add or load version records to inspect detail fields."
-              variant="warning"
-            />
-          )}
-
-          {selectedVersionId && detailState.state === "loading" && (
-            <AdminFeedbackState
-              testId="version-detail-loading"
-              title="Loading selected version"
-              message="Please wait while the selected record details are fetched."
-            />
-          )}
-
-          {selectedVersionId && detailState.state === "not-found" && (
-            <AdminFeedbackState
-              testId="version-detail-not-found"
-              title="Selected version was not found"
-              message="The selected record no longer exists in the current workspace data."
-              variant="warning"
-            />
-          )}
-
-          {selectedVersionId && detailState.state === "error" && (
-            <AdminFeedbackState
-              testId="version-detail-error"
-              title="Failed to load selected version"
-              message={detailState.message}
-              variant="destructive"
-            />
-          )}
-
-          {selectedVersionId && detailState.state === "validation-error" && (
-            <AdminFeedbackState
-              testId="version-detail-validation-error"
-              title="Selected version payload is invalid"
-              message={detailState.message}
-              variant="destructive"
-            />
-          )}
-
-          {selectedVersionId && detailState.state === "success" && (
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">ID</dt>
-                <dd className="font-medium" data-testid="version-detail-id">
-                  {detailState.data.id}
-                </dd>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createAction.isPending}
+                  className="rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {createAction.isPending ? "Creating…" : "Create version"}
+                </button>
               </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Label</dt>
-                <dd className="font-medium" data-testid="version-detail-label">
-                  {buildCanonicalVersionLabel(detailState.data.label)}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Slug</dt>
-                <dd className="font-medium" data-testid="version-detail-slug">
-                  {detailState.data.slug}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Space</dt>
-                <dd className="font-medium" data-testid="version-detail-space">
-                  {detailState.data.space}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Status</dt>
-                <dd className="font-medium" data-testid="version-detail-status">
-                  {selectedVersionStatus ?? detailState.data.status}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Default</dt>
-                <dd className="font-medium" data-testid="version-detail-default">
-                  {detailState.data.isDefault ? "Yes" : "No"}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Created</dt>
-                <dd className="font-medium" data-testid="version-detail-created-at">
-                  {formatTimestamp(detailState.data.createdAt)}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Updated</dt>
-                <dd className="font-medium" data-testid="version-detail-updated-at">
-                  {formatTimestamp(detailState.data.updatedAt)}
-                </dd>
-              </div>
-            </dl>
-          )}
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

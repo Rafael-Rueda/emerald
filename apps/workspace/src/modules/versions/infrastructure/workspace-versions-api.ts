@@ -1,9 +1,7 @@
 import {
-  type MutationResult,
-  type WorkspaceVersion,
-  type WorkspaceVersionList,
-} from "@emerald/contracts";
-import { createApiClient } from "@emerald/data-access";
+  createApiClient,
+  type WorkspaceReleaseVersion,
+} from "@emerald/data-access";
 
 const workspaceApiClient = createApiClient(process.env.NEXT_PUBLIC_API_URL);
 
@@ -35,18 +33,12 @@ async function resolveWorkspaceSpaceId(): Promise<WorkspaceSpaceIdResult> {
 }
 
 export type WorkspaceVersionsListFetchResult =
-  | { status: "success"; data: WorkspaceVersionList }
+  | { status: "success"; data: WorkspaceReleaseVersion[] }
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
-export type WorkspaceVersionDetailFetchResult =
-  | { status: "success"; data: WorkspaceVersion }
-  | { status: "not-found" }
-  | { status: "error"; message: string }
-  | { status: "validation-error"; message: string };
-
-export type WorkspaceVersionPublishResult =
-  | { status: "success"; data: MutationResult }
+export type WorkspaceVersionMutationResult =
+  | { status: "success"; data: WorkspaceReleaseVersion }
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
@@ -57,7 +49,7 @@ export async function fetchWorkspaceVersionsList(): Promise<WorkspaceVersionsLis
     return spaceIdResult;
   }
 
-  const result = await workspaceApiClient.getWorkspaceVersions(spaceIdResult.data);
+  const result = await workspaceApiClient.getWorkspaceReleaseVersions(spaceIdResult.data);
 
   switch (result.status) {
     case "success":
@@ -71,27 +63,55 @@ export async function fetchWorkspaceVersionsList(): Promise<WorkspaceVersionsLis
   }
 }
 
-export async function fetchWorkspaceVersionDetail(
-  versionId: string,
-): Promise<WorkspaceVersionDetailFetchResult> {
-  const result = await workspaceApiClient.getWorkspaceVersion(versionId);
+export async function createWorkspaceVersion(payload: {
+  label: string;
+  key: string;
+}): Promise<WorkspaceVersionMutationResult> {
+  const spaceIdResult = await resolveWorkspaceSpaceId();
+
+  if (spaceIdResult.status !== "success") {
+    return spaceIdResult;
+  }
+
+  const result = await workspaceApiClient.createWorkspaceReleaseVersion({
+    spaceId: spaceIdResult.data,
+    label: payload.label,
+    key: payload.key,
+  });
 
   switch (result.status) {
     case "success":
       return { status: "success", data: result.data };
-    case "not-found":
-      return { status: "not-found" };
     case "validation-error":
       return { status: "validation-error", message: result.message };
     case "error":
       return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
   }
 }
 
 export async function publishWorkspaceVersion(
   versionId: string,
-): Promise<WorkspaceVersionPublishResult> {
-  const result = await workspaceApiClient.publishWorkspaceVersion(versionId);
+): Promise<WorkspaceVersionMutationResult> {
+  const result = await workspaceApiClient.publishWorkspaceReleaseVersion(versionId);
+
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
+  }
+}
+
+export async function setDefaultWorkspaceVersion(
+  versionId: string,
+): Promise<WorkspaceVersionMutationResult> {
+  const result = await workspaceApiClient.setDefaultWorkspaceReleaseVersion(versionId);
 
   switch (result.status) {
     case "success":

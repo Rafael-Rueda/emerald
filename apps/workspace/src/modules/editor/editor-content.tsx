@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { type JSONContent } from "@tiptap/core";
 import {
   EditorContent as TiptapEditorContent,
@@ -9,12 +10,25 @@ import {
 import { cn } from "@emerald/ui/lib/cn";
 import { type CalloutTone } from "./extensions";
 import { getEditorExtensions } from "./get-editor-extensions";
+import { uploadWorkspaceEditorImageAsset } from "./infrastructure/editor-assets-api";
+
+const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg"]);
+const DEFAULT_MAX_FILE_SIZE_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB ?? "10");
+const FALLBACK_UPLOAD_ENTITY_ID = "00000000-0000-4000-8000-000000000000";
+
+export interface WorkspaceEditorUploadContext {
+  entityType: string;
+  entityId: string;
+  field: string;
+  maxFileSizeMb?: number;
+}
 
 export interface WorkspaceEditorContentProps {
   initialContent?: JSONContent;
   editable?: boolean;
   className?: string;
   onChange?: (json: JSONContent) => void;
+  uploadContext?: WorkspaceEditorUploadContext;
 }
 
 const DEFAULT_EDITOR_CONTENT: JSONContent = {
@@ -32,7 +46,36 @@ export function EditorContent({
   editable = true,
   className,
   onChange,
+  uploadContext,
 }: WorkspaceEditorContentProps) {
+  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const resolvedUploadContext = useMemo(() => ({
+    entityType: uploadContext?.entityType ?? "document",
+    entityId: uploadContext?.entityId ?? FALLBACK_UPLOAD_ENTITY_ID,
+    field: uploadContext?.field ?? "content-image",
+    maxFileSizeMb: uploadContext?.maxFileSizeMb ?? DEFAULT_MAX_FILE_SIZE_MB,
+  }), [uploadContext]);
+
+  useEffect(() => {
+    if (!selectedImageFile || typeof URL.createObjectURL !== "function") {
+      setLocalPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImageFile);
+    setLocalPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedImageFile]);
+
   const editor = useEditor({
     extensions: getEditorExtensions(),
     content: initialContent ?? DEFAULT_EDITOR_CONTENT,
@@ -71,20 +114,72 @@ export function EditorContent({
       .run();
   }
 
-  function insertImage() {
+  function insertImage(url: string, caption: string) {
     editor
       ?.chain()
       .focus()
       .insertContent({
         type: "image",
         attrs: {
-          src: "https://storage.googleapis.com/emerald-assets/sample-image.png",
-          alt: "Sample editor image",
-          assetId: "asset-sample-image",
-          caption: "Sample image inserted from editor toolbar",
+          src: url,
+          alt: caption,
+          assetId: url,
+          caption,
         },
       })
       .run();
+  }
+
+  function openImageUploadModal() {
+    setUploadError(null);
+    setUploadedImageUrl(null);
+    setSelectedImageFile(null);
+    setIsImageUploadModalOpen(true);
+  }
+
+  function closeImageUploadModal() {
+    setIsImageUploadModalOpen(false);
+    setUploadError(null);
+    setUploadedImageUrl(null);
+    setSelectedImageFile(null);
+  }
+
+  async function handleUploadImage() {
+    if (!selectedImageFile) {
+      setUploadError("Select a PNG or JPG image before uploading.");
+      return;
+    }
+
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(selectedImageFile.type)) {
+      setUploadError("Only PNG or JPG images are allowed.");
+      return;
+    }
+
+    const maxBytes = resolvedUploadContext.maxFileSizeMb * 1024 * 1024;
+    if (selectedImageFile.size > maxBytes) {
+      setUploadError(`Image exceeds the ${resolvedUploadContext.maxFileSizeMb}MB size limit.`);
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setUploadError(null);
+
+    const result = await uploadWorkspaceEditorImageAsset({
+      entityType: resolvedUploadContext.entityType,
+      entityId: resolvedUploadContext.entityId,
+      field: resolvedUploadContext.field,
+      file: selectedImageFile,
+    });
+
+    setIsUploadingImage(false);
+
+    if (result.status !== "success") {
+      setUploadError(result.message);
+      return;
+    }
+
+    setUploadedImageUrl(result.data.url);
+    insertImage(result.data.url, selectedImageFile.name);
   }
 
   if (!editor) {
@@ -198,7 +293,7 @@ export function EditorContent({
           type="button"
           data-testid="editor-insert-image"
           className="rounded-md border border-border px-2 py-1 text-sm hover:bg-accent"
-          onClick={insertImage}
+          onClick={openImageUploadModal}
         >
           Image
         </button>
@@ -219,6 +314,85 @@ export function EditorContent({
           Tabs
         </button>
       </div>
+
+      {isImageUploadModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="editor-image-upload-title"
+          data-testid="editor-image-upload-modal"
+        >
+          <div className="w-full max-w-md rounded-lg border border-border bg-background p-5 shadow-lg">
+            <h3 id="editor-image-upload-title" className="text-lg font-semibold text-foreground">
+              Upload image
+            </h3>
+
+            <div className="mt-4 space-y-3">
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={(event) => {
+                  const nextFile = event.target.files?.[0] ?? null;
+                  setSelectedImageFile(nextFile);
+                  setUploadedImageUrl(null);
+                  setUploadError(null);
+                }}
+                data-testid="editor-image-upload-input"
+              />
+
+              <p className="text-xs text-muted-foreground">
+                Supported files: PNG, JPG. Max size: {resolvedUploadContext.maxFileSizeMb}MB.
+              </p>
+
+              {(uploadedImageUrl || localPreviewUrl) && (
+                <div className="space-y-2" data-testid="editor-image-upload-preview">
+                  <Image
+                    src={uploadedImageUrl ?? localPreviewUrl ?? ""}
+                    alt="Uploaded preview"
+                    width={320}
+                    height={176}
+                    unoptimized
+                    className="max-h-44 rounded-md border border-border object-contain"
+                    data-testid="editor-image-upload-thumbnail"
+                  />
+                  {uploadedImageUrl && (
+                    <p className="text-xs text-emerald-600" data-testid="editor-image-upload-success">
+                      Image uploaded and inserted into the editor.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {uploadError && (
+                <p className="text-sm text-destructive" data-testid="editor-image-upload-error">
+                  {uploadError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeImageUploadModal}
+                  className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleUploadImage();
+                  }}
+                  disabled={isUploadingImage}
+                  className="rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isUploadingImage ? "Uploading…" : "Upload"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg border border-border bg-card p-4">
         <TiptapEditorContent

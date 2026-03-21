@@ -170,6 +170,10 @@ const WorkspaceReleaseVersionListSchema = z
   })
   .transform((payload) => payload.versions);
 
+const StorageUploadResponseSchema = z.object({
+  url: z.url(),
+});
+
 const WorkspacePublishDocumentResultSchema = z
   .union([
     MutationResultSchema,
@@ -639,6 +643,85 @@ export function createApiClient(baseUrl?: string) {
         resolvedBaseUrl,
         `/api/workspace/versions?spaceId=${encodeURIComponent(spaceId)}`,
         WorkspaceReleaseVersionListSchema,
+      );
+    },
+
+    getWorkspaceReleaseVersion(versionId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions/${encodeURIComponent(versionId)}`,
+        WorkspaceReleaseVersionSchema,
+      );
+    },
+
+    createWorkspaceReleaseVersion(payload: {
+      spaceId: string;
+      key: string;
+      label: string;
+    }) {
+      return request(
+        resolvedBaseUrl,
+        "/api/workspace/versions",
+        WorkspaceReleaseVersionSchema,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    publishWorkspaceReleaseVersion(versionId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions/${encodeURIComponent(versionId)}/publish`,
+        WorkspaceReleaseVersionSchema,
+        {
+          method: "POST",
+        },
+      );
+    },
+
+    setDefaultWorkspaceReleaseVersion(versionId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions/${encodeURIComponent(versionId)}/set-default`,
+        WorkspaceReleaseVersionSchema,
+        {
+          method: "POST",
+        },
+      );
+    },
+
+    uploadWorkspaceStorageImage(payload: {
+      entityType: string;
+      entityId: string;
+      field: string;
+      file: File;
+    }) {
+      if (typeof FormData === "undefined") {
+        return Promise.resolve({
+          status: "error" as const,
+          message: "File uploads are not supported in this environment",
+        });
+      }
+
+      const formData = new FormData();
+      formData.set("file", payload.file);
+      formData.set("entityType", payload.entityType);
+      formData.set("entityId", payload.entityId);
+      formData.set("field", payload.field);
+
+      return request(
+        resolvedBaseUrl,
+        "/api/storage/upload",
+        StorageUploadResponseSchema,
+        {
+          method: "POST",
+          body: formData,
+        },
       );
     },
 

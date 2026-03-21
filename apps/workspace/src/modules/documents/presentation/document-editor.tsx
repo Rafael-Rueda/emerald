@@ -123,6 +123,17 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [spaceId, setSpaceId] = useState("");
   const [releaseVersionId, setReleaseVersionId] = useState("");
+  const [uploadEntityId] = useState(() => {
+    if (typeof documentId === "string" && documentId.length > 0) {
+      return documentId;
+    }
+
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+
+    return "00000000-0000-4000-8000-000000000000";
+  });
   const [editorJson, setEditorJson] = useState<JSONContent | null>(
     mode === "create" ? EMPTY_EDITOR_CONTENT : null,
   );
@@ -849,6 +860,11 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
             key={`${mode}-${documentId ?? "new"}-${editorResetVersion}`}
             initialContent={editorJson ?? EMPTY_EDITOR_CONTENT}
             onChange={setEditorJson}
+            uploadContext={{
+              entityType: "document",
+              entityId: uploadEntityId,
+              field: "content-image",
+            }}
           />
         </div>
       </form>
