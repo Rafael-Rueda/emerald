@@ -13,6 +13,7 @@ commands:
   api_generate: pnpm --filter @emerald/api prisma generate
   api_psql_dev: docker exec -e PGPASSWORD=sardius_password sardius_postgres psql -U sardius_user -d sardius_db
   api_psql_test: docker exec -e PGPASSWORD=sardius_password sardius_postgres_test psql -U sardius_user -d sardius_db
+  api_start_test: pnpm --filter @emerald/api exec dotenv -e .env.test -- nest start
 
 services:
   postgres-dev:

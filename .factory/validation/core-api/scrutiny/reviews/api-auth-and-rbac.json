@@ -1,0 +1,21 @@
+{
+  "featureId": "api-auth-and-rbac",
+  "reviewedAt": "2026-03-20T23:59:00Z",
+  "commitId": "45d2c0b1ca651564b544eb19bfcd3cd97fd1534a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly configures Google OAuth 2.0, adding user upsert behavior and assigning the VIEWER role by default. RBAC was correctly extended with SUPER_ADMIN and AUTHOR roles, complete with hierarchical role resolution in AuthGuard. The Next.js middleware correctly protects workspace /admin routes, and the RS256 JWT pair generation script is provided.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "services",
+      "observation": "Worker had to manually start the API with test environment variables using `pnpm exec dotenv -e .env.test -- nest start` for local verification, as there is no `api_start_test` script or equivalent in `.factory/services.yaml`.",
+      "evidence": "Transcript shows: `Set-Location \"C:/_Local/_Web-Devlopment/_Templates/Rueda Gems/Emerald/apps/api\"; pnpm exec dotenv -e .env.test -- nest start`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature fully implements auth/RBAC hardening, Google OAuth integration, Next.js middleware protection, and JWT RS256 transition, with appropriate unit and E2E test coverage."
+}
