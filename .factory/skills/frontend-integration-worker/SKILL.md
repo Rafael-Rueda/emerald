@@ -187,6 +187,21 @@ pnpm build
 }
 ```
 
+## Browser Verification (Windows)
+
+**Primary:** Use the `agent-browser` Skill for interactive checks.
+
+**Fallback (if agent-browser fails with EACCES/port binding):** Write a temporary Playwright script and remove it after verification:
+```typescript
+// tmp-verify.ts (delete after use — must not appear in git status at commit time)
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true });
+// ... verify behavior
+await browser.close();
+```
+
+**Public endpoint payload adaptation:** `GET /api/public/*` response shapes differ from MSW mock shapes. When adding real-API connectivity, always adapt the public endpoint payload to match the existing contract used by MSW. Without adaptation, online mode may break offline fallback tests.
+
 ## When to Return to Orchestrator
 
 - The API's revalidation webhook requires HTTPS and won't work over HTTP in dev

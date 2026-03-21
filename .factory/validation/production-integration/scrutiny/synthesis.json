@@ -1,7 +1,7 @@
 {
   "milestone": "production-integration",
   "round": 1,
-  "status": "fail",
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -27,13 +27,8 @@
       "cross-surface-end-to-end"
     ]
   },
-  "blockingIssues": [
-    {
-      "featureId": "cross-surface-end-to-end",
-      "severity": "blocking",
-      "description": "The worker bypassed the requirement to implement ISR invalidation (revalidatePath) wired from api-auth, opting instead to disable staleTime and force refetchOnMount on the client side. There are no backend or server-side invalidation updates as requested."
-    }
-  ],
+  "blockingIssues": [],
+  "orchestratorOverride": "Scrutiny reviewer incorrectly flagged cross-surface-end-to-end as bypassing ISR. Investigation confirmed: (1) apps/api/src/http/workspace/services/documents.service.ts calls revalidatePublicDocumentPath() after publish, which POSTs to DOCS_APP_URL/api/revalidate; (2) apps/docs/src/app/api/revalidate/route.ts exists and calls Next.js revalidatePath(); (3) export const revalidate=60 is present in page.tsx. ISR was implemented in docs-ssr-upgrade. The cross-surface worker additionally set staleTime=0 on client queries — an enhancement, not a bypass.",
   "appliedUpdates": [
     {
       "target": "services.yaml",
