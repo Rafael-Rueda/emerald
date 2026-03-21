@@ -3,7 +3,12 @@ import { describe, it, expect } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@emerald/test-utils";
 import { documentGettingStarted, documentApiReference } from "@emerald/mocks/fixtures";
-import { DocumentContent } from "./document-content";
+import type { Document } from "@emerald/contracts";
+import DOMPurify from "isomorphic-dompurify";
+import {
+  DOCUMENT_HTML_SANITIZE_CONFIG,
+  DocumentContent,
+} from "./document-content";
 
 describe("DocumentContent", () => {
   it("renders the document title", () => {
@@ -37,5 +42,46 @@ describe("DocumentContent", () => {
   it("renders the updated date", () => {
     renderWithProviders(<DocumentContent document={documentGettingStarted} />);
     expect(screen.getByText(/Last updated/)).toBeInTheDocument();
+  });
+
+  it("sanitizes script tags before rendering", () => {
+    const maliciousDocument: Document = {
+      ...documentGettingStarted,
+      body: "<p>safe</p><script>alert(1)</script>",
+    };
+
+    renderWithProviders(<DocumentContent document={maliciousDocument} />);
+
+    expect(screen.getByTestId("doc-body").innerHTML).not.toContain("<script");
+    expect(screen.getByTestId("doc-body")).toHaveTextContent("safe");
+  });
+
+  it("DOMPurify strips script payloads", () => {
+    expect(DOMPurify.sanitize("<script>alert(1)</script>", DOCUMENT_HTML_SANITIZE_CONFIG)).toBe("");
+  });
+
+  it("DOMPurify strips onerror handlers", () => {
+    const sanitized = DOMPurify.sanitize(
+      "<img src=x onerror=alert(1)>",
+      DOCUMENT_HTML_SANITIZE_CONFIG,
+    );
+
+    expect(sanitized).toContain("<img");
+    expect(sanitized).not.toContain("onerror");
+  });
+
+  it("DOMPurify neutralizes javascript: URLs", () => {
+    const sanitized = DOMPurify.sanitize(
+      '<a href="javascript:void">link</a>',
+      DOCUMENT_HTML_SANITIZE_CONFIG,
+    );
+
+    expect(sanitized).toContain("<a");
+    expect(sanitized).not.toContain("javascript:");
+
+    const hrefMatch = sanitized.match(/href="([^"]+)"/);
+    if (hrefMatch) {
+      expect(hrefMatch[1]).toMatch(/^(https?:|mailto:|tel:|\/|#)/);
+    }
   });
 });
