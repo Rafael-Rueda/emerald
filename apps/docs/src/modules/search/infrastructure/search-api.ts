@@ -9,12 +9,26 @@ import {
   SearchResponseSchema,
   type SearchResponse,
 } from "@emerald/contracts";
+import { z } from "zod";
 
 /** Result type for search fetch operations. */
 export type SearchFetchResult =
   | { status: "success"; data: SearchResponse }
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
+
+const PublicSearchResultSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  slug: z.string(),
+  space: z.string(),
+  version: z.string(),
+  snippet: z.string(),
+});
+
+const PublicSearchResponseSchema = z.object({
+  results: z.array(PublicSearchResultSchema),
+}).passthrough();
 
 function resolveSearchRequestUrl(path: string): string {
   const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
@@ -52,6 +66,37 @@ function buildSearchRequestPath(query: string): string {
 export function buildSearchApiPath(query: string): string {
   const path = buildSearchRequestPath(query);
   return resolveSearchRequestUrl(path);
+}
+
+function normalizeSearchResponse(payload: unknown, query: string): SearchFetchResult {
+  const parsed = SearchResponseSchema.safeParse(payload);
+  if (parsed.success) {
+    return { status: "success", data: parsed.data };
+  }
+
+  const parsedPublic = PublicSearchResponseSchema.safeParse(payload);
+  if (!parsedPublic.success) {
+    return {
+      status: "validation-error",
+      message: `Invalid search response: ${parsed.error.message}`,
+    };
+  }
+
+  const adapted = {
+    query,
+    results: parsedPublic.data.results,
+    totalCount: parsedPublic.data.results.length,
+  };
+
+  const parsedAdapted = SearchResponseSchema.safeParse(adapted);
+  if (!parsedAdapted.success) {
+    return {
+      status: "validation-error",
+      message: `Invalid search response: ${parsedAdapted.error.message}`,
+    };
+  }
+
+  return { status: "success", data: parsedAdapted.data };
 }
 
 /**
@@ -92,13 +137,5 @@ export async function fetchSearch(query: string): Promise<SearchFetchResult> {
     };
   }
 
-  const parsed = SearchResponseSchema.safeParse(json);
-  if (!parsed.success) {
-    return {
-      status: "validation-error",
-      message: `Invalid search response: ${parsed.error.message}`,
-    };
-  }
-
-  return { status: "success", data: parsed.data };
+  return normalizeSearchResponse(json, query);
 }

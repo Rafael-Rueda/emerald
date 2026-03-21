@@ -31,6 +31,7 @@ export function DocPageClient({
   initialDocumentState,
 }: DocPageClientProps) {
   const versionState = useVersions(space);
+  const isVersionLoading = versionState.state === "loading";
 
   // Determine headings from the document data (empty for non-success states)
   const headings = useMemo(() => {
@@ -40,10 +41,6 @@ export function DocPageClient({
     return [];
   }, [initialDocumentState]);
 
-  if (versionState.state === "loading") {
-    return <DocumentLoading />;
-  }
-
   if (versionState.state === "not-found" || versionState.state === "error") {
     return <VersionError />;
   }
@@ -52,45 +49,52 @@ export function DocPageClient({
     return <VersionError isValidationError />;
   }
 
-  // Render document content based on view state
-  const documentContent = (() => {
-    switch (initialDocumentState.state) {
-      case "success":
-        return <DocumentContent document={initialDocumentState.document} />;
-      case "not-found":
-        return (
-          <DocumentUnavailable
-            space={space}
-            version={version}
-            slug={slug}
-          />
-        );
-      case "error":
-        return <DocumentError message={initialDocumentState.message} />;
-      case "validation-error":
-        return (
-          <DocumentError
-            message={initialDocumentState.message}
-            isValidationError
-          />
-        );
-    }
-  })();
+  const versionSelector = isVersionLoading
+    ? undefined
+    : (
+      <VersionSelector
+        space={space}
+        activeVersion={version}
+        slug={slug}
+        versions={versionState.data.versions}
+        disabled={false}
+      />
+    );
+
+  // Render document content based on view state.
+  // Keep the reading shell mounted while versions load so navigation can fetch in parallel.
+  const documentContent = isVersionLoading
+    ? <DocumentLoading />
+    : (() => {
+      switch (initialDocumentState.state) {
+        case "success":
+          return <DocumentContent document={initialDocumentState.document} />;
+        case "not-found":
+          return (
+            <DocumentUnavailable
+              space={space}
+              version={version}
+              slug={slug}
+            />
+          );
+        case "error":
+          return <DocumentError message={initialDocumentState.message} />;
+        case "validation-error":
+          return (
+            <DocumentError
+              message={initialDocumentState.message}
+              isValidationError
+            />
+          );
+      }
+    })();
 
   return (
     <ReadingShell
       space={space}
       version={version}
       slug={slug}
-      versionSelector={
-        <VersionSelector
-          space={space}
-          activeVersion={version}
-          slug={slug}
-          versions={versionState.data.versions}
-          disabled={false}
-        />
-      }
+      versionSelector={versionSelector}
       headings={headings}
       isDocumentLoading={false}
     >

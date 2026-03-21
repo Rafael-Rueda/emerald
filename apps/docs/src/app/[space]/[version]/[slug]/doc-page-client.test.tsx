@@ -10,6 +10,7 @@ import {
   vi,
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
+import { delay, http, HttpResponse } from "msw";
 import { renderWithProviders, createTestServer } from "@emerald/test-utils";
 import { documentGettingStarted } from "@emerald/mocks";
 import { DocPageClient } from "./doc-page-client";
@@ -87,6 +88,32 @@ describe("DocPageClient — version metadata success", () => {
     expect(screen.getByTestId("version-active-label")).toHaveTextContent("v1");
     expect(screen.getByTestId("version-option-v1")).toBeInTheDocument();
     expect(screen.getByTestId("version-option-v2")).toBeInTheDocument();
+  });
+
+  it("keeps the reading shell mounted while version metadata is loading", () => {
+    server.use(
+      http.get("*/api/versions/:space", async () => {
+        await delay("infinite");
+        return HttpResponse.json({ space: "guides", versions: [] });
+      }),
+    );
+
+    renderWithProviders(
+      <DocPageClient
+        space="guides"
+        version="v1"
+        slug="getting-started"
+        initialDocumentState={{
+          state: "success",
+          document: documentGettingStarted,
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("reading-shell")).toBeInTheDocument();
+    expect(screen.getByTestId("reading-shell-search")).toBeInTheDocument();
+    expect(screen.getByTestId("document-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("version-selector")).not.toBeInTheDocument();
   });
 
   it("keeps selected target version context when target slug is unavailable", async () => {

@@ -60,6 +60,7 @@ export function DocumentContent({ document }: DocumentContentProps) {
     slug: document.slug,
   });
   const sanitizedBody = DOMPurify.sanitize(document.body, DOCUMENT_HTML_SANITIZE_CONFIG);
+  const updatedAtLabel = new Date(document.updatedAt).toLocaleDateString("en-US");
 
   return (
     <article
@@ -84,10 +85,11 @@ export function DocumentContent({ document }: DocumentContentProps) {
       <div
         className="prose prose-sm dark:prose-invert max-w-none [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-6 [&_h2]:mb-2 [&_p]:leading-relaxed [&_p]:text-foreground"
         data-testid="doc-body"
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: sanitizedBody }}
       />
       <div className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">
-        Last updated: {new Date(document.updatedAt).toLocaleDateString()}
+        Last updated: <span suppressHydrationWarning>{updatedAtLabel}</span>
       </div>
     </article>
   );

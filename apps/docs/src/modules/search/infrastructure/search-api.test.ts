@@ -66,6 +66,50 @@ describe("fetchSearch — malformed payload scenario", () => {
   });
 });
 
+describe("fetchSearch — public payload adaptation", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.NEXT_PUBLIC_API_URL;
+  });
+
+  it("adapts public responses shaped as { results: [...] }", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3333";
+
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: "sr-getting-started",
+              title: "Getting Started",
+              slug: "getting-started",
+              space: "guides",
+              version: "v1",
+              snippet: "Start building with Emerald",
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchSearch("getting");
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3333/api/public/search?q=getting");
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.data.query).toBe("getting");
+      expect(result.data.totalCount).toBe(1);
+      expect(result.data.results[0]?.slug).toBe("getting-started");
+    }
+  });
+});
+
 describe("fetchSearch URL resolution", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

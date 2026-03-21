@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@emerald/test-utils";
 import { documentGettingStarted, documentApiReference } from "@emerald/mocks/fixtures";
@@ -42,6 +42,17 @@ describe("DocumentContent", () => {
   it("renders the updated date", () => {
     renderWithProviders(<DocumentContent document={documentGettingStarted} />);
     expect(screen.getByText(/Last updated/)).toBeInTheDocument();
+  });
+
+  it("formats the updated date using en-US locale", () => {
+    const localeSpy = vi
+      .spyOn(Date.prototype, "toLocaleDateString")
+      .mockReturnValue("01/02/2026");
+
+    renderWithProviders(<DocumentContent document={documentGettingStarted} />);
+
+    expect(localeSpy).toHaveBeenCalledWith("en-US");
+    localeSpy.mockRestore();
   });
 
   it("sanitizes script tags before rendering", () => {
