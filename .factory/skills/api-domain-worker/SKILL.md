@@ -33,7 +33,7 @@ docker ps | findstr emerald
 In `src/domain/<context>/application/__tests__/unit/`, write Jest unit tests for each use-case using in-memory repository fakes (never real Prisma). Tests must FAIL before implementation.
 
 ```bash
-pnpm --filter @emerald/api test:unit -- --testPathPattern=<context>
+pnpm --filter @emerald/api test:unit -- --testPathPatterns=<context>
 # Should fail initially (red)
 ```
 
@@ -53,7 +53,7 @@ All use-cases return `Either<DomainError, SuccessValue>`. NEVER throw.
 
 ### Step 5: Run Unit Tests (Green)
 ```bash
-pnpm --filter @emerald/api test:unit -- --testPathPattern=<context>
+pnpm --filter @emerald/api test:unit -- --testPathPatterns=<context>
 # Must pass (green)
 ```
 
@@ -61,7 +61,7 @@ pnpm --filter @emerald/api test:unit -- --testPathPattern=<context>
 In `src/http/<context>/__tests__/e2e/<controller>.spec.ts`, write supertest tests using the test DB (port 5435). Tests must FAIL before HTTP layer exists.
 
 ```bash
-pnpm --filter @emerald/api test:e2e -- --testPathPattern=<context>
+pnpm --filter @emerald/api test:e2e -- --testPathPatterns=<context>
 # Should fail initially (red)
 ```
 
@@ -81,7 +81,7 @@ Register the new module in `src/http/app.module.ts`.
 
 ### Step 8: Run E2E Tests (Green)
 ```bash
-pnpm --filter @emerald/api test:e2e -- --testPathPattern=<context>
+pnpm --filter @emerald/api test:e2e -- --testPathPatterns=<context>
 # Must pass
 ```
 
