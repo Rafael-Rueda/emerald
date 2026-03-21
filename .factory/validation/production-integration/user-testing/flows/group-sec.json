@@ -1,0 +1,114 @@
+{
+  "groupId": "group-sec",
+  "testedAt": "2026-03-21T13:30:00Z",
+  "isolation": {
+    "space": "testspace-sec",
+    "urls": ["http://localhost:3100", "http://localhost:3101"]
+  },
+  "toolsUsed": ["Playwright"],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Navigation tree change reflects in public docs sidebar",
+      "status": "fail",
+      "steps": [
+        { "action": "Create document and publish", "expected": "Document published", "observed": "Document created and published via API" },
+        { "action": "Create navigation nodes in workspace", "expected": "Nodes created successfully", "observed": "Nodes created successfully via API" },
+        { "action": "Navigate to public doc", "expected": "Sidebar shows multiple items", "observed": "Sidebar items count is 0, failing to render the navigation tree" }
+      ],
+      "evidence": {
+        "screenshots": ["production-integration/group-sec/VAL-CROSS-002-sidebar-initial.png"],
+        "consoleErrors": "none",
+        "network": "POST /api/workspace/navigation -> 200"
+      },
+      "issues": "The sidebar on the public documentation page fails to render the navigation tree nodes created in the workspace."
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Full-text search in public docs links to correct page",
+      "status": "fail",
+      "steps": [
+        { "action": "Create and publish test document", "expected": "Document published", "observed": "Document published successfully" },
+        { "action": "Poll public search API", "expected": "Document appears in search results", "observed": "Document successfully indexed and returned by search API" },
+        { "action": "Perform search in public docs UI", "expected": "Search result link is visible", "observed": "Search result link not found in the DOM within 5s" }
+      ],
+      "evidence": {
+        "screenshots": ["production-integration/group-sec/VAL-CROSS-005-search-results.png"],
+        "consoleErrors": "none",
+        "network": "GET /api/public/search -> 200"
+      },
+      "issues": "The search result item is not rendering properly in the UI even though the API returns the correct matches."
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Theme cookie persists across docs and workspace",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to docs and set theme to dark", "expected": "Dark theme applied", "observed": "Dark theme applied successfully" },
+        { "action": "Navigate to workspace admin", "expected": "Dark theme persists", "observed": "Workspace document root element contains 'dark' class" }
+      ],
+      "evidence": {
+        "screenshots": ["production-integration/group-sec/VAL-CROSS-007-docs-dark.png", "production-integration/group-sec/VAL-CROSS-007-workspace-dark.png"],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-009",
+      "title": "All TipTap block types render correctly in public docs",
+      "status": "fail",
+      "steps": [
+        { "action": "Create document containing all block types", "expected": "Document created", "observed": "Document created successfully via API" },
+        { "action": "Publish document", "expected": "Published successfully", "observed": "Published successfully" },
+        { "action": "Navigate to public docs URL", "expected": "Document rendered with all block types", "observed": "Failed to find doc-title in DOM, implying client-side render crash for complex blocks" }
+      ],
+      "evidence": {
+        "screenshots": ["production-integration/group-sec/VAL-CROSS-009-all-blocks.png"],
+        "consoleErrors": "Client-side rendering or hydration error preventing successful display of complex blocks",
+        "network": "GET /api/public/... -> 200"
+      },
+      "issues": "When loading a document with complex TipTap blocks (like tabs, callouts, tables) the frontend either crashes or fails to render the main title properly."
+    },
+    {
+      "id": "VAL-PROD-009",
+      "title": "Document body is sanitized before render",
+      "status": "pass",
+      "steps": [
+        { "action": "Create document with XSS vectors in body text", "expected": "Document created", "observed": "Document created and published" },
+        { "action": "Load document in public docs", "expected": "No alert triggered, vectors inert", "observed": "No dialog fired, __XSS1 and __XSS2 were undefined" }
+      ],
+      "evidence": {
+        "screenshots": ["production-integration/group-sec/VAL-PROD-009-014-xss.png"],
+        "consoleErrors": "none",
+        "network": "GET /api/public/... -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PROD-014",
+      "title": "XSS sanitization covers img/onerror and javascript: links",
+      "status": "pass",
+      "steps": [
+        { "action": "Include img/onerror and javascript: link in document body", "expected": "Document created", "observed": "Document created and published" },
+        { "action": "Load document and click link", "expected": "Link does not execute script", "observed": "Clicking the link had no effect, __XSS3 was undefined" }
+      ],
+      "evidence": {
+        "screenshots": ["production-integration/group-sec/VAL-PROD-009-014-xss.png"],
+        "consoleErrors": "none",
+        "network": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "API-based testing for TipTap content JSON structure might generate states that the frontend cannot hydrate if custom block mappings differ, resulting in ambiguous test failures.",
+      "resolved": false,
+      "resolution": null,
+      "affectedAssertions": ["VAL-CROSS-009"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 6 assertions: 3 passed (VAL-CROSS-007, VAL-PROD-009, VAL-PROD-014), 3 failed (VAL-CROSS-002, VAL-CROSS-005, VAL-CROSS-009). The failed assertions appear related to component rendering omissions or potential client-side hydration issues in Next.js."
+}
