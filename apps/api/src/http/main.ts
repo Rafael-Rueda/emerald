@@ -5,10 +5,23 @@ import { apiReference } from "@scalar/nestjs-api-reference";
 import { cleanupOpenApiDoc } from "nestjs-zod";
 
 import type { Env } from "@/env/env";
-import { AppModule } from "@/http/app.module";
+import { ALLOWED_CORS_ORIGINS, AppModule } from "@/http/app.module";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    const allowedOrigins = new Set<string>(ALLOWED_CORS_ORIGINS);
+
+    app.enableCors({
+        origin: (origin, callback) => {
+            if (!origin) {
+                callback(null, true);
+                return;
+            }
+
+            callback(null, allowedOrigins.has(origin));
+        },
+    });
 
     const configService = app.get<ConfigService<Env, true>>(ConfigService);
 
