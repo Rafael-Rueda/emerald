@@ -51,7 +51,8 @@ export function useNavigation(
       queryFn: () => fetchNavigation(space, version),
       enabled,
       retry: false,
-      staleTime: 30_000,
+      staleTime: 0,
+      refetchOnMount: "always",
     });
 
   if (isLoading || isPending) {

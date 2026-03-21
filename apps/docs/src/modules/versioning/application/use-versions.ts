@@ -35,7 +35,8 @@ export function useVersions(space: string): VersionsViewState {
     queryFn: () => fetchVersions(space),
     enabled,
     retry: false,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   if (!enabled || isLoading || isPending) {
