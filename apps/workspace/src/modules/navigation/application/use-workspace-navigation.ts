@@ -2,16 +2,18 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
-  WorkspaceNavigation,
+  WorkspaceDocument,
   WorkspaceNavigationList,
 } from "@emerald/contracts";
 import {
-  fetchWorkspaceNavigationDetail,
+  createWorkspaceNavigationNode,
+  fetchWorkspaceNavigationDocuments,
   fetchWorkspaceNavigationList,
-  reorderWorkspaceNavigation,
-  type WorkspaceNavigationDetailFetchResult,
+  moveWorkspaceNavigationNode,
+  updateWorkspaceNavigationNode,
+  type WorkspaceNavigationDocumentsFetchResult,
   type WorkspaceNavigationListFetchResult,
-  type WorkspaceNavigationReorderResult,
+  type WorkspaceNavigationMutationResult,
 } from "../infrastructure/workspace-navigation-api";
 
 export type WorkspaceNavigationListViewState =
@@ -20,10 +22,9 @@ export type WorkspaceNavigationListViewState =
   | { state: "error"; message: string }
   | { state: "validation-error"; message: string };
 
-export type WorkspaceNavigationDetailViewState =
+export type WorkspaceNavigationDocumentsViewState =
   | { state: "loading" }
-  | { state: "success"; data: WorkspaceNavigation }
-  | { state: "not-found" }
+  | { state: "success"; data: WorkspaceDocument[] }
   | { state: "error"; message: string }
   | { state: "validation-error"; message: string };
 
@@ -32,9 +33,9 @@ export function workspaceNavigationListQueryKey(): readonly string[] {
 }
 
 export function workspaceNavigationDetailQueryKey(
-  navigationId: string,
+  scope: string,
 ): readonly string[] {
-  return ["workspace", "navigation", "detail", navigationId] as const;
+  return ["workspace", "navigation", "detail", scope] as const;
 }
 
 export function useWorkspaceNavigationList(): WorkspaceNavigationListViewState {
@@ -71,21 +72,16 @@ export function useWorkspaceNavigationList(): WorkspaceNavigationListViewState {
   }
 }
 
-export function useWorkspaceNavigationDetail(
-  navigationId: string | null,
-): WorkspaceNavigationDetailViewState {
-  const enabled = typeof navigationId === "string" && navigationId.length > 0;
-
+export function useWorkspaceNavigationDocuments(): WorkspaceNavigationDocumentsViewState {
   const { data, error, isLoading, isPending } =
-    useQuery<WorkspaceNavigationDetailFetchResult>({
-      queryKey: workspaceNavigationDetailQueryKey(navigationId ?? "none"),
-      queryFn: () => fetchWorkspaceNavigationDetail(navigationId ?? ""),
-      enabled,
+    useQuery<WorkspaceNavigationDocumentsFetchResult>({
+      queryKey: workspaceNavigationDetailQueryKey("documents"),
+      queryFn: fetchWorkspaceNavigationDocuments,
       retry: false,
       staleTime: 30_000,
     });
 
-  if (!enabled || isLoading || isPending) {
+  if (isLoading || isPending) {
     return { state: "loading" };
   }
 
@@ -103,8 +99,6 @@ export function useWorkspaceNavigationDetail(
   switch (data.status) {
     case "success":
       return { state: "success", data: data.data };
-    case "not-found":
-      return { state: "not-found" };
     case "error":
       return { state: "error", message: data.message };
     case "validation-error":
@@ -112,8 +106,55 @@ export function useWorkspaceNavigationDetail(
   }
 }
 
-export function useReorderWorkspaceNavigationAction() {
-  return useMutation<WorkspaceNavigationReorderResult, Error, string>({
-    mutationFn: reorderWorkspaceNavigation,
+export function useCreateWorkspaceNavigationAction() {
+  return useMutation<
+    WorkspaceNavigationMutationResult,
+    Error,
+    {
+      parentId?: string | null;
+      documentId?: string | null;
+      label: string;
+      slug: string;
+      order: number;
+      nodeType: "document" | "group" | "external_link";
+      externalUrl?: string | null;
+    }
+  >({
+    mutationFn: createWorkspaceNavigationNode,
+  });
+}
+
+export function useUpdateWorkspaceNavigationAction() {
+  return useMutation<
+    WorkspaceNavigationMutationResult,
+    Error,
+    {
+      navigationId: string;
+      payload: {
+        documentId?: string | null;
+        label?: string;
+        slug?: string;
+        order?: number;
+        nodeType?: "document" | "group" | "external_link";
+        externalUrl?: string | null;
+      };
+    }
+  >({
+    mutationFn: ({ navigationId, payload }) =>
+      updateWorkspaceNavigationNode(navigationId, payload),
+  });
+}
+
+export function useMoveWorkspaceNavigationAction() {
+  return useMutation<
+    WorkspaceNavigationMutationResult,
+    Error,
+    {
+      navigationId: string;
+      payload: { parentId?: string | null; order: number };
+    }
+  >({
+    mutationFn: ({ navigationId, payload }) =>
+      moveWorkspaceNavigationNode(navigationId, payload),
   });
 }

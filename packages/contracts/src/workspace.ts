@@ -19,15 +19,31 @@ export const WorkspaceDocumentListSchema = z.object({
   documents: z.array(WorkspaceDocumentSchema),
 });
 
-export const WorkspaceNavigationSchema = z.object({
+const WorkspaceNavigationNodeBaseSchema = z.object({
   id: z.string(),
+  spaceId: z.string(),
+  releaseVersionId: z.string().nullable(),
+  parentId: z.string().nullable(),
+  documentId: z.string().nullable(),
   label: z.string(),
   slug: z.string(),
-  space: z.string(),
-  parentId: z.string().nullable(),
   order: z.number().int(),
+  nodeType: z.enum(["document", "group", "external_link"]),
+  externalUrl: z.string().nullable(),
+  createdAt: z.string(),
   updatedAt: z.string(),
 });
+
+export type WorkspaceNavigation = z.infer<typeof WorkspaceNavigationNodeBaseSchema> & {
+  children: WorkspaceNavigation[];
+};
+
+export const WorkspaceNavigationSchema: z.ZodType<WorkspaceNavigation> = z.lazy(
+  () =>
+    WorkspaceNavigationNodeBaseSchema.extend({
+      children: z.array(WorkspaceNavigationSchema).default([]),
+    }),
+);
 
 export const WorkspaceNavigationListSchema = z.object({
   items: z.array(WorkspaceNavigationSchema),
@@ -55,7 +71,6 @@ export const MutationResultSchema = z.object({
 
 export type WorkspaceDocument = z.infer<typeof WorkspaceDocumentSchema>;
 export type WorkspaceDocumentList = z.infer<typeof WorkspaceDocumentListSchema>;
-export type WorkspaceNavigation = z.infer<typeof WorkspaceNavigationSchema>;
 export type WorkspaceNavigationList = z.infer<
   typeof WorkspaceNavigationListSchema
 >;

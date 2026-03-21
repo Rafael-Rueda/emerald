@@ -543,6 +543,74 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
+    createWorkspaceNavigation(payload: {
+      spaceId: string;
+      releaseVersionId?: string | null;
+      parentId?: string | null;
+      documentId?: string | null;
+      label: string;
+      slug: string;
+      order: number;
+      nodeType: "document" | "group" | "external_link";
+      externalUrl?: string | null;
+    }) {
+      return request(
+        resolvedBaseUrl,
+        "/api/workspace/navigation",
+        WorkspaceNavigationSchema,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    updateWorkspaceNavigation(
+      navigationId: string,
+      payload: {
+        documentId?: string | null;
+        label?: string;
+        slug?: string;
+        order?: number;
+        nodeType?: "document" | "group" | "external_link";
+        externalUrl?: string | null;
+      },
+    ) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/navigation/${encodeURIComponent(navigationId)}`,
+        WorkspaceNavigationSchema,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    moveWorkspaceNavigation(
+      navigationId: string,
+      payload: { parentId?: string | null; order: number },
+    ) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/navigation/${encodeURIComponent(navigationId)}/move`,
+        WorkspaceNavigationSchema,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
     reorderWorkspaceNavigation(navigationId: string) {
       return executeWorkspaceMutation(
         resolvedBaseUrl,

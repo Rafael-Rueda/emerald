@@ -2,179 +2,695 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  buildCanonicalNavigationLabel,
-  buildCanonicalPathLabel,
-  type WorkspaceNavigation,
-} from "@emerald/contracts";
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  type DragEndEvent,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { WorkspaceNavigation } from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
-  useReorderWorkspaceNavigationAction,
-  useWorkspaceNavigationDetail,
+  useCreateWorkspaceNavigationAction,
+  useMoveWorkspaceNavigationAction,
+  useUpdateWorkspaceNavigationAction,
+  useWorkspaceNavigationDocuments,
   useWorkspaceNavigationList,
 } from "../application/use-workspace-navigation";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  TextInput,
+} from "@emerald/ui/primitives";
 
 type ActionFeedback =
   | { tone: "success"; message: string }
   | { tone: "error"; message: string }
   | null;
 
-function sortNavigationItemsByOrder(items: WorkspaceNavigation[]): WorkspaceNavigation[] {
-  return [...items].sort((a, b) => {
-    if (a.order !== b.order) {
-      return a.order - b.order;
+type CreateNodeFormState = {
+  label: string;
+  slug: string;
+  nodeType: WorkspaceNavigation["nodeType"];
+  documentId: string;
+  underSelectedParent: boolean;
+};
+
+type EditNodeFormState = {
+  label: string;
+  slug: string;
+  nodeType: WorkspaceNavigation["nodeType"];
+  documentId: string;
+};
+
+function sortTreeByOrder(items: WorkspaceNavigation[]): WorkspaceNavigation[] {
+  return [...items]
+    .sort((a, b) => a.order - b.order)
+    .map((item) => ({
+      ...item,
+      children: sortTreeByOrder(item.children),
+    }));
+}
+
+function slugifyLabel(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function findNode(
+  items: WorkspaceNavigation[],
+  nodeId: string,
+): WorkspaceNavigation | null {
+  for (const item of items) {
+    if (item.id === nodeId) {
+      return item;
     }
 
-    return a.label.localeCompare(b.label);
+    const nested = findNode(item.children, nodeId);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+}
+
+function findSiblings(
+  items: WorkspaceNavigation[],
+  parentId: string | null,
+): WorkspaceNavigation[] {
+  if (!parentId) {
+    return items;
+  }
+
+  const parent = findNode(items, parentId);
+  return parent?.children ?? [];
+}
+
+function reindexSiblings(siblings: WorkspaceNavigation[]) {
+  siblings.forEach((item, index) => {
+    item.order = index;
   });
 }
 
-function buildMoveToTopOrderOverrides(
+function detachNode(
   items: WorkspaceNavigation[],
-  targetId: string,
-): Record<string, number> {
-  const targetItem = items.find((item) => item.id === targetId);
-  if (!targetItem) {
-    return {};
+  nodeId: string,
+): WorkspaceNavigation | null {
+  const index = items.findIndex((item) => item.id === nodeId);
+  if (index >= 0) {
+    const [removed] = items.splice(index, 1);
+    reindexSiblings(items);
+    return removed ?? null;
   }
-
-  const targetOrder = targetItem.order;
-  const nextOrders: Record<string, number> = {};
 
   for (const item of items) {
-    if (item.id === targetId) {
-      nextOrders[item.id] = 0;
-      continue;
+    const removed = detachNode(item.children, nodeId);
+    if (removed) {
+      return removed;
     }
-
-    nextOrders[item.id] = item.order < targetOrder ? item.order + 1 : item.order;
   }
 
-  return nextOrders;
+  return null;
 }
 
-function formatUpdatedAt(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
+function moveNodeWithinTree(
+  items: WorkspaceNavigation[],
+  nodeId: string,
+  parentId: string | null,
+  order: number,
+): boolean {
+  const detached = detachNode(items, nodeId);
+  if (!detached) {
+    return false;
   }
 
-  return parsed.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
+  const siblings = findSiblings(items, parentId);
+  const targetIndex = Math.max(0, Math.min(order, siblings.length));
+
+  detached.parentId = parentId;
+  detached.order = targetIndex;
+
+  siblings.splice(targetIndex, 0, detached);
+  reindexSiblings(siblings);
+
+  return true;
+}
+
+function updateNodeById(
+  items: WorkspaceNavigation[],
+  nodeId: string,
+  updater: (item: WorkspaceNavigation) => WorkspaceNavigation,
+): WorkspaceNavigation[] {
+  return items.map((item) => {
+    if (item.id === nodeId) {
+      return updater(item);
+    }
+
+    if (item.children.length === 0) {
+      return item;
+    }
+
+    return {
+      ...item,
+      children: updateNodeById(item.children, nodeId, updater),
+    };
   });
+}
+
+function buildTreeSignature(items: WorkspaceNavigation[]): string {
+  return items
+    .map((item) =>
+      [
+        item.id,
+        item.parentId ?? "root",
+        String(item.order),
+        item.updatedAt,
+        buildTreeSignature(item.children),
+      ].join("::"),
+    )
+    .join("|");
+}
+
+type SortableNavigationRowProps = {
+  node: WorkspaceNavigation;
+  depth: number;
+  selectedNavigationId: string | null;
+  collapsedNodeIds: Set<string>;
+  onSelectNode: (navigationId: string) => void;
+  onToggleCollapsed: (navigationId: string) => void;
+  linkedDocumentTitle: string | null;
+};
+
+function SortableNavigationRow({
+  node,
+  depth,
+  selectedNavigationId,
+  collapsedNodeIds,
+  onSelectNode,
+  onToggleCollapsed,
+  linkedDocumentTitle,
+}: SortableNavigationRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: node.id,
+    data: {
+      parentId: node.parentId,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const isSelected = selectedNavigationId === node.id;
+  const hasChildren = node.children.length > 0;
+  const isCollapsed = collapsedNodeIds.has(node.id);
+
+  return (
+    <li className="list-none" data-testid={`navigation-node-${node.id}`}>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2",
+          isSelected && "border-primary bg-accent",
+          isDragging && "opacity-70",
+        )}
+      >
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-xs"
+          onClick={() => onToggleCollapsed(node.id)}
+          disabled={!hasChildren}
+          aria-label={hasChildren ? "Toggle collapsed" : "No children"}
+        >
+          {hasChildren ? (isCollapsed ? "+" : "−") : "•"}
+        </button>
+
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded border border-border text-xs"
+          aria-label={`Drag ${node.label}`}
+          {...attributes}
+          {...listeners}
+        >
+          ↕
+        </button>
+
+        <button
+          type="button"
+          className="min-w-0 flex-1 text-left"
+          data-testid={`navigation-select-node-${node.id}`}
+          onClick={() => onSelectNode(node.id)}
+          style={{ paddingLeft: `${depth * 1.25}rem` }}
+        >
+          <p className="truncate text-sm font-medium text-foreground">{node.label}</p>
+          <p className="text-xs text-muted-foreground" data-testid={`navigation-node-order-${node.id}`}>
+            /{node.slug} • order {node.order}
+          </p>
+          {linkedDocumentTitle ? (
+            <p className="text-xs text-emerald-600" data-testid={`navigation-node-document-title-${node.id}`}>
+              Linked document: {linkedDocumentTitle}
+            </p>
+          ) : null}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+type NavigationTreeListProps = {
+  nodes: WorkspaceNavigation[];
+  depth: number;
+  selectedNavigationId: string | null;
+  collapsedNodeIds: Set<string>;
+  onSelectNode: (navigationId: string) => void;
+  onToggleCollapsed: (navigationId: string) => void;
+  linkedDocumentTitleById: Map<string, string>;
+};
+
+function NavigationTreeList({
+  nodes,
+  depth,
+  selectedNavigationId,
+  collapsedNodeIds,
+  onSelectNode,
+  onToggleCollapsed,
+  linkedDocumentTitleById,
+}: NavigationTreeListProps) {
+  if (nodes.length === 0) {
+    return null;
+  }
+
+  return (
+    <SortableContext
+      items={nodes.map((node) => node.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      <ul className="space-y-2" data-testid={depth === 0 ? "navigation-tree" : undefined}>
+        {nodes.map((node) => {
+          const isCollapsed = collapsedNodeIds.has(node.id);
+
+          return (
+            <React.Fragment key={node.id}>
+              <SortableNavigationRow
+                node={node}
+                depth={depth}
+                selectedNavigationId={selectedNavigationId}
+                collapsedNodeIds={collapsedNodeIds}
+                onSelectNode={onSelectNode}
+                onToggleCollapsed={onToggleCollapsed}
+                linkedDocumentTitle={
+                  node.documentId ? (linkedDocumentTitleById.get(node.documentId) ?? null) : null
+                }
+              />
+
+              {!isCollapsed && node.children.length > 0 ? (
+                <NavigationTreeList
+                  nodes={node.children}
+                  depth={depth + 1}
+                  selectedNavigationId={selectedNavigationId}
+                  collapsedNodeIds={collapsedNodeIds}
+                  onSelectNode={onSelectNode}
+                  onToggleCollapsed={onToggleCollapsed}
+                  linkedDocumentTitleById={linkedDocumentTitleById}
+                />
+              ) : null}
+            </React.Fragment>
+          );
+        })}
+      </ul>
+    </SortableContext>
+  );
 }
 
 export function NavigationInspector() {
   const listState = useWorkspaceNavigationList();
-  const reorderAction = useReorderWorkspaceNavigationAction();
+  const documentsState = useWorkspaceNavigationDocuments();
+  const createAction = useCreateWorkspaceNavigationAction();
+  const updateAction = useUpdateWorkspaceNavigationAction();
+  const moveAction = useMoveWorkspaceNavigationAction();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const [treeItems, setTreeItems] = useState<WorkspaceNavigation[]>([]);
   const [selectedNavigationId, setSelectedNavigationId] = useState<string | null>(
     null,
   );
-  const [navigationOrderOverrides, setNavigationOrderOverrides] = useState<
-    Record<string, number>
-  >({});
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateNodeFormState>({
+    label: "",
+    slug: "",
+    nodeType: "group",
+    documentId: "",
+    underSelectedParent: false,
+  });
+  const [editForm, setEditForm] = useState<EditNodeFormState>({
+    label: "",
+    slug: "",
+    nodeType: "group",
+    documentId: "",
+  });
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
 
-  const listItems = useMemo<WorkspaceNavigation[]>(() => {
-    if (listState.state !== "success") {
-      return [];
+  const fetchedTreeItems =
+    listState.state === "success" ? listState.data.items : null;
+
+  const linkedDocumentTitleById = useMemo(() => {
+    if (documentsState.state !== "success") {
+      return new Map<string, string>();
     }
 
-    const itemsWithEffectiveOrder = listState.data.items.map((item) => ({
-      ...item,
-      order: navigationOrderOverrides[item.id] ?? item.order,
-    }));
+    return new Map(documentsState.data.map((doc) => [doc.id, doc.title]));
+  }, [documentsState]);
 
-    return sortNavigationItemsByOrder(itemsWithEffectiveOrder);
-  }, [listState, navigationOrderOverrides]);
+  const sortedTreeItems = useMemo(() => sortTreeByOrder(treeItems), [treeItems]);
+  const fetchedTreeSignature = useMemo(
+    () => (fetchedTreeItems ? buildTreeSignature(fetchedTreeItems) : ""),
+    [fetchedTreeItems],
+  );
 
   useEffect(() => {
-    if (listItems.length === 0) {
+    if (!fetchedTreeItems) {
+      return;
+    }
+
+    setTreeItems((currentTreeItems) => {
+      if (buildTreeSignature(currentTreeItems) === fetchedTreeSignature) {
+        return currentTreeItems;
+      }
+
+      return sortTreeByOrder(fetchedTreeItems);
+    });
+  }, [fetchedTreeItems, fetchedTreeSignature]);
+
+  useEffect(() => {
+    if (sortedTreeItems.length === 0) {
       setSelectedNavigationId(null);
       return;
     }
 
+    const flatIds: string[] = [];
+    const collectIds = (items: WorkspaceNavigation[]) => {
+      for (const item of items) {
+        flatIds.push(item.id);
+        collectIds(item.children);
+      }
+    };
+
+    collectIds(sortedTreeItems);
+
     setSelectedNavigationId((currentSelectedId) => {
-      if (currentSelectedId && listItems.some((item) => item.id === currentSelectedId)) {
+      if (currentSelectedId && flatIds.includes(currentSelectedId)) {
         return currentSelectedId;
       }
 
-      return listItems[0].id;
+      return sortedTreeItems[0]?.id ?? null;
     });
-  }, [listItems]);
+  }, [sortedTreeItems]);
 
-  useEffect(() => {
-    const validIds = new Set(listItems.map((item) => item.id));
+  const selectedNode = useMemo(
+    () =>
+      selectedNavigationId ? findNode(sortedTreeItems, selectedNavigationId) : null,
+    [selectedNavigationId, sortedTreeItems],
+  );
 
-    setNavigationOrderOverrides((currentOverrides) => {
-      let hasChanges = false;
-      const nextOverrides: Record<string, number> = {};
-
-      for (const [navigationId, order] of Object.entries(currentOverrides)) {
-        if (validIds.has(navigationId)) {
-          nextOverrides[navigationId] = order;
-          continue;
-        }
-
-        hasChanges = true;
-      }
-
-      return hasChanges ? nextOverrides : currentOverrides;
-    });
-  }, [listItems]);
-
-  const detailState = useWorkspaceNavigationDetail(selectedNavigationId);
-
-  function getEffectiveOrder(navigationId: string, baseOrder: number) {
-    return navigationOrderOverrides[navigationId] ?? baseOrder;
-  }
-
-  const selectedNavigationOrder =
-    selectedNavigationId && detailState.state === "success"
-      ? getEffectiveOrder(detailState.data.id, detailState.data.order)
-      : null;
-
-  async function handleMoveSelectedNavigationToTop() {
-    if (!selectedNavigationId || detailState.state !== "success") {
+  function openEditDialog(navigationId: string) {
+    const node = findNode(sortedTreeItems, navigationId);
+    if (!node) {
       return;
     }
 
-    const navigationId = detailState.data.id;
-    const previousOverrides = { ...navigationOrderOverrides };
-    const nextOverrides = buildMoveToTopOrderOverrides(listItems, navigationId);
-
+    setSelectedNavigationId(node.id);
+    setEditForm({
+      label: node.label,
+      slug: node.slug,
+      nodeType: node.nodeType,
+      documentId: node.documentId ?? "",
+    });
     setActionFeedback(null);
-    setNavigationOrderOverrides(nextOverrides);
+    setIsEditDialogOpen(true);
+  }
 
-    try {
-      const result = await reorderAction.mutateAsync(navigationId);
-
-      if (result.status === "success") {
-        setActionFeedback({
-          tone: "success",
-          message: result.data.message,
-        });
-        return;
+  function toggleCollapsed(navigationId: string) {
+    setCollapsedNodeIds((currentSet) => {
+      const nextSet = new Set(currentSet);
+      if (nextSet.has(navigationId)) {
+        nextSet.delete(navigationId);
+      } else {
+        nextSet.add(navigationId);
       }
 
-      setNavigationOrderOverrides(previousOverrides);
+      return nextSet;
+    });
+  }
+
+  function openCreateDialog() {
+    setCreateForm((current) => ({
+      ...current,
+      underSelectedParent: selectedNavigationId !== null,
+    }));
+    setActionFeedback(null);
+    setIsCreateDialogOpen(true);
+  }
+
+  async function handleCreateNodeSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedSlug = slugifyLabel(createForm.slug || createForm.label);
+    if (!normalizedSlug || !createForm.label.trim()) {
       setActionFeedback({
         tone: "error",
-        message: result.message,
+        message: "Label and slug are required.",
       });
-    } catch (error) {
-      setNavigationOrderOverrides(previousOverrides);
-      setActionFeedback({
-        tone: "error",
-        message: error instanceof Error ? error.message : "Unknown mutation failure",
-      });
+      return;
     }
+
+    const parentId = createForm.underSelectedParent ? selectedNavigationId : null;
+    const siblings = findSiblings(sortedTreeItems, parentId);
+    const order = siblings.length;
+
+    const result = await createAction.mutateAsync({
+      parentId,
+      documentId: createForm.documentId || null,
+      label: createForm.label.trim(),
+      slug: normalizedSlug,
+      order,
+      nodeType: createForm.nodeType,
+      externalUrl: null,
+    });
+
+    if (result.status !== "success") {
+      setActionFeedback({
+        tone: "error",
+        message: result.status === "not-found" ? "Node not found." : result.message,
+      });
+      return;
+    }
+
+    setTreeItems((currentTree) => {
+      const nextTree = structuredClone(currentTree);
+      const siblingsInTree = findSiblings(nextTree, parentId);
+      siblingsInTree.push({ ...result.data, children: result.data.children ?? [] });
+      reindexSiblings(siblingsInTree);
+      return sortTreeByOrder(nextTree);
+    });
+
+    setSelectedNavigationId(result.data.id);
+    setActionFeedback({
+      tone: "success",
+      message: "Navigation node created.",
+    });
+    setIsCreateDialogOpen(false);
+    setCreateForm({
+      label: "",
+      slug: "",
+      nodeType: "group",
+      documentId: "",
+      underSelectedParent: false,
+    });
+  }
+
+  async function handleEditNodeSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedNode) {
+      return;
+    }
+
+    const normalizedSlug = slugifyLabel(editForm.slug || editForm.label);
+    if (!normalizedSlug || !editForm.label.trim()) {
+      setActionFeedback({
+        tone: "error",
+        message: "Label and slug are required.",
+      });
+      return;
+    }
+
+    const result = await updateAction.mutateAsync({
+      navigationId: selectedNode.id,
+      payload: {
+        label: editForm.label.trim(),
+        slug: normalizedSlug,
+        nodeType: editForm.nodeType,
+        documentId: editForm.documentId || null,
+      },
+    });
+
+    if (result.status !== "success") {
+      setActionFeedback({
+        tone: "error",
+        message: result.status === "not-found" ? "Node not found." : result.message,
+      });
+      return;
+    }
+
+    setTreeItems((currentTree) =>
+      updateNodeById(currentTree, selectedNode.id, (node) => ({
+        ...node,
+        label: result.data.label,
+        slug: result.data.slug,
+        nodeType: result.data.nodeType,
+        documentId: result.data.documentId,
+      })),
+    );
+
+    setActionFeedback({
+      tone: "success",
+      message: "Navigation node updated.",
+    });
+    setIsEditDialogOpen(false);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const activeParentId = (active.data.current?.parentId as string | null | undefined) ?? null;
+    const overParentId = (over.data.current?.parentId as string | null | undefined) ?? null;
+
+    if (activeParentId !== overParentId) {
+      return;
+    }
+
+    const siblings = findSiblings(sortedTreeItems, activeParentId);
+    const oldIndex = siblings.findIndex((node) => node.id === activeId);
+    const newIndex = siblings.findIndex((node) => node.id === overId);
+
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+      return;
+    }
+
+    const previousTree = structuredClone(sortedTreeItems);
+    const optimisticTree = structuredClone(sortedTreeItems);
+    const moved = moveNodeWithinTree(optimisticTree, activeId, activeParentId, newIndex);
+
+    if (!moved) {
+      return;
+    }
+
+    setActionFeedback(null);
+    setTreeItems(sortTreeByOrder(optimisticTree));
+
+    const result = await moveAction.mutateAsync({
+      navigationId: activeId,
+      payload: {
+        parentId: activeParentId,
+        order: newIndex,
+      },
+    });
+
+    if (result.status === "success") {
+      setActionFeedback({
+        tone: "success",
+        message: "Navigation order updated.",
+      });
+      return;
+    }
+
+    setTreeItems(previousTree);
+    setActionFeedback({
+      tone: "error",
+      message: result.status === "not-found" ? "Node not found." : result.message,
+    });
+  }
+
+  async function handleMoveSelectedNodeToTop() {
+    if (!selectedNode || selectedNode.order === 0) {
+      return;
+    }
+
+    const parentId = selectedNode.parentId;
+    const previousTree = structuredClone(sortedTreeItems);
+    const optimisticTree = structuredClone(sortedTreeItems);
+    const moved = moveNodeWithinTree(optimisticTree, selectedNode.id, parentId, 0);
+
+    if (!moved) {
+      return;
+    }
+
+    setActionFeedback(null);
+    setTreeItems(sortTreeByOrder(optimisticTree));
+
+    const result = await moveAction.mutateAsync({
+      navigationId: selectedNode.id,
+      payload: {
+        parentId,
+        order: 0,
+      },
+    });
+
+    if (result.status === "success") {
+      setActionFeedback({
+        tone: "success",
+        message: "Navigation order updated.",
+      });
+      return;
+    }
+
+    setTreeItems(previousTree);
+    setActionFeedback({
+      tone: "error",
+      message: result.status === "not-found" ? "Node not found." : result.message,
+    });
   }
 
   return (
@@ -182,232 +698,282 @@ export function NavigationInspector() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-foreground">Navigation</h1>
         <p className="text-muted-foreground">
-          Inspect mocked navigation records and compare structural metadata for
-          the selected item.
+          Manage your navigation tree with inline editing, linked documents, and
+          same-level drag-and-drop reordering.
         </p>
+
+        <Button type="button" onClick={openCreateDialog} data-testid="navigation-create-node-button">
+          Create node
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            void handleMoveSelectedNodeToTop();
+          }}
+          disabled={!selectedNode || selectedNode.order === 0 || moveAction.isPending}
+          data-testid="navigation-move-selected-to-top-button"
+        >
+          Move selected to top
+        </Button>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_1fr]">
+      {listState.state === "loading" && (
+        <AdminFeedbackState
+          testId="navigation-list-loading"
+          title="Loading navigation records"
+          message="Please wait while navigation data is fetched."
+        />
+      )}
+
+      {listState.state === "error" && (
+        <AdminFeedbackState
+          testId="navigation-list-error"
+          title="Could not load navigation records"
+          message={listState.message}
+          variant="destructive"
+        />
+      )}
+
+      {listState.state === "validation-error" && (
+        <AdminFeedbackState
+          testId="navigation-list-validation-error"
+          title="Navigation list payload is invalid"
+          message={listState.message}
+          variant="destructive"
+        />
+      )}
+
+      {listState.state === "success" && sortedTreeItems.length === 0 && (
+        <AdminFeedbackState
+          testId="navigation-list-empty"
+          title="No navigation records found"
+          message="This workspace has no navigation records yet."
+          variant="warning"
+        />
+      )}
+
+      {listState.state === "success" && sortedTreeItems.length > 0 && (
         <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Records
-          </h2>
-
-          {listState.state === "loading" && (
-            <AdminFeedbackState
-              testId="navigation-list-loading"
-              title="Loading navigation records"
-              message="Please wait while navigation data is fetched."
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => {
+              void handleDragEnd(event);
+            }}
+          >
+            <NavigationTreeList
+              nodes={sortedTreeItems}
+              depth={0}
+              selectedNavigationId={selectedNavigationId}
+              collapsedNodeIds={collapsedNodeIds}
+              onSelectNode={openEditDialog}
+              onToggleCollapsed={toggleCollapsed}
+              linkedDocumentTitleById={linkedDocumentTitleById}
             />
-          )}
-
-          {listState.state === "error" && (
-            <AdminFeedbackState
-              testId="navigation-list-error"
-              title="Could not load navigation records"
-              message={listState.message}
-              variant="destructive"
-            />
-          )}
-
-          {listState.state === "validation-error" && (
-            <AdminFeedbackState
-              testId="navigation-list-validation-error"
-              title="Navigation list payload is invalid"
-              message={listState.message}
-              variant="destructive"
-            />
-          )}
-
-          {listState.state === "success" && listItems.length === 0 && (
-            <AdminFeedbackState
-              testId="navigation-list-empty"
-              title="No navigation records found"
-              message="This workspace has no navigation records to inspect yet."
-              variant="warning"
-            />
-          )}
-
-          {listState.state === "success" && listItems.length > 0 && (
-            <ul className="mt-3 space-y-2" data-testid="navigation-list">
-              {listItems.map((item) => {
-                const isSelected = selectedNavigationId === item.id;
-                const order = getEffectiveOrder(item.id, item.order);
-                const pathLabel = buildCanonicalPathLabel({
-                  space: item.space,
-                  slug: item.slug,
-                });
-
-                return (
-                  <li
-                    key={item.id}
-                    className="list-none"
-                    data-testid={`navigation-list-item-${item.id}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedNavigationId(item.id)}
-                      aria-pressed={isSelected}
-                      className={cn(
-                        "w-full rounded-md border px-3 py-2 text-left transition-colors",
-                        "border-border text-foreground hover:bg-accent",
-                        isSelected && "border-primary bg-accent",
-                      )}
-                    >
-                      <p className="text-sm font-medium">
-                        {buildCanonicalNavigationLabel(item.label)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {pathLabel} • order{" "}
-                        <span data-testid={`navigation-list-item-${item.id}-order`}>
-                          {order}
-                        </span>
-                      </p>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          </DndContext>
         </div>
+      )}
 
-        <div className="rounded-lg border border-border bg-card p-4" data-testid="navigation-detail">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Selected navigation item
-          </h2>
+      {actionFeedback?.tone === "success" && (
+        <p className="text-sm text-emerald-600" data-testid="navigation-action-feedback-success">
+          {actionFeedback.message}
+        </p>
+      )}
 
-          {selectedNavigationId && detailState.state === "success" && (
-            <div className="mt-3 space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void handleMoveSelectedNavigationToTop();
+      {actionFeedback?.tone === "error" && (
+        <p className="text-sm text-destructive" data-testid="navigation-action-feedback-error">
+          {actionFeedback.message}
+        </p>
+      )}
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create navigation node</DialogTitle>
+            <DialogDescription>
+              Add a root node or create a child node under the selected parent.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="space-y-3" onSubmit={(event) => void handleCreateNodeSubmit(event)}>
+            <TextInput
+              label="Label"
+              value={createForm.label}
+              onChange={(event) => {
+                const label = event.target.value;
+                setCreateForm((current) => ({
+                  ...current,
+                  label,
+                  slug: current.slug.length > 0 ? current.slug : slugifyLabel(label),
+                }));
+              }}
+            />
+
+            <TextInput
+              label="Slug"
+              value={createForm.slug}
+              onChange={(event) => {
+                setCreateForm((current) => ({
+                  ...current,
+                  slug: slugifyLabel(event.target.value),
+                }));
+              }}
+            />
+
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-foreground">Node type</span>
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={createForm.nodeType}
+                onChange={(event) => {
+                  const nodeType = event.target.value as WorkspaceNavigation["nodeType"];
+                  setCreateForm((current) => ({ ...current, nodeType }));
                 }}
-                disabled={reorderAction.isPending || selectedNavigationOrder === 0}
-                className={cn(
-                  "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-                  "border-border text-foreground hover:bg-accent",
-                  "disabled:cursor-not-allowed disabled:opacity-60",
-                )}
               >
-                {reorderAction.isPending ? "Moving…" : "Move selected item to top"}
-              </button>
+                <option value="group">Group</option>
+                <option value="document">Document</option>
+                <option value="external_link">External link</option>
+              </select>
+            </label>
 
-              {actionFeedback?.tone === "success" && (
-                <p className="text-sm text-emerald-600" data-testid="navigation-action-feedback-success">
-                  {actionFeedback.message}
-                </p>
-              )}
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-foreground">Linked document</span>
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={createForm.documentId}
+                onChange={(event) => {
+                  setCreateForm((current) => ({
+                    ...current,
+                    documentId: event.target.value,
+                  }));
+                }}
+              >
+                <option value="">No linked document</option>
+                {documentsState.state === "success"
+                  ? documentsState.data.map((document) => (
+                      <option key={document.id} value={document.id}>
+                        {document.title}
+                      </option>
+                    ))
+                  : null}
+              </select>
+            </label>
 
-              {actionFeedback?.tone === "error" && (
-                <p className="text-sm text-destructive" data-testid="navigation-action-feedback-error">
-                  {actionFeedback.message}
-                </p>
-              )}
-            </div>
-          )}
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={createForm.underSelectedParent}
+                disabled={!selectedNavigationId}
+                onChange={(event) => {
+                  setCreateForm((current) => ({
+                    ...current,
+                    underSelectedParent: event.target.checked,
+                  }));
+                }}
+              />
+              Create under selected parent
+            </label>
 
-          {listState.state === "success" && listItems.length === 0 && (
-            <AdminFeedbackState
-              testId="navigation-detail-empty"
-              title="No selected navigation item"
-              message="Add or load navigation records to inspect detail fields."
-              variant="warning"
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={createAction.isPending}
+                data-testid="navigation-create-submit"
+              >
+                {createAction.isPending ? "Creating…" : "Create node"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit navigation node</DialogTitle>
+            <DialogDescription>
+              Update label, slug, type, and linked document.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="space-y-3" onSubmit={(event) => void handleEditNodeSubmit(event)}>
+            <TextInput
+              label="Label"
+              value={editForm.label}
+              onChange={(event) => {
+                setEditForm((current) => ({
+                  ...current,
+                  label: event.target.value,
+                }));
+              }}
             />
-          )}
 
-          {selectedNavigationId && detailState.state === "loading" && (
-            <AdminFeedbackState
-              testId="navigation-detail-loading"
-              title="Loading selected navigation item"
-              message="Please wait while the selected record details are fetched."
+            <TextInput
+              label="Slug"
+              value={editForm.slug}
+              onChange={(event) => {
+                setEditForm((current) => ({
+                  ...current,
+                  slug: slugifyLabel(event.target.value),
+                }));
+              }}
             />
-          )}
 
-          {selectedNavigationId && detailState.state === "not-found" && (
-            <AdminFeedbackState
-              testId="navigation-detail-not-found"
-              title="Selected navigation item was not found"
-              message="The selected record no longer exists in the current workspace data."
-              variant="warning"
-            />
-          )}
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-foreground">Node type</span>
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={editForm.nodeType}
+                onChange={(event) => {
+                  setEditForm((current) => ({
+                    ...current,
+                    nodeType: event.target.value as WorkspaceNavigation["nodeType"],
+                  }));
+                }}
+              >
+                <option value="group">Group</option>
+                <option value="document">Document</option>
+                <option value="external_link">External link</option>
+              </select>
+            </label>
 
-          {selectedNavigationId && detailState.state === "error" && (
-            <AdminFeedbackState
-              testId="navigation-detail-error"
-              title="Failed to load selected navigation item"
-              message={detailState.message}
-              variant="destructive"
-            />
-          )}
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-foreground">Linked document</span>
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={editForm.documentId}
+                onChange={(event) => {
+                  setEditForm((current) => ({
+                    ...current,
+                    documentId: event.target.value,
+                  }));
+                }}
+              >
+                <option value="">No linked document</option>
+                {documentsState.state === "success"
+                  ? documentsState.data.map((document) => (
+                      <option key={document.id} value={document.id}>
+                        {document.title}
+                      </option>
+                    ))
+                  : null}
+              </select>
+            </label>
 
-          {selectedNavigationId && detailState.state === "validation-error" && (
-            <AdminFeedbackState
-              testId="navigation-detail-validation-error"
-              title="Selected navigation payload is invalid"
-              message={detailState.message}
-              variant="destructive"
-            />
-          )}
-
-          {selectedNavigationId && detailState.state === "success" && (
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Path</dt>
-                <dd className="font-medium" data-testid="navigation-detail-path-label">
-                  {buildCanonicalPathLabel({
-                    space: detailState.data.space,
-                    slug: detailState.data.slug,
-                  })}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">ID</dt>
-                <dd className="font-medium" data-testid="navigation-detail-id">
-                  {detailState.data.id}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Label</dt>
-                <dd className="font-medium" data-testid="navigation-detail-label">
-                  {buildCanonicalNavigationLabel(detailState.data.label)}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Slug</dt>
-                <dd className="font-medium" data-testid="navigation-detail-slug">
-                  {detailState.data.slug}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Space</dt>
-                <dd className="font-medium" data-testid="navigation-detail-space">
-                  {detailState.data.space}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Parent</dt>
-                <dd className="font-medium" data-testid="navigation-detail-parent">
-                  {detailState.data.parentId ?? "Root"}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Order</dt>
-                <dd className="font-medium" data-testid="navigation-detail-order">
-                  {selectedNavigationOrder ?? detailState.data.order}
-                </dd>
-              </div>
-              <div className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Updated</dt>
-                <dd className="font-medium" data-testid="navigation-detail-updated-at">
-                  {formatUpdatedAt(detailState.data.updatedAt)}
-                </dd>
-              </div>
-            </dl>
-          )}
-        </div>
-      </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={updateAction.isPending}
+                data-testid="navigation-edit-submit"
+              >
+                {updateAction.isPending ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

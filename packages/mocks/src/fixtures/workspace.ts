@@ -84,22 +84,50 @@ export const wsDocumentRevisions = {
 
 export const wsNavGettingStarted: WorkspaceNavigation = {
   id: "nav-getting-started",
+  spaceId: "space-guides",
+  releaseVersionId: "ver-v1",
+  parentId: null,
+  documentId: "doc-getting-started",
   label: "Getting Started",
   slug: "getting-started",
-  space: "guides",
-  parentId: null,
   order: 0,
+  nodeType: "document",
+  externalUrl: null,
+  createdAt: "2025-01-15T10:00:00Z",
   updatedAt: "2025-01-15T10:00:00Z",
+  children: [
+    {
+      id: "nav-installation",
+      spaceId: "space-guides",
+      releaseVersionId: "ver-v1",
+      parentId: "nav-getting-started",
+      documentId: null,
+      label: "Installation",
+      slug: "installation",
+      order: 0,
+      nodeType: "group",
+      externalUrl: null,
+      createdAt: "2025-01-16T10:00:00Z",
+      updatedAt: "2025-01-16T10:00:00Z",
+      children: [],
+    },
+  ],
 };
 
 export const wsNavApiReference: WorkspaceNavigation = {
   id: "nav-api-reference",
+  spaceId: "space-guides",
+  releaseVersionId: "ver-v1",
+  parentId: null,
+  documentId: "doc-api-reference",
   label: "API Reference",
   slug: "api-reference",
-  space: "guides",
-  parentId: null,
   order: 1,
+  nodeType: "document",
+  externalUrl: null,
+  createdAt: "2025-01-20T14:30:00Z",
   updatedAt: "2025-01-20T14:30:00Z",
+  children: [],
 };
 
 export const wsNavigationList: WorkspaceNavigationList = {

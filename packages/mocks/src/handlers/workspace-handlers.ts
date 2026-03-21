@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import type { WorkspaceNavigation } from "@emerald/contracts";
 import type { ScenarioConfig } from "../scenarios";
 import { resolveScenarios } from "../scenarios";
 import { applyScenario } from "./utils";
@@ -7,8 +8,6 @@ import {
   wsDocGettingStarted,
   wsDocApiReference,
   wsNavigationList,
-  wsNavGettingStarted,
-  wsNavApiReference,
   wsVersionList,
   wsVersionV1,
   wsVersionV2,
@@ -37,8 +36,95 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
   ];
 
   const wsDocuments = [wsDocGettingStarted, wsDocApiReference];
-  const wsNavItems = [wsNavGettingStarted, wsNavApiReference];
+  const wsNavItems = structuredClone(wsNavigationList.items);
   const wsVersionItems = [wsVersionV1, wsVersionV2];
+
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function findNode(tree: WorkspaceNavigation[], id: string): WorkspaceNavigation | null {
+    for (const node of tree) {
+      if (node.id === id) {
+        return node;
+      }
+
+      const child = findNode(node.children, id);
+      if (child) {
+        return child;
+      }
+    }
+
+    return null;
+  }
+
+  function findSiblings(
+    tree: WorkspaceNavigation[],
+    parentId: string | null,
+  ): WorkspaceNavigation[] {
+    if (!parentId) {
+      return tree;
+    }
+
+    const parentNode = findNode(tree, parentId);
+    return parentNode?.children ?? [];
+  }
+
+  function reindexSiblings(siblings: WorkspaceNavigation[]) {
+    siblings.forEach((node, index) => {
+      node.order = index;
+      node.updatedAt = nowIso();
+    });
+  }
+
+  function detachNode(tree: WorkspaceNavigation[], id: string): WorkspaceNavigation | null {
+    const ownIndex = tree.findIndex((node) => node.id === id);
+    if (ownIndex >= 0) {
+      const [removedNode] = tree.splice(ownIndex, 1);
+      reindexSiblings(tree);
+      return removedNode ?? null;
+    }
+
+    for (const node of tree) {
+      const detached = detachNode(node.children, id);
+      if (detached) {
+        return detached;
+      }
+    }
+
+    return null;
+  }
+
+  function isDescendant(
+    tree: WorkspaceNavigation[],
+    sourceId: string,
+    targetParentId: string | null,
+  ): boolean {
+    if (!targetParentId) {
+      return false;
+    }
+
+    const sourceNode = findNode(tree, sourceId);
+    if (!sourceNode) {
+      return false;
+    }
+
+    const stack = [...sourceNode.children];
+    while (stack.length > 0) {
+      const candidate = stack.pop();
+      if (!candidate) {
+        continue;
+      }
+
+      if (candidate.id === targetParentId) {
+        return true;
+      }
+
+      stack.push(...candidate.children);
+    }
+
+    return false;
+  }
 
   return [
     // Spaces list: GET /api/workspace/spaces
@@ -110,7 +196,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
         return HttpResponse.json({ items: [] });
       }
 
-      return HttpResponse.json(wsNavigationList);
+      return HttpResponse.json({ items: wsNavItems });
     }),
 
     // Navigation detail: GET /api/workspace/navigation/:id
@@ -121,12 +207,146 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       );
       if (scenarioResponse) return scenarioResponse;
 
-      const item = wsNavItems.find((n) => n.id === params.id);
+      const item = findNode(wsNavItems, String(params.id ?? ""));
       if (!item) {
         return HttpResponse.json({ error: "Not found" }, { status: 404 });
       }
 
       return HttpResponse.json(item);
+    }),
+
+    // Navigation mutation: POST /api/workspace/navigation (create)
+    http.post(`${API_BASE}/navigation`, async ({ request }) => {
+      const scenarioResponse = await applyScenario(
+        scenarios.workspaceMutation,
+        { success: "maybe" },
+      );
+      if (scenarioResponse) return scenarioResponse;
+
+      const body = (await request.json()) as {
+        spaceId: string;
+        releaseVersionId?: string | null;
+        parentId?: string | null;
+        documentId?: string | null;
+        label: string;
+        slug: string;
+        order: number;
+        nodeType: "document" | "group" | "external_link";
+        externalUrl?: string | null;
+      };
+
+      const parentId = body.parentId ?? null;
+      const siblings = findSiblings(wsNavItems, parentId);
+      const nextOrder = Math.max(0, Math.min(body.order, siblings.length));
+      const createdAt = nowIso();
+
+      const node: WorkspaceNavigation = {
+        id: `nav-${Math.random().toString(36).slice(2, 9)}`,
+        spaceId: body.spaceId,
+        releaseVersionId: body.releaseVersionId ?? null,
+        parentId,
+        documentId: body.documentId ?? null,
+        label: body.label,
+        slug: body.slug,
+        order: nextOrder,
+        nodeType: body.nodeType,
+        externalUrl: body.externalUrl ?? null,
+        createdAt,
+        updatedAt: createdAt,
+        children: [],
+      };
+
+      siblings.splice(nextOrder, 0, node);
+      reindexSiblings(siblings);
+
+      return HttpResponse.json(node, { status: 201 });
+    }),
+
+    // Navigation mutation: PATCH /api/workspace/navigation/:id
+    http.patch(`${API_BASE}/navigation/:id`, async ({ params, request }) => {
+      const scenarioResponse = await applyScenario(
+        scenarios.workspaceMutation,
+        { success: "maybe" },
+      );
+      if (scenarioResponse) return scenarioResponse;
+
+      const navigationId = String(params.id ?? "");
+      const node = findNode(wsNavItems, navigationId);
+
+      if (!node) {
+        return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      const body = (await request.json()) as Partial<{
+        documentId: string | null;
+        label: string;
+        slug: string;
+        order: number;
+        nodeType: "document" | "group" | "external_link";
+        externalUrl: string | null;
+      }>;
+
+      if (body.documentId !== undefined) {
+        node.documentId = body.documentId;
+      }
+
+      if (body.label !== undefined) {
+        node.label = body.label;
+      }
+
+      if (body.slug !== undefined) {
+        node.slug = body.slug;
+      }
+
+      if (body.nodeType !== undefined) {
+        node.nodeType = body.nodeType;
+      }
+
+      if (body.externalUrl !== undefined) {
+        node.externalUrl = body.externalUrl;
+      }
+
+      node.updatedAt = nowIso();
+
+      return HttpResponse.json(node);
+    }),
+
+    // Navigation mutation: POST /api/workspace/navigation/:id/move
+    http.post(`${API_BASE}/navigation/:id/move`, async ({ params, request }) => {
+      const scenarioResponse = await applyScenario(
+        scenarios.workspaceMutation,
+        { success: "maybe" },
+      );
+      if (scenarioResponse) return scenarioResponse;
+
+      const navigationId = String(params.id ?? "");
+      const body = (await request.json()) as {
+        parentId?: string | null;
+        order: number;
+      };
+
+      const parentId = body.parentId ?? null;
+
+      if (isDescendant(wsNavItems, navigationId, parentId)) {
+        return HttpResponse.json({ message: "Circular reference" }, { status: 400 });
+      }
+
+      const detached = detachNode(wsNavItems, navigationId);
+      if (!detached) {
+        return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      const siblings = findSiblings(wsNavItems, parentId);
+      const nextOrder = Math.max(0, Math.min(body.order, siblings.length));
+
+      detached.parentId = parentId;
+      detached.order = nextOrder;
+      detached.updatedAt = nowIso();
+
+      siblings.splice(nextOrder, 0, detached);
+      reindexSiblings(siblings);
+
+      return HttpResponse.json(detached);
     }),
 
     // Version list: GET /api/workspace/versions
@@ -175,8 +395,8 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       return HttpResponse.json(mutationSuccess);
     }),
 
-    // Navigation mutation: POST /api/workspace/navigation/:id/reorder
-    http.post(`${API_BASE}/navigation/:id/reorder`, async () => {
+    // Navigation legacy mutation alias: POST /api/workspace/navigation/:id/reorder
+    http.post(`${API_BASE}/navigation/:id/reorder`, async ({ params }) => {
       const scenarioResponse = await applyScenario(
         scenarios.workspaceMutation,
         { success: "maybe" },
@@ -186,6 +406,17 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       if (scenarios.workspaceMutation === "not-found") {
         return HttpResponse.json(mutationFailure, { status: 400 });
       }
+
+      const navigationId = String(params.id ?? "");
+      const detached = detachNode(wsNavItems, navigationId);
+      if (!detached) {
+        return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      detached.parentId = null;
+      detached.updatedAt = nowIso();
+      wsNavItems.unshift(detached);
+      reindexSiblings(wsNavItems);
 
       return HttpResponse.json(mutationSuccess);
     }),
