@@ -154,7 +154,18 @@ export function DocumentInspector() {
   return (
     <section className="space-y-4" data-testid="admin-section-documents">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">Documents</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold text-foreground">Documents</h1>
+          <Link
+            href="/admin/documents/new"
+            className={cn(
+              "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+              "border-border text-foreground hover:bg-accent",
+            )}
+          >
+            Create Document
+          </Link>
+        </div>
         <p className="text-muted-foreground">
           Inspect mocked document records and review the selected item details.
         </p>
@@ -251,6 +262,16 @@ export function DocumentInspector() {
 
           {selectedDocumentId && detailState.state === "success" && (
             <div className="mt-3 space-y-2">
+              <Link
+                href={`/admin/documents/${encodeURIComponent(detailState.data.id)}`}
+                className={cn(
+                  "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                  "border-border text-foreground hover:bg-accent",
+                )}
+              >
+                Open document editor
+              </Link>
+
               <Link
                 href={`/admin/ai-context?entityType=document&entityId=${encodeURIComponent(detailState.data.id)}`}
                 className={cn(

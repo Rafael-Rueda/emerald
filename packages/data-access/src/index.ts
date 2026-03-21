@@ -7,6 +7,7 @@
 
 import {
   AiContextResponseSchema,
+  DocumentContentSchema,
   DocumentResponseSchema,
   MutationResultSchema,
   NavigationResponseSchema,
@@ -118,6 +119,50 @@ const VersionsSchema = VersionListResponseSchema.transform(
 const SpacesSchema = z
   .union([z.array(SpaceSchema), z.object({ spaces: z.array(SpaceSchema) })])
   .transform((payload) => (Array.isArray(payload) ? payload : payload.spaces));
+
+const WorkspaceDocumentEditorSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  slug: z.string(),
+  space: z.string(),
+  spaceId: z.string(),
+  releaseVersionId: z.string(),
+  status: z.enum(["draft", "published", "archived"]),
+  content_json: DocumentContentSchema.nullable(),
+  currentRevisionId: z.string().nullable(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const WorkspaceRevisionSchema = z.object({
+  id: z.string(),
+  documentId: z.string(),
+  revisionNumber: z.number().int(),
+  content_json: DocumentContentSchema,
+  createdBy: z.string(),
+  changeNote: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+const WorkspaceReleaseVersionSchema = z.object({
+  id: z.string(),
+  spaceId: z.string(),
+  key: z.string(),
+  label: z.string(),
+  status: z.enum(["draft", "published", "archived"]),
+  isDefault: z.boolean(),
+  publishedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const WorkspaceReleaseVersionListSchema = z
+  .object({
+    versions: z.array(WorkspaceReleaseVersionSchema),
+  })
+  .transform((payload) => payload.versions);
 
 function getEnvironmentApiUrl(): string {
   const globalWithProcess = globalThis as typeof globalThis & {
@@ -294,6 +339,9 @@ async function executeWorkspaceMutation(
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+export type WorkspaceDocumentEditor = z.infer<typeof WorkspaceDocumentEditorSchema>;
+export type WorkspaceRevision = z.infer<typeof WorkspaceRevisionSchema>;
+export type WorkspaceReleaseVersion = z.infer<typeof WorkspaceReleaseVersionSchema>;
 
 export function createApiClient(baseUrl?: string) {
   const resolvedBaseUrl = normalizeBaseUrl(baseUrl);
@@ -349,6 +397,74 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
+    getWorkspaceDocumentEditor(documentId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/documents/${encodeURIComponent(documentId)}`,
+        WorkspaceDocumentEditorSchema,
+      );
+    },
+
+    createWorkspaceDocument(payload: {
+      spaceId: string;
+      releaseVersionId: string;
+      title: string;
+      slug: string;
+      content_json: z.infer<typeof DocumentContentSchema>;
+    }) {
+      return request(
+        resolvedBaseUrl,
+        "/api/workspace/documents",
+        WorkspaceDocumentEditorSchema,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    updateWorkspaceDocument(documentId: string, payload: {
+      title?: string;
+      content_json?: z.infer<typeof DocumentContentSchema>;
+    }) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/documents/${encodeURIComponent(documentId)}`,
+        WorkspaceDocumentEditorSchema,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    createWorkspaceDocumentRevision(
+      documentId: string,
+      payload: {
+        content_json: z.infer<typeof DocumentContentSchema>;
+        changeNote?: string;
+      },
+    ) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/documents/${encodeURIComponent(documentId)}/revisions`,
+        WorkspaceRevisionSchema,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
     publishWorkspaceDocument(documentId: string) {
       return executeWorkspaceMutation(
         resolvedBaseUrl,
@@ -392,6 +508,14 @@ export function createApiClient(baseUrl?: string) {
         resolvedBaseUrl,
         `/api/workspace/versions/${encodeURIComponent(versionId)}`,
         WorkspaceVersionSchema,
+      );
+    },
+
+    getWorkspaceReleaseVersions(spaceId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions?spaceId=${encodeURIComponent(spaceId)}`,
+        WorkspaceReleaseVersionListSchema,
       );
     },
 
