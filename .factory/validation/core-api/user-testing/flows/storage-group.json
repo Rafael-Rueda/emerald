@@ -1,0 +1,77 @@
+{
+  "groupId": "storage-group",
+  "testedAt": "2026-03-21T02:05:00.000Z",
+  "isolation": {
+    "url": "http://localhost:3333",
+    "credentials": "admin@test.com / password123, viewer@test.com / password123",
+    "platform": "Windows"
+  },
+  "toolsUsed": ["curl.exe", "node"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-010",
+      "title": "POST /storage/upload returns a signed URL",
+      "status": "blocked",
+      "steps": [
+        { "action": "POST /api/storage/upload with image and valid fields", "expected": "HTTP 201 with signed URL", "observed": "HTTP 400 Bad Request (ENOENT: gcp-service-account.json missing)" }
+      ],
+      "evidence": {
+        "network": "POST /api/storage/upload -> 400",
+        "terminalOutput": "core-api/storage-group/VAL-CORE-010.txt"
+      },
+      "issues": "API returned 400 because gcp-service-account.json is missing in the environment."
+    },
+    {
+      "id": "VAL-CORE-011",
+      "title": "POST /storage/upload with no file returns 400",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/storage/upload without file", "expected": "HTTP 400", "observed": "HTTP 400 Bad Request with Zod validation error for missing file" }
+      ],
+      "evidence": {
+        "network": "POST /api/storage/upload -> 400",
+        "terminalOutput": "core-api/storage-group/VAL-CORE-011.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-016",
+      "title": "File upload rejects non-image MIME types",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/storage/upload with application/json file", "expected": "HTTP 400 with MIME rejection error", "observed": "HTTP 400 with 'Invalid or unrecognized file type'" }
+      ],
+      "evidence": {
+        "network": "POST /api/storage/upload -> 400",
+        "terminalOutput": "core-api/storage-group/VAL-CORE-016.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-017",
+      "title": "Spaces CRUD full lifecycle for SUPER_ADMIN",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/workspace/spaces", "expected": "HTTP 201 Created", "observed": "HTTP 201 Created" },
+        { "action": "GET /api/workspace/spaces/:id", "expected": "HTTP 200 OK", "observed": "HTTP 200 OK" },
+        { "action": "PATCH /api/workspace/spaces/:id", "expected": "HTTP 200 OK", "observed": "HTTP 200 OK" },
+        { "action": "DELETE /api/workspace/spaces/:id", "expected": "HTTP 200 or 204", "observed": "HTTP 200 OK" },
+        { "action": "GET /api/workspace/spaces/:id after delete", "expected": "HTTP 404 Not Found", "observed": "HTTP 404 Not Found" }
+      ],
+      "evidence": {
+        "network": "CRUD sequence -> correct status codes",
+        "terminalOutput": "core-api/storage-group/VAL-CORE-017-1-create.txt, core-api/storage-group/VAL-CORE-017-2-get.txt, core-api/storage-group/VAL-CORE-017-3-patch.txt, core-api/storage-group/VAL-CORE-017-4-delete.txt, core-api/storage-group/VAL-CORE-017-5-get-deleted.txt"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "gcp-service-account.json is missing on the environment so successful file uploads are failing with 400 ENOENT",
+      "affectedAssertions": ["VAL-CORE-010"],
+      "quickFixAttempted": "None, missing infrastructure/credentials"
+    }
+  ],
+  "summary": "Tested 4 assertions: 3 passed, 1 blocked (VAL-CORE-010: missing GCP credentials)"
+}

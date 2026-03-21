@@ -1,0 +1,180 @@
+{
+  "groupId": "auth-group",
+  "testedAt": "2026-03-21T01:55:00Z",
+  "isolation": {
+    "url": "http://localhost:3333",
+    "credentials": "admin@test.com / password123 and viewer@test.com / password123",
+    "platform": "Windows"
+  },
+  "toolsUsed": [
+    "curl.exe"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CORE-001",
+      "title": "Health check returns 200",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/health",
+          "expected": "Returns HTTP 200 with JSON body { \"status\": \"ok\" }",
+          "observed": "Returns HTTP 200 with JSON body {\"status\":\"ok\",\"db\":\"up\"}"
+        }
+      ],
+      "evidence": {
+        "network": "GET /health -> 200",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-001-health.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-002",
+      "title": "Swagger/Scalar docs UI served at /docs",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/docs",
+          "expected": "Returns HTTP 200 with HTML Content-Type rendering docs UI",
+          "observed": "Returns HTTP 200 with text/html containing Scalar API Reference"
+        }
+      ],
+      "evidence": {
+        "network": "GET /docs -> 200",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-002-docs.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-003",
+      "title": "GET /auth/google redirects to Google OAuth",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/auth/google",
+          "expected": "Returns 302 redirect to accounts.google.com",
+          "observed": "Returns 302 Found with Location header to accounts.google.com"
+        }
+      ],
+      "evidence": {
+        "network": "GET /auth/google -> 302",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-003-auth-google.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-004",
+      "title": "POST /auth/login with valid credentials returns JWT",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST http://localhost:3333/auth/login with admin@test.com/password123",
+          "expected": "Returns HTTP 200 with body containing accessToken",
+          "observed": "Returns HTTP 200 with user object and accessToken"
+        }
+      ],
+      "evidence": {
+        "network": "POST /auth/login -> 200",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-004-login-success.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-005",
+      "title": "POST /auth/login with invalid credentials returns 401",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST http://localhost:3333/auth/login with admin@test.com/wrongpass",
+          "expected": "Returns HTTP 401, no JWT issued",
+          "observed": "Returns HTTP 401 Unauthorized with message 'Invalid credentials'"
+        }
+      ],
+      "evidence": {
+        "network": "POST /auth/login -> 401",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-005-login-invalid.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-006",
+      "title": "POST /auth/login with malformed body returns 400",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST http://localhost:3333/auth/login with missing password and invalid email",
+          "expected": "Returns HTTP 400 with Zod validation error",
+          "observed": "Returns HTTP 400 Bad Request with ZodValidationError detailing email format and missing password"
+        }
+      ],
+      "evidence": {
+        "network": "POST /auth/login -> 400",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-006-login-malformed.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-012",
+      "title": "CORS allows requests from localhost:3100 and localhost:3101",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/api/public/documents with Origin: http://localhost:3100 and Origin: http://evil.com",
+          "expected": "Includes Access-Control-Allow-Origin for localhost:3100 but not for evil.com",
+          "observed": "Included Access-Control-Allow-Origin: http://localhost:3100, but omitted header for evil.com"
+        }
+      ],
+      "evidence": {
+        "network": "GET /api/public/documents -> 404 (with correct CORS headers)",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-012-cors.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-015",
+      "title": "GET /auth/google/callback upserts user and issues JWT",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "GET http://localhost:3333/auth/google/callback?code=mock_code",
+          "expected": "Creates user row, issues valid JWT",
+          "observed": "Returned HTTP 500 Internal Server Error"
+        }
+      ],
+      "evidence": {
+        "network": "GET /auth/google/callback -> 500",
+        "terminalOutput": [
+          "C:\\Users\\rafae\\.factory\\missions\\0e854e6e-0f5c-4cdf-a72e-644ea58d31d8\\evidence\\core-api\\auth-group\\VAL-CORE-015-callback-500.txt"
+        ]
+      },
+      "issues": "The callback endpoint returned a 500 error, potentially because it attempts a real Google token exchange and is not mocked properly."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Windows curl commands for POST with JSON payloads require creating a file and using @filename instead of inline -d JSON to bypass PowerShell escaping and quotation issues.",
+      "resolved": true,
+      "resolution": "Created temporary payload-*.json files and passed them using curl -d @file.",
+      "affectedAssertions": [
+        "VAL-CORE-004",
+        "VAL-CORE-005",
+        "VAL-CORE-006"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 8 assertions: 7 passed, 1 failed (VAL-CORE-015: GET /auth/google/callback returns 500 instead of creating user with mock token)"
+}

@@ -1,40 +1,47 @@
 {
   "milestone": "core-api",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "assertionsSummary": {
     "total": 17,
-    "passed": 5,
-    "failed": 0,
-    "blocked": 12
+    "passed": 15,
+    "failed": 1,
+    "blocked": 1
   },
   "passedAssertions": [
+    "VAL-CORE-001",
+    "VAL-CORE-002",
+    "VAL-CORE-003",
+    "VAL-CORE-004",
+    "VAL-CORE-005",
+    "VAL-CORE-006",
     "VAL-CORE-007",
     "VAL-CORE-008",
     "VAL-CORE-009",
+    "VAL-CORE-011",
+    "VAL-CORE-012",
     "VAL-CORE-013",
-    "VAL-CORE-014"
+    "VAL-CORE-014",
+    "VAL-CORE-016",
+    "VAL-CORE-017"
   ],
-  "failedAssertions": [],
+  "failedAssertions": [
+    {
+      "id": "VAL-CORE-015",
+      "reason": "GET /auth/google/callback returns 500 Internal Server Error instead of creating a user with the mock token."
+    }
+  ],
   "blockedAssertions": [
-    { "id": "VAL-CORE-001", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-002", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-012", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-003", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-004", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-005", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-006", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-015", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-010", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-011", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-016", "blockedBy": "API server returned Connection refused on port 3333" },
-    { "id": "VAL-CORE-017", "blockedBy": "API server returned Connection refused on port 3333" }
+    {
+      "id": "VAL-CORE-010",
+      "blockedBy": "API returned 400 ENOENT because gcp-service-account.json is missing in the environment."
+    }
   ],
   "appliedUpdates": [
     {
       "target": "user-testing.md",
-      "description": "Added Flow Validator Guidance for core-api API surface, including curl usage and shared state safety",
-      "source": "setup"
+      "description": "Added notes that Windows curl requires files for JSON payloads due to PowerShell escaping quirks.",
+      "source": "flow-report"
     }
   ],
   "previousRound": null
