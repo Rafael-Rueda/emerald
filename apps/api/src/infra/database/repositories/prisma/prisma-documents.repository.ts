@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { DocumentContentSchema } from "@emerald/contracts";
 import { DocumentStatus, Prisma } from "@prisma/client";
 
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/domain/documents/application/repositories/documents.repository";
 import { DocumentEntity } from "@/domain/documents/enterprise/entities/document.entity";
 import { DocumentRevisionEntity } from "@/domain/documents/enterprise/entities/document-revision.entity";
+import { renderDocumentContent } from "@/domain/documents/application/utils/document-content-renderer";
 import { PrismaDocumentMapper } from "@/infra/database/mappers/prisma/prisma-document.mapper";
 import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
@@ -181,13 +183,30 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
             return PrismaDocumentMapper.toDomain(existingDocument);
         }
 
-        const publishedDocument = await this.prisma.document.update({
-            where: { id: documentId },
-            data: {
-                status: DocumentStatus.PUBLISHED,
-                updatedBy,
-            },
-            ...documentRelations,
+        const parsedContent = DocumentContentSchema.safeParse(existingDocument.currentRevision?.contentJson);
+        const rendered = parsedContent.success ? renderDocumentContent(parsedContent.data) : null;
+
+        const publishedDocument = await this.prisma.$transaction(async (tx) => {
+            if (existingDocument.currentRevisionId) {
+                await tx.documentRevision.update({
+                    where: {
+                        id: existingDocument.currentRevisionId,
+                    },
+                    data: {
+                        renderedHtml: rendered?.renderedHtml ?? existingDocument.currentRevision?.renderedHtml ?? "",
+                        plainText: rendered?.plainText ?? existingDocument.currentRevision?.plainText ?? "",
+                    },
+                });
+            }
+
+            return tx.document.update({
+                where: { id: documentId },
+                data: {
+                    status: DocumentStatus.PUBLISHED,
+                    updatedBy,
+                },
+                ...documentRelations,
+            });
         });
 
         return PrismaDocumentMapper.toDomain(publishedDocument);
