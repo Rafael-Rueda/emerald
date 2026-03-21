@@ -6,7 +6,6 @@
 export {
   type DefaultDocumentContext,
   DEFAULT_SPACE,
-  MOCKED_DEFAULT_CONTEXT,
   resolveDefaultVersion,
   resolveFirstSlug,
   buildDefaultDocumentContext,

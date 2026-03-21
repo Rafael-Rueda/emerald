@@ -79,11 +79,8 @@ export function buildCanonicalPath(ctx: DefaultDocumentContext): string {
 }
 
 /**
- * The hardcoded default document context for the mocked data.
+ * Fallback default document context for mocked/offline scenarios.
  * This matches the fixture: guides/v1/getting-started.
- *
- * Used for the server-side redirect at `/` to avoid needing
- * a runtime API call before the redirect.
  */
 export const MOCKED_DEFAULT_CONTEXT: DefaultDocumentContext = {
   space: "guides",
