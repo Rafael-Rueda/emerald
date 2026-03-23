@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import * as pgvector from "pgvector";
+import { randomUUID } from "crypto";
 
 import type {
     DocumentChunkCreate,
@@ -26,8 +27,10 @@ export class PrismaDocumentChunkRepository implements DocumentChunkRepository {
         const values = Prisma.join(
             chunks.map((chunk) => {
                 const embedding = pgvector.toSql(chunk.embedding);
+                const chunkId = randomUUID();
 
                 return Prisma.sql`(
+                    ${chunkId},
                     ${chunk.documentId},
                     ${chunk.spaceId},
                     ${chunk.releaseVersionId},
@@ -41,6 +44,7 @@ export class PrismaDocumentChunkRepository implements DocumentChunkRepository {
 
         await this.prisma.$executeRaw`
             INSERT INTO "document_chunks" (
+                "id",
                 "document_id",
                 "space_id",
                 "release_version_id",

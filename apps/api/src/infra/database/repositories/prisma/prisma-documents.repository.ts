@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
 import { DocumentContentSchema } from "@emerald/contracts";
+import { Injectable } from "@nestjs/common";
 import { DocumentStatus, Prisma } from "@prisma/client";
 
 import {
@@ -11,9 +11,9 @@ import {
     ListDocumentsResult,
     UpdateDocumentParams,
 } from "@/domain/documents/application/repositories/documents.repository";
+import { renderDocumentContent } from "@/domain/documents/application/utils/document-content-renderer";
 import { DocumentEntity } from "@/domain/documents/enterprise/entities/document.entity";
 import { DocumentRevisionEntity } from "@/domain/documents/enterprise/entities/document-revision.entity";
-import { renderDocumentContent } from "@/domain/documents/application/utils/document-content-renderer";
 import { PrismaDocumentMapper } from "@/infra/database/mappers/prisma/prisma-document.mapper";
 import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
@@ -81,6 +81,9 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
     }
 
     async create(params: CreateDocumentParams): Promise<DocumentEntity> {
+        const parsedContent = DocumentContentSchema.safeParse(params.contentJson);
+        const rendered = parsedContent.success ? renderDocumentContent(parsedContent.data) : null;
+
         const document = await this.prisma.$transaction(async (tx) => {
             const createdDocument = await tx.document.create({
                 data: {
@@ -99,6 +102,8 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
                     documentId: createdDocument.id,
                     revisionNumber: 1,
                     contentJson: params.contentJson as Prisma.InputJsonValue,
+                    renderedHtml: rendered?.renderedHtml ?? "",
+                    plainText: rendered?.plainText ?? "",
                     createdBy: params.createdBy,
                     changeNote: "Initial revision",
                 },
@@ -131,15 +136,22 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
                 title?: string;
                 updatedBy: string;
                 currentRevisionId?: string;
+                status?: DocumentStatus;
             } = {
                 updatedBy: params.updatedBy,
             };
 
             if (params.title !== undefined) {
                 data.title = params.title;
+                data.status = DocumentStatus.DRAFT;
             }
 
             if (params.contentJson) {
+                const parsedUpdateContent = DocumentContentSchema.safeParse(params.contentJson);
+                const renderedUpdate = parsedUpdateContent.success
+                    ? renderDocumentContent(parsedUpdateContent.data)
+                    : null;
+
                 const latestRevision = await tx.documentRevision.findFirst({
                     where: { documentId: params.documentId },
                     orderBy: { revisionNumber: "desc" },
@@ -151,12 +163,15 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
                         documentId: params.documentId,
                         revisionNumber: (latestRevision?.revisionNumber ?? 0) + 1,
                         contentJson: params.contentJson as Prisma.InputJsonValue,
+                        renderedHtml: renderedUpdate?.renderedHtml ?? "",
+                        plainText: renderedUpdate?.plainText ?? "",
                         createdBy: params.updatedBy,
                         changeNote: "Document update",
                     },
                 });
 
                 data.currentRevisionId = createdRevision.id;
+                data.status = DocumentStatus.DRAFT;
             }
 
             return tx.document.update({
@@ -212,6 +227,32 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
         return PrismaDocumentMapper.toDomain(publishedDocument);
     }
 
+    async unpublish(documentId: string, updatedBy: string): Promise<DocumentEntity | null> {
+        const existingDocument = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            ...documentRelations,
+        });
+
+        if (!existingDocument) {
+            return null;
+        }
+
+        if (existingDocument.status === DocumentStatus.DRAFT) {
+            return PrismaDocumentMapper.toDomain(existingDocument);
+        }
+
+        const updatedDocument = await this.prisma.document.update({
+            where: { id: documentId },
+            data: {
+                status: DocumentStatus.DRAFT,
+                updatedBy,
+            },
+            ...documentRelations,
+        });
+
+        return PrismaDocumentMapper.toDomain(updatedDocument);
+    }
+
     async createRevision(params: CreateRevisionParams): Promise<DocumentRevisionEntity | null> {
         const existingDocument = await this.prisma.document.findUnique({
             where: { id: params.documentId },
@@ -221,6 +262,9 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
         if (!existingDocument) {
             return null;
         }
+
+        const parsedContent = DocumentContentSchema.safeParse(params.contentJson);
+        const rendered = parsedContent.success ? renderDocumentContent(parsedContent.data) : null;
 
         const createdRevision = await this.prisma.$transaction(async (tx) => {
             const latestRevision = await tx.documentRevision.findFirst({
@@ -234,6 +278,8 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
                     documentId: params.documentId,
                     revisionNumber: (latestRevision?.revisionNumber ?? 0) + 1,
                     contentJson: params.contentJson as Prisma.InputJsonValue,
+                    renderedHtml: rendered?.renderedHtml ?? "",
+                    plainText: rendered?.plainText ?? "",
                     createdBy: params.createdBy,
                     changeNote: params.changeNote,
                 },
