@@ -1,0 +1,54 @@
+{
+  "milestone": "mcp-server",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 24,
+    "passed": 20,
+    "failed": 4,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-MCP-001",
+    "VAL-MCP-002",
+    "VAL-MCP-003",
+    "VAL-MCP-004",
+    "VAL-MCP-006",
+    "VAL-MCP-011",
+    "VAL-MCP-018",
+    "VAL-MCP-018b",
+    "VAL-MCP-013",
+    "VAL-MCP-014",
+    "VAL-MCP-015",
+    "VAL-MCP-017",
+    "VAL-MCP-019",
+    "VAL-CROSS-009",
+    "VAL-CROSS-010",
+    "VAL-MCP-005",
+    "VAL-MCP-016",
+    "VAL-CROSS-003",
+    "VAL-CROSS-004",
+    "VAL-MCP-007"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-MCP-010",
+      "reason": "Failed auth check"
+    },
+    {
+      "id": "VAL-MCP-008",
+      "reason": "Failed SSE stream check"
+    },
+    {
+      "id": "VAL-MCP-009",
+      "reason": "DELETE did not terminate session correctly"
+    },
+    {
+      "id": "VAL-MCP-012",
+      "reason": "Tool response was not a graceful error"
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null
+}
