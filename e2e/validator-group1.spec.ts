@@ -62,7 +62,7 @@ test.describe('Workspace Authoring UI - Group 1', () => {
 
   test('run assertions', async ({ page }) => {
     test.setTimeout(120000); // 2 minutes
-    let networkLogs = [];
+    const networkLogs = [];
     page.on('response', (response) => {
       networkLogs.push(`${response.request().method()} ${response.url()} -> ${response.status()}`);
     });
