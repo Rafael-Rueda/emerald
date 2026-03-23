@@ -14,10 +14,18 @@ const makeChunkRepository = (): jest.Mocked<DocumentChunkRepository> => ({
     createMany: jest.fn(),
 });
 
-const makePrismaService = (): jest.Mocked<Pick<PrismaService, "$queryRaw" | "document">> => ({
+const makePrismaService = (): jest.Mocked<
+    Pick<PrismaService, "$queryRaw" | "document" | "space" | "releaseVersion">
+> => ({
     document: {
         findUnique: jest.fn(),
     } as unknown as PrismaService["document"],
+    space: {
+        findUnique: jest.fn(),
+    } as unknown as PrismaService["space"],
+    releaseVersion: {
+        findUnique: jest.fn(),
+    } as unknown as PrismaService["releaseVersion"],
     $queryRaw: jest.fn(),
 });
 
@@ -29,12 +37,15 @@ const makeEmbedding = (seed = 0.1): number[] => Array.from({ length: 512 }, (_, 
 
 describe("AiContextService.semanticSearch", () => {
     let sut: AiContextService;
-    let prismaService: jest.Mocked<Pick<PrismaService, "$queryRaw" | "document">>;
+    let prismaService: jest.Mocked<Pick<PrismaService, "$queryRaw" | "document" | "space" | "releaseVersion">>;
     let voyageClient: MockVoyageClient;
 
     beforeEach(() => {
         prismaService = makePrismaService();
         voyageClient = makeVoyageClient();
+
+        prismaService.space.findUnique.mockResolvedValue({ id: "space-1" });
+        prismaService.releaseVersion.findUnique.mockResolvedValue({ id: "version-1" });
 
         sut = new AiContextService(makeChunkRepository(), prismaService as never, voyageClient as never);
     });
@@ -82,6 +93,19 @@ describe("AiContextService.semanticSearch", () => {
             model: "voyage-3-lite",
             input_type: "query",
         });
+        expect(prismaService.space.findUnique).toHaveBeenCalledWith({
+            where: { key: "guides" },
+            select: { id: true },
+        });
+        expect(prismaService.releaseVersion.findUnique).toHaveBeenCalledWith({
+            where: {
+                spaceId_key: {
+                    spaceId: "space-1",
+                    key: "v1",
+                },
+            },
+            select: { id: true },
+        });
         expect(prismaService.$queryRaw).toHaveBeenCalledTimes(1);
         expect(result.entityType).toBe("semantic-search");
         expect(result.entityId).toBe("best practices");
@@ -127,11 +151,8 @@ describe("AiContextService.semanticSearch", () => {
         expect(prismaService.$queryRaw).not.toHaveBeenCalled();
     });
 
-    it("returns an empty result when raw semantic query fails", async () => {
-        voyageClient.embed.mockResolvedValue({
-            data: [{ embedding: makeEmbedding(0.42) }],
-        });
-        prismaService.$queryRaw.mockRejectedValue(new Error("space not found"));
+    it("returns an empty result when space is unknown", async () => {
+        prismaService.space.findUnique.mockResolvedValue(null);
 
         const result = await sut.semanticSearch("unknown space", "unknown", "v1");
 
@@ -140,6 +161,32 @@ describe("AiContextService.semanticSearch", () => {
             entityType: "semantic-search",
             chunks: [],
         });
+        expect(prismaService.releaseVersion.findUnique).not.toHaveBeenCalled();
+        expect(voyageClient.embed).not.toHaveBeenCalled();
+        expect(prismaService.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty result when version is unknown", async () => {
+        prismaService.releaseVersion.findUnique.mockResolvedValue(null);
+
+        const result = await sut.semanticSearch("unknown version", "guides", "missing");
+
+        expect(result).toEqual({
+            entityId: "unknown version",
+            entityType: "semantic-search",
+            chunks: [],
+        });
+        expect(voyageClient.embed).not.toHaveBeenCalled();
+        expect(prismaService.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("propagates raw semantic query errors when pre-flight checks pass", async () => {
+        voyageClient.embed.mockResolvedValue({
+            data: [{ embedding: makeEmbedding(0.42) }],
+        });
+        prismaService.$queryRaw.mockRejectedValue(new Error("database unavailable"));
+
+        await expect(sut.semanticSearch("db error", "guides", "v1")).rejects.toThrow("database unavailable");
     });
 
     it("maps nullable raw fields to strings so AiContextResponseSchema parse succeeds", async () => {

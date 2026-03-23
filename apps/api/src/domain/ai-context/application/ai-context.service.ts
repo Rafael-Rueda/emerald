@@ -101,6 +101,29 @@ export class AiContextService {
     ) {}
 
     async semanticSearch(query: string, space: string, version: string): Promise<AiContextResponse> {
+        const spaceRecord = await this.prisma.space.findUnique({
+            where: { key: space },
+            select: { id: true },
+        });
+
+        if (!spaceRecord) {
+            return this.emptySemanticSearchResponse(query);
+        }
+
+        const versionRecord = await this.prisma.releaseVersion.findUnique({
+            where: {
+                spaceId_key: {
+                    spaceId: spaceRecord.id,
+                    key: version,
+                },
+            },
+            select: { id: true },
+        });
+
+        if (!versionRecord) {
+            return this.emptySemanticSearchResponse(query);
+        }
+
         const embeddingResponse = await this.voyageAiClient
             .embed({
                 input: [query],
@@ -126,57 +149,45 @@ export class AiContextService {
         }
 
         const embeddingParam = pgvector.toSql(queryEmbedding);
-
-        let rows: SemanticSearchRow[] = [];
-
-        try {
-            rows = await this.prisma.$queryRaw<SemanticSearchRow[]>`
-                SELECT
-                    dc.id,
-                    dc.content,
-                    1 - (dc.embedding <=> ${embeddingParam}::vector) AS relevance_score,
-                    d.id AS document_id,
-                    d.title AS document_title,
-                    rv.id AS version_id,
-                    rv.label AS version_label,
-                    COALESCE(nav.label, d.title) AS navigation_label,
-                    dc.section_id,
-                    dc.section_title,
-                    d.slug,
-                    s.key AS space
-                FROM document_chunks dc
-                INNER JOIN documents d
-                    ON d.id = dc.document_id
-                INNER JOIN release_versions rv
-                    ON rv.id = dc.release_version_id
-                INNER JOIN spaces s
-                    ON s.id = dc.space_id
-                LEFT JOIN LATERAL (
-                    SELECT nn.label
-                    FROM navigation_nodes nn
-                    WHERE nn.document_id = d.id
-                      AND nn.space_id = dc.space_id
-                      AND (nn.release_version_id = dc.release_version_id OR nn.release_version_id IS NULL)
-                    ORDER BY
-                        CASE WHEN nn.release_version_id = dc.release_version_id THEN 0 ELSE 1 END,
-                        nn."order" ASC,
-                        nn.created_at ASC
-                    LIMIT 1
-                ) nav
-                    ON true
-                WHERE dc.space_id = (SELECT id FROM spaces WHERE key = ${space})
-                  AND dc.release_version_id IN (
-                        SELECT id
-                        FROM release_versions
-                        WHERE space_id = (SELECT id FROM spaces WHERE key = ${space})
-                          AND key = ${version}
-                    )
-                ORDER BY dc.embedding <=> ${embeddingParam}::vector
-                LIMIT 10
-            `;
-        } catch {
-            return this.emptySemanticSearchResponse(query);
-        }
+        const rows = await this.prisma.$queryRaw<SemanticSearchRow[]>`
+            SELECT
+                dc.id,
+                dc.content,
+                1 - (dc.embedding <=> ${embeddingParam}::vector) AS relevance_score,
+                d.id AS document_id,
+                d.title AS document_title,
+                rv.id AS version_id,
+                rv.label AS version_label,
+                COALESCE(nav.label, d.title) AS navigation_label,
+                dc.section_id,
+                dc.section_title,
+                d.slug,
+                s.key AS space
+            FROM document_chunks dc
+            INNER JOIN documents d
+                ON d.id = dc.document_id
+            INNER JOIN release_versions rv
+                ON rv.id = dc.release_version_id
+            INNER JOIN spaces s
+                ON s.id = dc.space_id
+            LEFT JOIN LATERAL (
+                SELECT nn.label
+                FROM navigation_nodes nn
+                WHERE nn.document_id = d.id
+                  AND nn.space_id = dc.space_id
+                  AND (nn.release_version_id = dc.release_version_id OR nn.release_version_id IS NULL)
+                ORDER BY
+                    CASE WHEN nn.release_version_id = dc.release_version_id THEN 0 ELSE 1 END,
+                    nn."order" ASC,
+                    nn.created_at ASC
+                LIMIT 1
+            ) nav
+                ON true
+            WHERE dc.space_id = ${spaceRecord.id}
+              AND dc.release_version_id = ${versionRecord.id}
+            ORDER BY dc.embedding <=> ${embeddingParam}::vector
+            LIMIT 10
+        `;
 
         return {
             entityId: query,
