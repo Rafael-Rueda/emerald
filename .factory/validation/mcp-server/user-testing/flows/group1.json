@@ -1,0 +1,113 @@
+{
+  "groupId": "group1",
+  "testedAt": "2026-03-23T14:09:45.574Z",
+  "isolation": {
+    "url": "http://localhost:3333"
+  },
+  "toolsUsed": [
+    "custom-nodejs-script"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-MCP-008",
+      "title": "GET /api/mcp Opens SSE Stream",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/mcp with session id",
+          "expected": "HTTP 200, Content-Type: text/event-stream, connection open >= 1s",
+          "observed": "Status: 200, Content-Type: text/event-stream, duration: 1515ms"
+        }
+      ],
+      "evidence": {
+        "network": "GET /api/mcp",
+        "files": [
+          "mcp-server/group1/VAL-MCP-008-get.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-009",
+      "title": "DELETE /api/mcp Terminates Session",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "DELETE /api/mcp",
+          "expected": "HTTP 200/204",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "POST /api/mcp with same session",
+          "expected": "HTTP 404 or error",
+          "observed": "HTTP 400 body: {\"statusCode\":400,\"error\":\"BadRequestException\",\"message\":[\"Bad Request: No valid session ID provided\"],\"timestamp\":\"2026-03-23T14:09:47.166Z\",\"path\":\"/api/mcp\"}"
+        }
+      ],
+      "evidence": {
+        "network": "DELETE /api/mcp -> POST /api/mcp",
+        "files": [
+          "mcp-server/group1/VAL-MCP-009-delete.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-010",
+      "title": "/api/mcp Requires No Authorization",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST /api/mcp without auth",
+          "expected": "Success (200)",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "GET /api/mcp without auth",
+          "expected": "Success (200)",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "DELETE /api/mcp without auth",
+          "expected": "Success (200/204)",
+          "observed": "HTTP 200"
+        }
+      ],
+      "evidence": {
+        "network": "POST, GET, DELETE /api/mcp",
+        "files": [
+          "mcp-server/group1/VAL-MCP-010-init-post.json",
+          "mcp-server/group1/VAL-MCP-008-get.json",
+          "mcp-server/group1/VAL-MCP-009-delete.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-012",
+      "title": "API DB Error Returns Graceful MCP Error",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Stop postgres",
+          "expected": "Postgres stopped",
+          "observed": "Postgres stopped via bash"
+        },
+        {
+          "action": "POST /api/mcp tools/call search_documentation",
+          "expected": "HTTP 200 with JSON-RPC error or isError: true",
+          "observed": "HTTP 200, body contains isError: true"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/mcp tools/call",
+        "files": [
+          "mcp-server/group1/VAL-MCP-012-db-error.json"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": ""
+}
