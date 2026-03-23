@@ -70,6 +70,15 @@ Both apps have `.env.local.example` files with placeholder values.
 - `@emerald/configs/tailwind/preset` export works via explicit exports map in configs package.json
 - `pnpm install` must be run from monorepo root to resolve all workspace packages correctly
 
+## Semantic Search / AI Context (added: semantic-search mission)
+
+- **VOYAGE_API_KEY** — Required in `apps/api/.env`. Obtain from https://www.voyageai.com/. Server refuses to start without it.
+- **PostgreSQL images** — Both containers (5434, 5435) use `pgvector/pgvector:pg17` (switched from bitnami/postgresql). Volume data at `apps/api/data/pg` and `apps/api/data/pg-test` must be cleared when switching images.
+- **pgvector npm package** — Required in `apps/api` for `pgvector.toSql()` serialization in `$queryRaw`.
+- **voyageai npm package** — Required in `apps/api` for embedding generation.
+- **@modelcontextprotocol/sdk** — Required in both `apps/api` and `packages/mcp-server` (v1.27.1). Use StreamableHTTP transport in NestJS; Stdio transport in CLI.
+- MCP CLI package: `packages/mcp-server` (internal, not published). API_URL env var controls target (default: http://localhost:3333).
+
 ## External Accounts Required (not automated by init.sh)
 
 - **GCP Service Account** with Storage Object Admin permission on the configured bucket

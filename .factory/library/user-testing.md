@@ -137,6 +137,36 @@ curl http://localhost:3100/guides/v1/getting-started | grep "og:description"
 - Use the provided dev database on 5434 or test database on 5435 for Prisma validations.
 - Keep tests within the monorepo directory.
 
+## Flow Validator Guidance: semantic-search and MCP (new — semantic-search mission)
+
+### Semantic Search Endpoint
+- Method: POST — use `curl.exe` (NOT GET)
+- URL: `http://localhost:3333/api/public/ai-context/search`
+- No Authorization header required
+- Body: `{"query":"<term>","space":"<space-key>","version":"<version-key>"}`
+- Write JSON body to a temp file on Windows: `Set-Content -Path "$env:TEMP\body.json" -Value '{"query":"test","space":"guides","version":"v1"}'`
+- Then: `curl.exe -X POST http://localhost:3333/api/public/ai-context/search -H "Content-Type: application/json" -d @"$env:TEMP\body.json"`
+- Expected response shape: `AiContextResponseSchema` — `{ entityId: string, entityType: "semantic-search", chunks: [] }`
+
+### MCP Endpoint (NestJS StreamableHTTP)
+- URL: `http://localhost:3333/api/mcp`
+- Methods: POST (initialize + tool calls), GET (SSE stream), DELETE (close session)
+- No Authorization header required
+- Initialize body: `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
+- After initialize: use `Mcp-Session-Id` header from response for subsequent requests
+
+### MCP CLI
+- Entry: `node packages/mcp-server/dist/index.js`
+- Build first: `pnpm --filter @emerald/mcp-server build`
+- Communicate via stdin/stdout (newline-delimited JSON-RPC 2.0)
+- API_URL env var (default: http://localhost:3333)
+- VOYAGE_API_KEY must be set for end-to-end semantic search to work
+
+### VOYAGE_API_KEY Requirement
+- **Required in apps/api/.env** for semantic search and embedding to work
+- Without it, the API will refuse to start
+- The user has confirmed they will add this key before end-to-end testing
+
 ## Flow Validator Guidance: core-api
 - Test against `http://localhost:3333`.
 - The API is fully started and ready.

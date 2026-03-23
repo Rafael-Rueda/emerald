@@ -116,6 +116,48 @@ export const revalidate = 60; // ISR
 - `z.safeParse()` at all boundaries; use `.success` field to branch
 - DocumentContentSchema is a discriminated union of block types — validate at both API boundary and in TipTap autosave before sending
 
+## Semantic Search / AI Context Architecture (added: semantic-search mission)
+
+### New Domain: ai-context
+```
+apps/api/src/
+  domain/ai-context/
+    application/
+      ai-context.service.ts          # chunkDocument(), generateAndStoreEmbeddings(), semanticSearch()
+      repositories/
+        document-chunk.repository.ts  # Interface: deleteByDocumentId, createMany
+      __tests__/unit/
+  infra/database/prisma/repositories/
+    document-chunk.repository.ts     # Prisma implementation (uses $executeRaw for vector writes)
+  http/
+    mcp/
+      mcp.controller.ts              # POST/GET/DELETE /api/mcp (StreamableHTTP transport)
+      mcp-server.manager.ts          # Manages McpServer instances + search_documentation tool
+      mcp.module.ts
+    public/controllers/
+      ai-context.controller.ts       # POST /api/public/ai-context/search (new controller, not PublicController)
+```
+
+### packages/mcp-server (new package)
+- Internal CLI (not published to npm)
+- `packages/mcp-server/src/index.ts` — StdioServerTransport, McpServer, search_documentation tool
+- `packages/mcp-server/src/client.ts` — HTTP client wrapper for semantic search API
+- Build output: `packages/mcp-server/dist/index.js`
+
+### pgvector Conventions
+- `DocumentChunk.embedding` declared as `Unsupported("vector(512)")` — invisible to typed Prisma Client
+- All vector I/O via `$executeRaw` (write) and `$queryRaw` (read/search)
+- Cosine similarity: `1 - (embedding <=> ${param}::vector)` as relevance score
+- HNSW index added via raw SQL migration (not in schema, Prisma would drop it on migrate)
+- Use `pgvector.toSql(array)` from `pgvector` npm package for serialization
+
+### MCP Transport Conventions
+- NestJS: `StreamableHTTPServerTransport` at `/api/mcp` (POST/GET/DELETE)
+- CLI: `StdioServerTransport` at stdin/stdout
+- Tool inputSchema: `zod/v4` subpath import (`import * as z from 'zod/v4'`)
+- Tool response: `content[0].text = JSON.stringify(AiContextResponseSchema result)`
+- `entityType: "semantic-search"`, `entityId: <query string>` for search responses
+
 ## Prisma Schema Location
 
 The Prisma schema is at `apps/api/src/infra/database/prisma/schema.prisma` (non-standard location per Sardius convention). The `prisma.config.ts` at `apps/api/` root wires this up.
