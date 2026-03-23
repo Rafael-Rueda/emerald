@@ -5,11 +5,13 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector]
 }
 
 enum ROLES {
@@ -121,6 +123,7 @@ model Document {
   releaseVersion  ReleaseVersion     @relation(fields: [releaseVersionId], references: [id], onDelete: Cascade)
   revisions       DocumentRevision[] @relation("DocumentRevisions")
   currentRevision DocumentRevision?  @relation("CurrentDocumentRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
+  chunks          DocumentChunk[]
   navigationNodes NavigationNode[]
 
   @@unique([spaceId, slug, releaseVersionId])
@@ -145,6 +148,25 @@ model DocumentRevision {
   @@unique([documentId, revisionNumber])
   @@index([documentId])
   @@map("document_revisions")
+}
+
+model DocumentChunk {
+  id               String   @id @default(cuid())
+  documentId       String   @map("document_id")
+  spaceId          String   @map("space_id")
+  releaseVersionId String   @map("release_version_id")
+  sectionId        String   @map("section_id")
+  sectionTitle     String   @map("section_title")
+  content          String
+  embedding        Unsupported("vector(512)")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([spaceId])
+  @@index([releaseVersionId])
+  @@map("document_chunks")
 }
 
 model NavigationNode {
