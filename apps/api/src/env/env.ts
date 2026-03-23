@@ -43,4 +43,4 @@ export function validateEnv() {
     return parsedEnv.data;
 }
 
-// export const env = validateEnv();
+export const env = validateEnv();
