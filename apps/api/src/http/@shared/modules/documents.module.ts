@@ -11,6 +11,7 @@ import { GetDocumentByIdUseCase } from "@/domain/documents/application/use-cases
 import { GetRevisionsUseCase } from "@/domain/documents/application/use-cases/get-revisions.use-case";
 import { ListDocumentsUseCase } from "@/domain/documents/application/use-cases/list-documents.use-case";
 import { PublishDocumentUseCase } from "@/domain/documents/application/use-cases/publish-document.use-case";
+import { UnpublishDocumentUseCase } from "@/domain/documents/application/use-cases/unpublish-document.use-case";
 import { UpdateDocumentUseCase } from "@/domain/documents/application/use-cases/update-document.use-case";
 import { PrismaDocumentsRepository } from "@/infra/database/repositories/prisma/prisma-documents.repository";
 
@@ -48,6 +49,11 @@ import { PrismaDocumentsRepository } from "@/infra/database/repositories/prisma/
                 new PublishDocumentUseCase(documentsRepository, aiContextService),
         },
         {
+            provide: "UnpublishDocumentUseCase",
+            inject: ["DocumentsRepository"],
+            useFactory: (documentsRepository: DocumentsRepository) => new UnpublishDocumentUseCase(documentsRepository),
+        },
+        {
             provide: "CreateRevisionUseCase",
             inject: ["DocumentsRepository"],
             useFactory: (documentsRepository: DocumentsRepository) => new CreateRevisionUseCase(documentsRepository),
@@ -65,6 +71,7 @@ import { PrismaDocumentsRepository } from "@/infra/database/repositories/prisma/
         "ListDocumentsUseCase",
         "UpdateDocumentUseCase",
         "PublishDocumentUseCase",
+        "UnpublishDocumentUseCase",
         "CreateRevisionUseCase",
         "GetRevisionsUseCase",
     ],
