@@ -74,18 +74,18 @@ const textFromBlocks = (blocks: BlockNode[]): string =>
     );
 
 interface SemanticSearchRow {
-    id: string;
-    content: string;
-    relevance_score: number | string;
-    document_id: string;
-    document_title: string;
-    version_id: string;
-    version_label: string;
+    id: string | null;
+    content: string | null;
+    relevance_score: number | string | null;
+    document_id: string | null;
+    document_title: string | null;
+    version_id: string | null;
+    version_label: string | null;
     navigation_label: string | null;
-    section_id: string;
-    section_title: string;
-    slug: string;
-    space: string;
+    section_id: string | null;
+    section_title: string | null;
+    slug: string | null;
+    space: string | null;
 }
 
 @Injectable()
@@ -101,11 +101,17 @@ export class AiContextService {
     ) {}
 
     async semanticSearch(query: string, space: string, version: string): Promise<AiContextResponse> {
-        const embeddingResponse = await this.voyageAiClient.embed({
-            input: [query],
-            model: "voyage-3-lite",
-            input_type: "query",
-        });
+        const embeddingResponse = await this.voyageAiClient
+            .embed({
+                input: [query],
+                model: "voyage-3-lite",
+                input_type: "query",
+            })
+            .catch(() => null);
+
+        if (!embeddingResponse) {
+            return this.emptySemanticSearchResponse(query);
+        }
 
         const queryEmbedding = embeddingResponse.data?.[0]?.embedding;
 
@@ -121,50 +127,56 @@ export class AiContextService {
 
         const embeddingParam = pgvector.toSql(queryEmbedding);
 
-        const rows = await this.prisma.$queryRaw<SemanticSearchRow[]>`
-            SELECT
-                dc.id,
-                dc.content,
-                1 - (dc.embedding <=> ${embeddingParam}::vector) AS relevance_score,
-                d.id AS document_id,
-                d.title AS document_title,
-                rv.id AS version_id,
-                rv.label AS version_label,
-                COALESCE(nav.label, d.title) AS navigation_label,
-                dc.section_id,
-                dc.section_title,
-                d.slug,
-                s.key AS space
-            FROM document_chunks dc
-            INNER JOIN documents d
-                ON d.id = dc.document_id
-            INNER JOIN release_versions rv
-                ON rv.id = dc.release_version_id
-            INNER JOIN spaces s
-                ON s.id = dc.space_id
-            LEFT JOIN LATERAL (
-                SELECT nn.label
-                FROM navigation_nodes nn
-                WHERE nn.document_id = d.id
-                  AND nn.space_id = dc.space_id
-                  AND (nn.release_version_id = dc.release_version_id OR nn.release_version_id IS NULL)
-                ORDER BY
-                    CASE WHEN nn.release_version_id = dc.release_version_id THEN 0 ELSE 1 END,
-                    nn."order" ASC,
-                    nn.created_at ASC
-                LIMIT 1
-            ) nav
-                ON true
-            WHERE dc.space_id = (SELECT id FROM spaces WHERE key = ${space})
-              AND dc.release_version_id IN (
-                    SELECT id
-                    FROM release_versions
-                    WHERE space_id = (SELECT id FROM spaces WHERE key = ${space})
-                      AND key = ${version}
-                )
-            ORDER BY dc.embedding <=> ${embeddingParam}::vector
-            LIMIT 10
-        `;
+        let rows: SemanticSearchRow[] = [];
+
+        try {
+            rows = await this.prisma.$queryRaw<SemanticSearchRow[]>`
+                SELECT
+                    dc.id,
+                    dc.content,
+                    1 - (dc.embedding <=> ${embeddingParam}::vector) AS relevance_score,
+                    d.id AS document_id,
+                    d.title AS document_title,
+                    rv.id AS version_id,
+                    rv.label AS version_label,
+                    COALESCE(nav.label, d.title) AS navigation_label,
+                    dc.section_id,
+                    dc.section_title,
+                    d.slug,
+                    s.key AS space
+                FROM document_chunks dc
+                INNER JOIN documents d
+                    ON d.id = dc.document_id
+                INNER JOIN release_versions rv
+                    ON rv.id = dc.release_version_id
+                INNER JOIN spaces s
+                    ON s.id = dc.space_id
+                LEFT JOIN LATERAL (
+                    SELECT nn.label
+                    FROM navigation_nodes nn
+                    WHERE nn.document_id = d.id
+                      AND nn.space_id = dc.space_id
+                      AND (nn.release_version_id = dc.release_version_id OR nn.release_version_id IS NULL)
+                    ORDER BY
+                        CASE WHEN nn.release_version_id = dc.release_version_id THEN 0 ELSE 1 END,
+                        nn."order" ASC,
+                        nn.created_at ASC
+                    LIMIT 1
+                ) nav
+                    ON true
+                WHERE dc.space_id = (SELECT id FROM spaces WHERE key = ${space})
+                  AND dc.release_version_id IN (
+                        SELECT id
+                        FROM release_versions
+                        WHERE space_id = (SELECT id FROM spaces WHERE key = ${space})
+                          AND key = ${version}
+                    )
+                ORDER BY dc.embedding <=> ${embeddingParam}::vector
+                LIMIT 10
+            `;
+        } catch {
+            return this.emptySemanticSearchResponse(query);
+        }
 
         return {
             entityId: query,
@@ -174,19 +186,19 @@ export class AiContextService {
                 const relevanceScore = Number.isNaN(parsedScore) ? 0 : Math.max(0, Math.min(1, parsedScore));
 
                 return {
-                    id: row.id,
-                    content: row.content,
+                    id: String(row.id ?? ""),
+                    content: String(row.content ?? ""),
                     relevanceScore,
                     source: {
-                        documentId: row.document_id,
-                        documentTitle: row.document_title,
-                        versionId: row.version_id,
-                        versionLabel: row.version_label,
-                        navigationLabel: row.navigation_label || row.document_title,
-                        sectionId: row.section_id,
-                        sectionTitle: row.section_title,
-                        slug: row.slug,
-                        space: row.space,
+                        documentId: String(row.document_id ?? ""),
+                        documentTitle: String(row.document_title ?? ""),
+                        versionId: String(row.version_id ?? ""),
+                        versionLabel: String(row.version_label ?? ""),
+                        navigationLabel: String(row.navigation_label ?? row.document_title ?? ""),
+                        sectionId: String(row.section_id ?? ""),
+                        sectionTitle: String(row.section_title ?? ""),
+                        slug: String(row.slug ?? ""),
+                        space: String(row.space ?? ""),
                     },
                 };
             }),

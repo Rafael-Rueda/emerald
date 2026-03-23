@@ -113,4 +113,75 @@ describe("AiContextService.semanticSearch", () => {
         });
         expect(prismaService.$queryRaw).not.toHaveBeenCalled();
     });
+
+    it("returns an empty result when embedding request fails", async () => {
+        voyageClient.embed.mockRejectedValue(new Error("Voyage unavailable"));
+
+        const result = await sut.semanticSearch("embedding failure", "guides", "v1");
+
+        expect(result).toEqual({
+            entityId: "embedding failure",
+            entityType: "semantic-search",
+            chunks: [],
+        });
+        expect(prismaService.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty result when raw semantic query fails", async () => {
+        voyageClient.embed.mockResolvedValue({
+            data: [{ embedding: makeEmbedding(0.42) }],
+        });
+        prismaService.$queryRaw.mockRejectedValue(new Error("space not found"));
+
+        const result = await sut.semanticSearch("unknown space", "unknown", "v1");
+
+        expect(result).toEqual({
+            entityId: "unknown space",
+            entityType: "semantic-search",
+            chunks: [],
+        });
+    });
+
+    it("maps nullable raw fields to strings so AiContextResponseSchema parse succeeds", async () => {
+        voyageClient.embed.mockResolvedValue({
+            data: [{ embedding: makeEmbedding(0.42) }],
+        });
+
+        prismaService.$queryRaw.mockResolvedValue([
+            {
+                id: null,
+                content: null,
+                relevance_score: 0.42,
+                document_id: null,
+                document_title: null,
+                version_id: null,
+                version_label: null,
+                navigation_label: null,
+                section_id: null,
+                section_title: null,
+                slug: null,
+                space: null,
+            },
+        ]);
+
+        const result = await sut.semanticSearch("nullable fields", "guides", "v1");
+
+        expect(() => AiContextResponseSchema.parse(result)).not.toThrow();
+        expect(result.chunks[0]).toEqual({
+            id: "",
+            content: "",
+            relevanceScore: 0.42,
+            source: {
+                documentId: "",
+                documentTitle: "",
+                versionId: "",
+                versionLabel: "",
+                navigationLabel: "",
+                sectionId: "",
+                sectionTitle: "",
+                slug: "",
+                space: "",
+            },
+        });
+    });
 });
