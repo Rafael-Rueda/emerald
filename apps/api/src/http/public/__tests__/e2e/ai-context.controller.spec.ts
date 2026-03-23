@@ -22,6 +22,7 @@ describe("AiContextController (e2e)", () => {
     const targetVersionKey = "v1";
     const otherVersionKey = "v2";
     const queryText = "semantic test query";
+    const testDocumentIds: string[] = [];
 
     let targetVersionId: string;
 
@@ -43,6 +44,7 @@ describe("AiContextController (e2e)", () => {
                 updatedBy: "semantic-e2e",
             },
         });
+        testDocumentIds.push(document.id);
 
         const revision = await prismaService.documentRevision.create({
             data: {
@@ -144,7 +146,13 @@ describe("AiContextController (e2e)", () => {
 
         prismaService = app.get(PrismaService);
 
-        await prismaService.documentChunk.deleteMany({});
+        await prismaService.documentChunk.deleteMany({
+            where: {
+                documentId: {
+                    in: testDocumentIds,
+                },
+            },
+        });
 
         const targetSpace = await prismaService.space.create({
             data: {
@@ -350,7 +358,13 @@ describe("AiContextController (e2e)", () => {
     });
 
     it("returns 200 with empty chunks when the document_chunks table is empty", async () => {
-        await prismaService.documentChunk.deleteMany({});
+        await prismaService.documentChunk.deleteMany({
+            where: {
+                documentId: {
+                    in: testDocumentIds,
+                },
+            },
+        });
 
         const response = await request(app.getHttpServer()).post("/api/public/ai-context/search").send({
             query: queryText,
