@@ -1,0 +1,39 @@
+{
+  "milestone": "vector-foundation",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 35,
+    "passed": 19,
+    "failed": 6,
+    "blocked": 10
+  },
+  "passedAssertions": [
+    "VAL-VEC-001", "VAL-VEC-002", "VAL-VEC-003", "VAL-VEC-004", "VAL-VEC-004b", "VAL-VEC-027",
+    "VAL-VEC-006", "VAL-VEC-007", "VAL-VEC-008", "VAL-VEC-009", "VAL-VEC-010", "VAL-VEC-011",
+    "VAL-VEC-012", "VAL-VEC-013", "VAL-VEC-014", "VAL-VEC-015", "VAL-VEC-016", "VAL-VEC-028",
+    "VAL-CROSS-007"
+  ],
+  "failedAssertions": [
+    { "id": "VAL-VEC-005", "reason": "env.ts validateEnv is commented out" },
+    { "id": "VAL-VEC-017", "reason": "Endpoint fails with 500 due to invalid Voyage API key" },
+    { "id": "VAL-VEC-018", "reason": "Endpoint fails with 500 due to invalid Voyage API key" },
+    { "id": "VAL-VEC-019", "reason": "Endpoint fails with 500 due to invalid Voyage API key" },
+    { "id": "VAL-VEC-025", "reason": "Endpoint fails with 500 due to invalid Voyage API key" },
+    { "id": "VAL-VEC-026", "reason": "Endpoint fails with 500 due to invalid Voyage API key" }
+  ],
+  "blockedAssertions": [
+    { "id": "VAL-VEC-020", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-VEC-021", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-VEC-022", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-VEC-023", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-VEC-024", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-CROSS-001", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-CROSS-002", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-CROSS-005", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-CROSS-006", "blockedBy": "invalid Voyage API key" },
+    { "id": "VAL-CROSS-008", "blockedBy": "invalid Voyage API key" }
+  ],
+  "appliedUpdates": [],
+  "previousRound": null
+}

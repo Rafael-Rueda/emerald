@@ -1,0 +1,121 @@
+{
+  "groupId": "group-1",
+  "testedAt": "2026-03-23T06:55:00.000Z",
+  "isolation": {
+    "context": "CLI execution within the monorepo root.",
+    "devDbPort": 5434,
+    "testDbPort": 5435
+  },
+  "toolsUsed": ["Execute", "Read", "Glob", "Create"],
+  "assertions": [
+    {
+      "id": "VAL-VEC-001",
+      "title": "pgvector Docker Image Replacement",
+      "status": "pass",
+      "steps": [
+        { "action": "Check docker compose config", "expected": "pgvector/pgvector:pg17 image used", "observed": "pgvector/pgvector:pg17 image used" },
+        { "action": "Query pg_available_extensions for vector", "expected": "Returns exactly one row", "observed": "Returned exactly one row" }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "vector-foundation/group-1/VAL-VEC-001-docker-config.txt",
+          "vector-foundation/group-1/VAL-VEC-001-psql-dev.txt",
+          "vector-foundation/group-1/VAL-VEC-001-psql-test.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-002",
+      "title": "Prisma postgresqlExtensions Preview Feature Enabled",
+      "status": "pass",
+      "steps": [
+        { "action": "Check schema.prisma", "expected": "previewFeatures and extensions declarations present", "observed": "Both declarations present" },
+        { "action": "Run prisma generate", "expected": "Completes without errors or unknown-feature warnings", "observed": "Completed successfully without warnings" }
+      ],
+      "evidence": {
+        "terminalOutput": ["vector-foundation/group-1/VAL-VEC-002-prisma-generate.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-003",
+      "title": "DocumentChunk Prisma Model — All Required Fields",
+      "status": "pass",
+      "steps": [
+        { "action": "Check schema.prisma DocumentChunk model", "expected": "All required fields present including vector(512)", "observed": "All required fields present" },
+        { "action": "Run prisma validate", "expected": "Exits 0", "observed": "Exited 0 with success message" }
+      ],
+      "evidence": {
+        "terminalOutput": ["vector-foundation/group-1/VAL-VEC-003-prisma-validate.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-004",
+      "title": "Migration — vector Extension Applied Before DocumentChunk Table",
+      "status": "pass",
+      "steps": [
+        { "action": "Run prisma migrate deploy", "expected": "Exits 0", "observed": "Exited 0 (already applied)" },
+        { "action": "Describe document_chunks table", "expected": "embedding column is vector(512)", "observed": "embedding column is vector(512)" }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "vector-foundation/group-1/VAL-VEC-004-prisma-migrate.txt",
+          "vector-foundation/group-1/VAL-VEC-004-d-document-chunks.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-004b",
+      "title": "HNSW Index on embedding Column",
+      "status": "pass",
+      "steps": [
+        { "action": "Query pg_indexes for hnsw on document_chunks", "expected": "Returns indexname", "observed": "Returned document_chunks_embedding_hnsw_idx" }
+      ],
+      "evidence": {
+        "terminalOutput": ["vector-foundation/group-1/VAL-VEC-004b-indexes.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-027",
+      "title": "Embedding Stored as Native vector Type",
+      "status": "pass",
+      "steps": [
+        { "action": "Describe document_chunks table", "expected": "embedding column is vector(512)", "observed": "embedding column is vector(512)" }
+      ],
+      "evidence": {
+        "terminalOutput": ["vector-foundation/group-1/VAL-VEC-004-d-document-chunks.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-005",
+      "title": "VOYAGE_API_KEY Env Var Required at Startup",
+      "status": "fail",
+      "steps": [
+        { "action": "Check env.ts", "expected": "VOYAGE_API_KEY declared and validated", "observed": "Declared in schema, but validateEnv() call is commented out" },
+        { "action": "Start server without VOYAGE_API_KEY", "expected": "Fails with validation error", "observed": "Server starts up and initializes NestJS application (fails on EADDRINUSE because it successfully reaches the port binding phase)" }
+      ],
+      "evidence": {
+        "terminalOutput": [
+          "vector-foundation/group-1/VAL-VEC-005-missing-key.txt",
+          "vector-foundation/group-1/VAL-VEC-005-empty-key.txt"
+        ]
+      },
+      "issues": "Server starts without the key, deferring failure. The `export const env = validateEnv();` statement in `apps/api/src/env/env.ts` is commented out, so the environment validation logic does not actually run at startup."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Validation contract for VAL-VEC-001 uses query `SELECT extname FROM pg_available_extensions WHERE extname = 'vector';`, but `extname` column does not exist in Postgres 17. The correct column is `name`.",
+      "resolved": true,
+      "resolution": "Updated query to `SELECT name FROM pg_available_extensions WHERE name = 'vector';` to gather valid evidence.",
+      "affectedAssertions": ["VAL-VEC-001"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 6 passed, 1 failed (VAL-VEC-005: env validation is commented out, deferring failure to runtime)."
+}

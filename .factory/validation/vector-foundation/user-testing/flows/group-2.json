@@ -1,0 +1,170 @@
+{
+  "groupId": "group-2",
+  "testedAt": "2026-03-23T06:45:00.000Z",
+  "isolation": {
+    "context": "CLI execution within the monorepo root. No shared state mutated that affects other tests.",
+    "devDbPort": 5434
+  },
+  "toolsUsed": ["CLI", "Execute"],
+  "assertions": [
+    {
+      "id": "VAL-VEC-006",
+      "title": "SemanticSearchQuerySchema Exported with Correct Shape",
+      "status": "pass",
+      "steps": [
+        { "action": "Run unit tests for @emerald/contracts", "expected": "pnpm test -- --run exits 0", "observed": "pnpm test -- --run executed successfully, 55 test files passed including packages/contracts/src/contracts.test.ts" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/vitest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-007",
+      "title": "chunkDocument() — Heading-Delimited Sections",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test output with multi-heading fixture passes", "observed": "jest --config test/unit/jest.config.json executed successfully, all tests passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-008",
+      "title": "chunkDocument() — Document With No Headings",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test output for no-heading edge case passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-009",
+      "title": "chunkDocument() — Empty Document Returns Empty Array",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test output for empty document edge case passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-010",
+      "title": "chunkDocument() — All Block Types Contribute Text",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test with one block of every type passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-011",
+      "title": "generateAndStoreEmbeddings() — Vector Dimension Is Exactly 512",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test mock assertion with 512-element array confirms successful insertion", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-012",
+      "title": "generateAndStoreEmbeddings() — All Chunk Fields Populated",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Integration test assertion on returned Prisma records passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-013",
+      "title": "generateAndStoreEmbeddings() — Old Chunks Deleted on Re-Embed",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Integration test asserting count equality passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-014",
+      "title": "Voyage AI Unavailable — No Uncaught Rejection Propagated",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test calling generateAndStoreEmbeddings() directly with mocked failing VoyageAI passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-015",
+      "title": "Publish Integration — Embedding Is Fire-and-Forget (Non-Blocking)",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test with delayed mock confirms execute() resolves before delay expires", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-016",
+      "title": "Publish Integration — Publish Succeeds Even When Embedding Throws",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test where generateAndStoreEmbeddings rejects passes use-case return value assertion", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-028",
+      "title": "Voyage AI Request Uses Correct Model and input_type",
+      "status": "pass",
+      "steps": [
+        { "action": "Run API unit tests", "expected": "Unit test spy capturing outbound VoyageAI request passes", "observed": "jest test suite passed" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/jest-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "SemanticSearchQuerySchema Validates Correctly in contracts.test.ts",
+      "status": "pass",
+      "steps": [
+        { "action": "Run vitest tests", "expected": "pnpm test -- --run exits 0, test suite passes", "observed": "All 483 tests across 55 test files passed, including contracts.test.ts" }
+      ],
+      "evidence": {
+        "unitTestOutput": ["vector-foundation/group-2/vitest-output.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 13 assertions: 13 passed, 0 failed. All unit tests successfully run and verified."
+}

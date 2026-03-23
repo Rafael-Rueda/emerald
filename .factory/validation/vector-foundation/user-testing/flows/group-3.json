@@ -1,0 +1,219 @@
+{
+  "groupId": "group-3",
+  "testedAt": "2026-03-23T09:45:49.048Z",
+  "isolation": {
+    "apiUrl": "http://localhost:3333"
+  },
+  "toolsUsed": [
+    "node-fetch",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-VEC-017",
+      "title": "Search Endpoint — POST /api/public/ai-context/search Reachable",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "POST to endpoint",
+          "expected": "200 OK",
+          "observed": "500 Internal Server Error (VoyageAIError)"
+        },
+        {
+          "action": "GET to endpoint",
+          "expected": "404 or 405",
+          "observed": "404 Not Found"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/group-3/VAL-VEC-017-POST.txt",
+          "vector-foundation/group-3/VAL-VEC-017-GET.txt"
+        ]
+      },
+      "issues": "Endpoint is reachable but fails with 500 due to invalid Voyage API key."
+    },
+    {
+      "id": "VAL-VEC-018",
+      "title": "Search Endpoint — Request Body Validation",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Send invalid bodies",
+          "expected": "400 Bad Request",
+          "observed": "400 Bad Request"
+        },
+        {
+          "action": "Send valid body",
+          "expected": "200 OK",
+          "observed": "500 Internal Server Error"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/group-3/VAL-VEC-018-cases.txt"
+        ]
+      },
+      "issues": "Valid payload fails with 500 due to invalid Voyage API key."
+    },
+    {
+      "id": "VAL-VEC-019",
+      "title": "Search Endpoint — Public (No Auth Required)",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Send request without Auth header",
+          "expected": "200 OK",
+          "observed": "500 Internal Server Error"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/group-3/VAL-VEC-019.txt"
+        ]
+      },
+      "issues": "Fails with 500 due to Voyage API key, but no 401 Unauthorized was returned, which implies it is public."
+    },
+    {
+      "id": "VAL-VEC-020",
+      "title": "Search Endpoint — Happy Path Response Conforms to AiContextResponseSchema",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-VEC-021",
+      "title": "Search Endpoint — Results Ranked by Cosine Similarity Descending",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-VEC-022",
+      "title": "Search Endpoint — Maximum 10 Chunks Returned",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-VEC-023",
+      "title": "Search Endpoint — Filter by space",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-VEC-024",
+      "title": "Search Endpoint — Filter by version",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-VEC-025",
+      "title": "Search Endpoint — Unknown Space/Version Returns Empty Chunks",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Query nonexistent space",
+          "expected": "200 OK, chunks: []",
+          "observed": "500 Internal Server Error"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/group-3/VAL-VEC-025.txt"
+        ]
+      },
+      "issues": "Fails with 500 VoyageAIError instead of returning empty chunks gracefully."
+    },
+    {
+      "id": "VAL-VEC-026",
+      "title": "Search Endpoint — Empty DB Returns Empty Chunks",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Query empty db",
+          "expected": "200 OK, chunks: []",
+          "observed": "500 Internal Server Error"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/group-3/VAL-VEC-026.txt"
+        ]
+      },
+      "issues": "Fails with 500 VoyageAIError instead of returning empty chunks gracefully."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Publish-to-Semantic-Search — Document Findable After Publish",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Non-Published Documents Never Produce Chunks",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Space Scoping — Chunks From Other Spaces Not Returned",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "title": "Version Scoping — Draft Version Documents Not Returned",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "title": "Re-publish Refreshes Chunks — Old Content No Longer Findable",
+      "status": "blocked",
+      "steps": [],
+      "evidence": {},
+      "issues": "Blocked by invalid Voyage API key"
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "Voyage API key in apps/api/.env is 'your-voyage-ai-api-key-here', causing all semantic search queries to fail with 500 (VoyageAIError: 401 Unauthorized)",
+      "affectedAssertions": [
+        "VAL-VEC-017",
+        "VAL-VEC-018",
+        "VAL-VEC-019",
+        "VAL-VEC-020",
+        "VAL-VEC-021",
+        "VAL-VEC-022",
+        "VAL-VEC-023",
+        "VAL-VEC-024",
+        "VAL-VEC-025",
+        "VAL-VEC-026",
+        "VAL-CROSS-001",
+        "VAL-CROSS-002",
+        "VAL-CROSS-005",
+        "VAL-CROSS-006",
+        "VAL-CROSS-008"
+      ],
+      "quickFixAttempted": "None. Subagents must not modify shared environment variables like API keys."
+    }
+  ],
+  "summary": "Tested 15 assertions. 5 failed and 10 were blocked due to invalid Voyage API key."
+}
