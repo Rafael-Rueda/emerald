@@ -29,6 +29,13 @@ export const AiContextResponseSchema = z.object({
   chunks: z.array(AiContextChunkSchema),
 });
 
+export const SemanticSearchQuerySchema = z.object({
+  query: z.string().min(1),
+  space: z.string().min(1),
+  version: z.string().min(1),
+});
+
 export type AiSourceReference = z.infer<typeof AiSourceReferenceSchema>;
 export type AiContextChunk = z.infer<typeof AiContextChunkSchema>;
 export type AiContextResponse = z.infer<typeof AiContextResponseSchema>;
+export type SemanticSearchQuery = z.infer<typeof SemanticSearchQuerySchema>;

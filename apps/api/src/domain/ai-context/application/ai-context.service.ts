@@ -1,4 +1,5 @@
 import {
+    type AiContextResponse,
     type BlockNode,
     type DocumentContent,
     DocumentContentSchema,
@@ -7,6 +8,7 @@ import {
     type TextNode,
 } from "@emerald/contracts";
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import * as pgvector from "pgvector";
 
 import {
     DOCUMENT_CHUNK_REPOSITORY,
@@ -71,6 +73,21 @@ const textFromBlocks = (blocks: BlockNode[]): string =>
             .join(" "),
     );
 
+interface SemanticSearchRow {
+    id: string;
+    content: string;
+    relevance_score: number | string;
+    document_id: string;
+    document_title: string;
+    version_id: string;
+    version_label: string;
+    navigation_label: string | null;
+    section_id: string;
+    section_title: string;
+    slug: string;
+    space: string;
+}
+
 @Injectable()
 export class AiContextService {
     private readonly logger = new Logger(AiContextService.name);
@@ -82,6 +99,99 @@ export class AiContextService {
         @Inject(VOYAGE_AI_EMBEDDING_CLIENT)
         private readonly voyageAiClient: VoyageAiEmbeddingClient,
     ) {}
+
+    async semanticSearch(query: string, space: string, version: string): Promise<AiContextResponse> {
+        const embeddingResponse = await this.voyageAiClient.embed({
+            input: [query],
+            model: "voyage-3-lite",
+            input_type: "query",
+        });
+
+        const queryEmbedding = embeddingResponse.data?.[0]?.embedding;
+
+        if (!queryEmbedding || queryEmbedding.length !== 512) {
+            this.logger.warn("Skipping semantic search due invalid query embedding", {
+                query,
+                space,
+                version,
+            });
+
+            return this.emptySemanticSearchResponse(query);
+        }
+
+        const embeddingParam = pgvector.toSql(queryEmbedding);
+
+        const rows = await this.prisma.$queryRaw<SemanticSearchRow[]>`
+            SELECT
+                dc.id,
+                dc.content,
+                1 - (dc.embedding <=> ${embeddingParam}::vector) AS relevance_score,
+                d.id AS document_id,
+                d.title AS document_title,
+                rv.id AS version_id,
+                rv.label AS version_label,
+                COALESCE(nav.label, d.title) AS navigation_label,
+                dc.section_id,
+                dc.section_title,
+                d.slug,
+                s.key AS space
+            FROM document_chunks dc
+            INNER JOIN documents d
+                ON d.id = dc.document_id
+            INNER JOIN release_versions rv
+                ON rv.id = dc.release_version_id
+            INNER JOIN spaces s
+                ON s.id = dc.space_id
+            LEFT JOIN LATERAL (
+                SELECT nn.label
+                FROM navigation_nodes nn
+                WHERE nn.document_id = d.id
+                  AND nn.space_id = dc.space_id
+                  AND (nn.release_version_id = dc.release_version_id OR nn.release_version_id IS NULL)
+                ORDER BY
+                    CASE WHEN nn.release_version_id = dc.release_version_id THEN 0 ELSE 1 END,
+                    nn."order" ASC,
+                    nn.created_at ASC
+                LIMIT 1
+            ) nav
+                ON true
+            WHERE dc.space_id = (SELECT id FROM spaces WHERE key = ${space})
+              AND dc.release_version_id IN (
+                    SELECT id
+                    FROM release_versions
+                    WHERE space_id = (SELECT id FROM spaces WHERE key = ${space})
+                      AND key = ${version}
+                )
+            ORDER BY dc.embedding <=> ${embeddingParam}::vector
+            LIMIT 10
+        `;
+
+        return {
+            entityId: query,
+            entityType: "semantic-search",
+            chunks: rows.map((row) => {
+                const parsedScore = Number(row.relevance_score);
+                const relevanceScore = Number.isNaN(parsedScore) ? 0 : Math.max(0, Math.min(1, parsedScore));
+
+                return {
+                    id: row.id,
+                    content: row.content,
+                    relevanceScore,
+                    source: {
+                        documentId: row.document_id,
+                        documentTitle: row.document_title,
+                        versionId: row.version_id,
+                        versionLabel: row.version_label,
+                        navigationLabel: row.navigation_label || row.document_title,
+                        sectionId: row.section_id,
+                        sectionTitle: row.section_title,
+                        slug: row.slug,
+                        space: row.space,
+                    },
+                };
+            }),
+        };
+    }
 
     async generateAndStoreEmbeddings(documentId: string): Promise<void> {
         try {
@@ -240,5 +350,13 @@ export class AiContextService {
         }
 
         return chunks;
+    }
+
+    private emptySemanticSearchResponse(query: string): AiContextResponse {
+        return {
+            entityId: query,
+            entityType: "semantic-search",
+            chunks: [],
+        };
     }
 }

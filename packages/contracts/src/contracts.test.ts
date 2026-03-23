@@ -13,6 +13,7 @@ import {
   VersionListResponseSchema,
   SearchResponseSchema,
   AiContextResponseSchema,
+  SemanticSearchQuerySchema,
   WorkspaceDocumentListSchema,
   WorkspaceNavigationListSchema,
   WorkspaceVersionListSchema,
@@ -192,6 +193,9 @@ describe("Zod Contracts", () => {
               id: "nav-1",
               label: "Getting Started",
               slug: "getting-started",
+              nodeType: "document",
+              documentId: "doc-1",
+              externalUrl: null,
               children: [],
             },
           ],
@@ -293,6 +297,30 @@ describe("Zod Contracts", () => {
         chunks: "not-an-array",
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("SemanticSearchQuerySchema", () => {
+    it("accepts valid semantic search query", () => {
+      const result = SemanticSearchQuerySchema.safeParse({
+        query: "x",
+        space: "guides",
+        version: "v1",
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects empty and malformed semantic search query payloads", () => {
+      expect(SemanticSearchQuerySchema.safeParse({}).success).toBe(false);
+      expect(SemanticSearchQuerySchema.safeParse({ query: "" }).success).toBe(false);
+      expect(
+        SemanticSearchQuerySchema.safeParse({
+          q: "x",
+          space: "guides",
+          version: "v1",
+        }).success,
+      ).toBe(false);
     });
   });
 
@@ -596,6 +624,7 @@ describe("Zod Contracts", () => {
       expect(contracts.DocumentContentSchema).toBeDefined();
       expect(contracts.SpaceSchema).toBeDefined();
       expect(contracts.RevisionSchema).toBeDefined();
+      expect(contracts.SemanticSearchQuerySchema).toBeDefined();
     });
   });
 });
