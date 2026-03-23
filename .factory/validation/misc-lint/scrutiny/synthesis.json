@@ -1,0 +1,46 @@
+{
+  "milestone": "misc-lint",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm test -- --run --maxWorkers=8",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add guidance on how to run `.factory/init.sh` in the Windows environment, as workers are failing when trying to execute it with `sh` or `bash`.",
+      "evidence": "Observed in both 'misc-fix-root-lint-errors' and 'fix-restore-mocks-store' features where workers struggled with CommandNotFoundException for shell interpreters.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "Clarify that the 'TDD Red-Phase' (writing failing tests first) can be skipped for pure restoration or refactoring tasks where new behavior is not being added.",
+      "evidence": "Worker for 'fix-restore-mocks-store' explicitly skipped this step as it didn't apply to restoring an accidentally removed file.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}
