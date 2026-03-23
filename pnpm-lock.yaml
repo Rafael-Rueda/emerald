@@ -116,6 +116,9 @@ importers:
       nestjs-zod:
         specifier: ^5.0.1
         version: 5.1.1(@nestjs/common@11.1.17(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/swagger@11.2.6(@nestjs/common@11.1.17(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2))(rxjs@7.8.2)(zod@4.3.6)
+      pgvector:
+        specifier: ^0.2.1
+        version: 0.2.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -125,6 +128,9 @@ importers:
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
+      voyageai:
+        specifier: ^0.2.1
+        version: 0.2.1
       zod:
         specifier: ^4.2.0
         version: 4.3.6
@@ -5394,6 +5400,10 @@ packages:
   pgpass@1.0.5:
     resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
 
+  pgvector@0.2.1:
+    resolution: {integrity: sha512-nKaQY9wtuiidwLMdVIce1O3kL0d+FxrigCVzsShnoqzOSaWWWOvuctb/sYwlai5cTwwzRSNa+a/NtN2kVZGNJw==}
+    engines: {node: '>= 18'}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -6572,6 +6582,18 @@ packages:
       happy-dom:
         optional: true
       jsdom:
+        optional: true
+
+  voyageai@0.2.1:
+    resolution: {integrity: sha512-ym7Dk6p8Si6lR9wDh58EzxwT0ziD/pqXjzzzceOSySO3Ic3uosHZLOTAsb3Gq+1OaKdEMnni/p8TohKUNvLTkg==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      '@huggingface/transformers': ^3.8.0
+      onnxruntime-node: '>=1.17.0'
+    peerDependenciesMeta:
+      '@huggingface/transformers':
+        optional: true
+      onnxruntime-node:
         optional: true
 
   w3c-keyname@2.2.8:
@@ -11872,6 +11894,8 @@ snapshots:
     dependencies:
       split2: 4.2.0
 
+  pgvector@0.2.1: {}
+
   picocolors@1.1.1: {}
 
   picomatch@2.3.1: {}
@@ -13133,6 +13157,12 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  voyageai@0.2.1:
+    dependencies:
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
 
   w3c-keyname@2.2.8: {}
 

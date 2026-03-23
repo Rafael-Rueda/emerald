@@ -3,16 +3,28 @@ import type { DocumentContent } from "@emerald/contracts";
 import { AiContextService } from "../../ai-context.service";
 import type { DocumentChunkRepository } from "../../repositories/document-chunk.repository";
 
+import type { PrismaService } from "@/infra/database/prisma/prisma.service";
+
 const makeRepository = (): jest.Mocked<DocumentChunkRepository> => ({
     deleteByDocumentId: jest.fn(),
     createMany: jest.fn(),
+});
+
+const makePrismaService = (): jest.Mocked<Pick<PrismaService, "document">> => ({
+    document: {
+        findUnique: jest.fn(),
+    } as unknown as PrismaService["document"],
+});
+
+const makeVoyageClient = () => ({
+    embed: jest.fn(),
 });
 
 describe("AiContextService.chunkDocument", () => {
     let sut: AiContextService;
 
     beforeEach(() => {
-        sut = new AiContextService(makeRepository());
+        sut = new AiContextService(makeRepository(), makePrismaService() as never, makeVoyageClient());
     });
 
     it("creates one chunk per heading section and aggregates following non-heading blocks", () => {

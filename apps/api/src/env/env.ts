@@ -18,6 +18,9 @@ export const envSchema = z.object({
     GOOGLE_OAUTH2_CLIENT_ID: z.string(),
     GOOGLE_OAUTH2_CLIENT_SECRET: z.string(),
     GOOGLE_OAUTH2_REDIRECT_URL: z.string(),
+    VOYAGE_API_KEY: z.string().min(1),
+
+    LOG_LEVEL: z.enum(["error", "warn", "log", "debug", "verbose"]).default("log"),
 
     DOCS_APP_URL: z.url().optional(),
     DOCS_REVALIDATE_SECRET: z.string().min(1).optional(),

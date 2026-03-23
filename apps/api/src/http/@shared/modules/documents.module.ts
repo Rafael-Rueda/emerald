@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 
+import { AiContextModule } from "./ai-context.module";
 import { PrismaModule } from "./prisma.module";
 
+import { AiContextService } from "@/domain/ai-context/application/ai-context.service";
 import { DocumentsRepository } from "@/domain/documents/application/repositories/documents.repository";
 import { CreateDocumentUseCase } from "@/domain/documents/application/use-cases/create-document.use-case";
 import { CreateRevisionUseCase } from "@/domain/documents/application/use-cases/create-revision.use-case";
@@ -13,7 +15,7 @@ import { UpdateDocumentUseCase } from "@/domain/documents/application/use-cases/
 import { PrismaDocumentsRepository } from "@/infra/database/repositories/prisma/prisma-documents.repository";
 
 @Module({
-    imports: [PrismaModule],
+    imports: [PrismaModule, AiContextModule],
     providers: [
         {
             provide: "DocumentsRepository",
@@ -41,8 +43,9 @@ import { PrismaDocumentsRepository } from "@/infra/database/repositories/prisma/
         },
         {
             provide: "PublishDocumentUseCase",
-            inject: ["DocumentsRepository"],
-            useFactory: (documentsRepository: DocumentsRepository) => new PublishDocumentUseCase(documentsRepository),
+            inject: ["DocumentsRepository", AiContextService],
+            useFactory: (documentsRepository: DocumentsRepository, aiContextService: AiContextService) =>
+                new PublishDocumentUseCase(documentsRepository, aiContextService),
         },
         {
             provide: "CreateRevisionUseCase",

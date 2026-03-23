@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import * as pgvector from "pgvector";
 
 import type {
     DocumentChunkCreate,
@@ -24,7 +25,7 @@ export class PrismaDocumentChunkRepository implements DocumentChunkRepository {
 
         const values = Prisma.join(
             chunks.map((chunk) => {
-                const embedding = `[${chunk.embedding.join(",")}]`;
+                const embedding = pgvector.toSql(chunk.embedding);
 
                 return Prisma.sql`(
                     ${chunk.documentId},
