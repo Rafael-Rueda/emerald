@@ -1,7 +1,7 @@
 {
     "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "../..",
-    "roots": ["<rootDir>/src/domain"],
+    "roots": ["<rootDir>/src/domain", "<rootDir>/src/http/mcp"],
     "testEnvironment": "node",
     "testRegex": "src/.*/unit/.*\\.spec\\.ts$",
     "transform": {

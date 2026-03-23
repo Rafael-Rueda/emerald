@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 
 import { AuthModule } from "./auth/auth.module";
 import { HealthModule } from "./health/health.module";
+import { McpModule } from "./mcp/mcp.module";
 import { PublicModule } from "./public/public.module";
 import { StorageModule } from "./storage/storage.module";
 import { UsersModule } from "./users/users.module";
@@ -21,6 +22,7 @@ export const ALLOWED_CORS_ORIGINS = ["http://localhost:3100", "http://localhost:
         }),
         AuthModule,
         HealthModule,
+        McpModule,
         PublicModule,
         UsersModule,
         StorageModule,
