@@ -1,0 +1,191 @@
+{
+  "groupId": "search-flow",
+  "testedAt": "2026-03-23T11:00:47.202Z",
+  "isolation": {
+    "url": "http://localhost:3333",
+    "credentials": "admin@test.com / password123"
+  },
+  "toolsUsed": [
+    "Node.js fetch script"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-VEC-026",
+      "title": "Empty DB Returns Empty Chunks",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Search before publishing",
+          "expected": "Empty chunks array",
+          "observed": "Status 200, chunks length 0"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-VEC-026-empty-db.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-025",
+      "title": "Unknown Space/Version Returns Empty Chunks",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Search nonexistent space",
+          "expected": "Empty chunks array",
+          "observed": "Status 200, chunks length 0"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-VEC-025-unknown-space.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Publish-to-Semantic-Search",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Search for published content",
+          "expected": "Finds doc1",
+          "observed": "Not found"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-001-alpha-search.json"
+      },
+      "issues": "Doc1 not found in results"
+    },
+    {
+      "id": "VAL-VEC-020",
+      "title": "Response Conforms to AiContextResponseSchema",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check schema",
+          "expected": "Valid schema",
+          "observed": "Valid"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-001-alpha-search.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-021",
+      "title": "Results Ranked by Cosine Similarity",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check sorting",
+          "expected": "Sorted descending",
+          "observed": "Sorted"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-001-alpha-search.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-023",
+      "title": "Filter by space",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check space filter",
+          "expected": "All guides",
+          "observed": "All guides"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-001-alpha-search.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-024",
+      "title": "Filter by version",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check version filter",
+          "expected": "All v1",
+          "observed": "All v1"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-001-alpha-search.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Space Scoping",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Search doc from space B in space A",
+          "expected": "Empty",
+          "observed": "Empty"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-005-beta-search.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "title": "Version Scoping",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Search doc from v1 in v2",
+          "expected": "Empty",
+          "observed": "Empty"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-006-v2-search.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "title": "Re-publish Refreshes Chunks",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Search old content",
+          "expected": "Not found",
+          "observed": "Not found"
+        },
+        {
+          "action": "Search new content",
+          "expected": "Found",
+          "observed": "Not found"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "responseFile": "vector-foundation/search-flow/VAL-CROSS-008-gamma-search.json"
+      },
+      "issues": "Re-publish failed to replace chunks"
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 10 assertions: 8 passed, 2 failed."
+}

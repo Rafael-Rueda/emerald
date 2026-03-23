@@ -1,12 +1,12 @@
 {
   "milestone": "vector-foundation",
-  "round": 2,
+  "round": 3,
   "status": "fail",
   "assertionsSummary": {
     "total": 35,
-    "passed": 25,
+    "passed": 27,
     "failed": 2,
-    "blocked": 8
+    "blocked": 6
   },
   "passedAssertions": [
     "VAL-VEC-001",
@@ -33,50 +33,44 @@
     "VAL-VEC-018",
     "VAL-VEC-019",
     "VAL-VEC-022",
-    "VAL-CROSS-002"
+    "VAL-CROSS-002",
+    "VAL-VEC-025",
+    "VAL-VEC-026"
   ],
   "failedAssertions": [
     {
-      "id": "VAL-VEC-020",
-      "reason": "Happy Path Response does not conform to schema"
+      "id": "VAL-CROSS-001",
+      "reason": "Publish-to-search returned empty chunks. Voyage AI embedding may be failing silently."
     },
     {
-      "id": "VAL-VEC-025",
-      "reason": "Unknown Space/Version Returns 500 instead of empty chunks"
+      "id": "VAL-CROSS-008",
+      "reason": "Publish-to-search returned empty chunks. Voyage AI embedding may be failing silently."
     }
   ],
   "blockedAssertions": [
+    {
+      "id": "VAL-VEC-020",
+      "blockedBy": "No chunks returned from semantic search to verify schema shape"
+    },
     {
       "id": "VAL-VEC-021",
       "blockedBy": "No chunks returned from semantic search to verify sorting"
     },
     {
       "id": "VAL-VEC-023",
-      "blockedBy": "No chunks returned to verify space filter"
+      "blockedBy": "No chunks returned from semantic search to verify space filter"
     },
     {
       "id": "VAL-VEC-024",
-      "blockedBy": "No chunks returned to verify version filter"
-    },
-    {
-      "id": "VAL-VEC-026",
-      "blockedBy": "Requires empty DB, but DB is seeded and we cannot verify empty DB without wiping dev DB"
-    },
-    {
-      "id": "VAL-CROSS-001",
-      "blockedBy": "Voyage AI rate limit reached (3 RPM)"
+      "blockedBy": "No chunks returned from semantic search to verify version filter"
     },
     {
       "id": "VAL-CROSS-005",
-      "blockedBy": "Voyage AI rate limit reached (3 RPM)"
+      "blockedBy": "No chunks returned from semantic search to verify cross-space isolation"
     },
     {
       "id": "VAL-CROSS-006",
-      "blockedBy": "Voyage AI rate limit reached (3 RPM)"
-    },
-    {
-      "id": "VAL-CROSS-008",
-      "blockedBy": "Voyage AI rate limit reached (3 RPM)"
+      "blockedBy": "No chunks returned from semantic search to verify cross-version isolation"
     }
   ],
   "appliedUpdates": [],
