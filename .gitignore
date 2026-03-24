@@ -50,3 +50,4 @@ pnpm-debug.log*
 /test-api*.js
 /update-state.js
 /create-dirs.js
+.mcp.json
