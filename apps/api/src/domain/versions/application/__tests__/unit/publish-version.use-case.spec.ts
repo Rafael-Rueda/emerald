@@ -1,7 +1,4 @@
-import {
-    RELEASE_VERSION_STATUS,
-    ReleaseVersionEntity,
-} from "../../../enterprise/entities/release-version.entity";
+import { RELEASE_VERSION_STATUS, ReleaseVersionEntity } from "../../../enterprise/entities/release-version.entity";
 import { ReleaseVersionNotFoundError } from "../../../errors/release-version-not-found.error";
 import { type ReleaseVersionsRepository } from "../../repositories/release-versions.repository";
 import { PublishVersionUseCase } from "../../use-cases/publish-version.use-case";

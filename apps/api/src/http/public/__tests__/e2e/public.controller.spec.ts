@@ -267,9 +267,7 @@ describe("PublicController (e2e)", () => {
     });
 
     it("searches published documents and excludes draft documents", async () => {
-        const matchedResponse = await request(app.getHttpServer())
-            .get("/api/public/search")
-            .query({ q: "getting" });
+        const matchedResponse = await request(app.getHttpServer()).get("/api/public/search").query({ q: "getting" });
 
         expect(matchedResponse.status).toBe(200);
         expect(matchedResponse.body.results).toEqual(
@@ -281,9 +279,7 @@ describe("PublicController (e2e)", () => {
             ]),
         );
 
-        const emptyResponse = await request(app.getHttpServer())
-            .get("/api/public/search")
-            .query({ q: "zzzznotaword" });
+        const emptyResponse = await request(app.getHttpServer()).get("/api/public/search").query({ q: "zzzznotaword" });
 
         expect(emptyResponse.status).toBe(200);
         expect(emptyResponse.body.results).toHaveLength(0);

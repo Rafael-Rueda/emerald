@@ -129,6 +129,26 @@ Emerald is designed to make your documentation **consumable by any AI**. The bui
 
 Whether it's ChatGPT, Claude, Gemini, or your own RAG pipeline — Emerald gives your docs a structured, queryable surface for AI consumption.
 
+### Semantic Search
+
+`POST /api/public/ai-context/search` performs **vector similarity search** over your published documentation using [Voyage AI](https://voyageai.com) embeddings stored in PostgreSQL via **pgvector**. Send `{ query: string, space: string, version: string }` and receive an `AiContextResponseSchema` with ranked chunks ordered by semantic relevance. Embeddings are generated automatically when a document is published — no manual indexing step required.
+
+### MCP Server — NestJS (`/api/mcp`)
+
+Emerald exposes a **Model Context Protocol** endpoint at `/api/mcp` using the **StreamableHTTP** transport. The `search_documentation` tool accepts `{ query, space, version }` and returns ranked documentation chunks from the semantic search index. The endpoint is public (no authentication required), making it trivial to connect any MCP-compatible AI client or IDE extension.
+
+### MCP Server — CLI (`packages/mcp-server`)
+
+A standalone **stdio MCP server** is available for use with Claude Desktop and other local MCP clients. Build it with `pnpm --filter @emerald/mcp-server build`, then run with `node packages/mcp-server/dist/index.js`. Set the `API_URL` environment variable to point to your deployed API (defaults to `http://localhost:3333`).
+
+### Semantic Search Setup
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `VOYAGE_API_KEY` | `apps/api/.env` | Voyage AI embeddings — obtain at [voyageai.com](https://voyageai.com) |
+
+The Docker Compose configuration already uses the `pgvector/pgvector:pg17` image — no additional database setup is required beyond running `docker compose up -d`.
+
 ---
 
 ## Quick Start
@@ -271,7 +291,8 @@ emerald/
 │   ├── mocks/             # MSW handlers, fixtures, and scenarios
 │   ├── test-utils/        # Testing Library + MSW helpers
 │   ├── data-access/       # TanStack Query hooks
-│   └── configs/           # Shared TS, Tailwind, and Vitest config
+│   ├── configs/           # Shared TS, Tailwind, and Vitest config
+│   └── mcp-server/        # Standalone stdio MCP server for Claude Desktop and local clients
 │
 ├── e2e/                   # Playwright end-to-end tests
 ├── .storybook/            # Storybook 9 configuration
@@ -351,6 +372,8 @@ Tests run against the same MSW handlers used in the browser — what you test is
 - [x] Revision history with one-click restore
 - [x] Publish workflow with optimistic UI
 - [x] Navigation tree drag-and-drop editor (dnd-kit)
+- [x] Semantic search via Voyage AI embeddings + pgvector (`POST /api/public/ai-context/search`)
+- [x] MCP server — StreamableHTTP (`/api/mcp`) and standalone stdio CLI (`packages/mcp-server`)
 - [ ] Pluggable AI provider adapters (OpenAI, Anthropic, Google, custom)
 - [ ] One-command deployment templates
 

@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
+import { RequestLoggerMiddleware } from "./@shared/middleware/request-logger.middleware";
 import { AuthModule } from "./auth/auth.module";
 import { HealthModule } from "./health/health.module";
 import { McpModule } from "./mcp/mcp.module";
@@ -12,7 +13,12 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 
 import { validateEnv } from "@/env/env";
 
-export const ALLOWED_CORS_ORIGINS = ["http://localhost:3100", "http://localhost:3101"] as const;
+export const ALLOWED_CORS_ORIGINS = [
+    "http://localhost:3001",
+    "http://localhost:3000",
+    "http://localhost:3100",
+    "http://localhost:3101",
+] as const;
 
 @Module({
     imports: [
@@ -32,4 +38,8 @@ export const ALLOWED_CORS_ORIGINS = ["http://localhost:3100", "http://localhost:
     controllers: [],
     providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(RequestLoggerMiddleware).forRoutes("*");
+    }
+}

@@ -3,6 +3,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -12,8 +13,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { createAllHandlers } from "@emerald/mocks";
+import { createAllHandlers, store } from "@emerald/mocks";
 import { AppProviders } from "@emerald/ui/providers";
+import { WorkspaceContextProvider } from "../../shared/application/workspace-context";
 import { DocumentInspector } from "./document-inspector";
 
 describe("DocumentInspector", () => {
@@ -24,12 +26,15 @@ describe("DocumentInspector", () => {
   function renderInspector() {
     return render(
       <AppProviders defaultTheme="light">
-        <DocumentInspector />
+        <WorkspaceContextProvider>
+          <DocumentInspector />
+        </WorkspaceContextProvider>
       </AppProviders>,
     );
   }
 
   beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+  beforeEach(() => store.reset());
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
 
@@ -48,10 +53,10 @@ describe("DocumentInspector", () => {
     ).toBeInTheDocument();
 
     expect(screen.getByTestId("document-list-item-doc-getting-started")).toHaveTextContent(
-      "getting-started",
+      "Getting Started",
     );
     expect(screen.getByTestId("document-list-item-doc-api-reference")).toHaveTextContent(
-      "api-reference",
+      "API Reference",
     );
     expect(screen.getByTestId("document-list-item-doc-api-reference-status")).toHaveTextContent(
       "Draft",
@@ -286,17 +291,20 @@ describe("DocumentInspector", () => {
       );
 
       await waitFor(() => {
+        expect(screen.getByTestId("document-action-feedback-error")).toHaveTextContent(
+          "Request failed with status 500",
+        );
+      }, { timeout: 5000 });
+
+      await waitFor(() => {
         expect(screen.getByTestId("document-detail-status")).toHaveTextContent(
           "draft",
         );
-      });
+      }, { timeout: 3000 });
 
       expect(
         screen.getByTestId("document-list-item-doc-api-reference-status"),
       ).toHaveTextContent("Draft");
-      expect(screen.getByTestId("document-action-feedback-error")).toHaveTextContent(
-        "Request failed with status 500",
-      );
 
       await waitFor(() => {
         expect(

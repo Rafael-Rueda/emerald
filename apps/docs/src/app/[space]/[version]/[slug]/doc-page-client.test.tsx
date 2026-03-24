@@ -23,6 +23,27 @@ beforeEach(() => {
   }));
 });
 
+// Wrap with HeaderControlsProvider + consumer so version selector rendered via
+// context actually appears in the test DOM.
+import {
+  HeaderControlsProvider,
+  useHeaderControlsSlot,
+} from "@/modules/navigation";
+
+function HeaderControlsSlot() {
+  const controls = useHeaderControlsSlot();
+  return controls ? <div data-testid="header-controls-slot">{controls}</div> : null;
+}
+
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <HeaderControlsProvider>
+      <HeaderControlsSlot />
+      {children}
+    </HeaderControlsProvider>
+  );
+}
+
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -70,15 +91,17 @@ describe("DocPageClient — version metadata success", () => {
 
   it("shows active version and available options on resolved docs pages", async () => {
     renderWithProviders(
-      <DocPageClient
-        space="guides"
-        version="v1"
-        slug="getting-started"
-        initialDocumentState={{
-          state: "success",
-          document: documentGettingStarted,
-        }}
-      />,
+      <TestWrapper>
+        <DocPageClient
+          space="guides"
+          version="v1"
+          slug="getting-started"
+          initialDocumentState={{
+            state: "success",
+            document: documentGettingStarted,
+          }}
+        />
+      </TestWrapper>,
     );
 
     await waitFor(() => {
@@ -99,31 +122,34 @@ describe("DocPageClient — version metadata success", () => {
     );
 
     renderWithProviders(
-      <DocPageClient
-        space="guides"
-        version="v1"
-        slug="getting-started"
-        initialDocumentState={{
-          state: "success",
-          document: documentGettingStarted,
-        }}
-      />,
+      <TestWrapper>
+        <DocPageClient
+          space="guides"
+          version="v1"
+          slug="getting-started"
+          initialDocumentState={{
+            state: "success",
+            document: documentGettingStarted,
+          }}
+        />
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("reading-shell")).toBeInTheDocument();
-    expect(screen.getByTestId("reading-shell-search")).toBeInTheDocument();
     expect(screen.getByTestId("document-loading")).toBeInTheDocument();
     expect(screen.queryByTestId("version-selector")).not.toBeInTheDocument();
   });
 
   it("keeps selected target version context when target slug is unavailable", async () => {
     renderWithProviders(
-      <DocPageClient
-        space="guides"
-        version="v2"
-        slug="api-reference"
-        initialDocumentState={{ state: "not-found" }}
-      />,
+      <TestWrapper>
+        <DocPageClient
+          space="guides"
+          version="v2"
+          slug="api-reference"
+          initialDocumentState={{ state: "not-found" }}
+        />
+      </TestWrapper>,
     );
 
     await waitFor(() => {
@@ -149,15 +175,17 @@ describe("DocPageClient — malformed version metadata", () => {
 
   it("shows version metadata error state instead of partial rendering", async () => {
     renderWithProviders(
-      <DocPageClient
-        space="guides"
-        version="v1"
-        slug="getting-started"
-        initialDocumentState={{
-          state: "success",
-          document: documentGettingStarted,
-        }}
-      />,
+      <TestWrapper>
+        <DocPageClient
+          space="guides"
+          version="v1"
+          slug="getting-started"
+          initialDocumentState={{
+            state: "success",
+            document: documentGettingStarted,
+          }}
+        />
+      </TestWrapper>,
     );
 
     await waitFor(() => {

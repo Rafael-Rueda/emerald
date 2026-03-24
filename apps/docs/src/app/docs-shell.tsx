@@ -5,27 +5,42 @@ import { PublicShell } from "@emerald/ui/shells";
 import {
   SidebarProvider,
   useSidebarSlot,
+  HeaderControlsProvider,
+  useHeaderControlsSlot,
 } from "@/modules/navigation";
+import { SpaceSelector } from "@/modules/spaces";
+import { SearchPanel } from "@/modules/search";
 
 /**
- * DocsShell — wraps PublicShell with sidebar context support.
+ * DocsShell — wraps PublicShell with sidebar + header controls context.
  *
- * The ReadingShell (rendered inside pages) injects sidebar content
- * via SidebarProvider context, and this shell reads it to populate
- * the PublicShell's sidebar slot.
+ * Page-level components (ReadingShell) inject sidebar content and header
+ * controls (version selector) via context providers, and this shell reads
+ * them to populate PublicShell's slots. The search panel is rendered
+ * directly as a shell-level component (reads route via useParams).
  */
 export function DocsShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <DocsShellInner>{children}</DocsShellInner>
+      <HeaderControlsProvider>
+        <DocsShellInner>{children}</DocsShellInner>
+      </HeaderControlsProvider>
     </SidebarProvider>
   );
 }
 
 function DocsShellInner({ children }: { children: React.ReactNode }) {
   const sidebarContent = useSidebarSlot();
+  const headerControls = useHeaderControlsSlot();
 
   return (
-    <PublicShell sidebar={sidebarContent}>{children}</PublicShell>
+    <PublicShell
+      sidebar={sidebarContent}
+      title={<SpaceSelector />}
+      headerControls={headerControls}
+      headerSearch={<SearchPanel />}
+    >
+      {children}
+    </PublicShell>
   );
 }

@@ -10,6 +10,7 @@ import { DeleteFileByEntityUseCase } from "@/domain/storage/application/use-case
 import { GetFileUrlUseCase } from "@/domain/storage/application/use-cases/get-file-url.use-case";
 import { UploadFileUseCase } from "@/domain/storage/application/use-cases/upload-file.use-case";
 import { UserPresenter } from "@/http/@shared/presenters/user.presenter";
+import { DefaultAdminSeederService } from "@/http/@shared/services/default-admin-seeder.service";
 import { CreateUserDTO, ListUsersQueryDTO, UpdateUserDTO } from "@/http/users/schemas/users.schema";
 
 @Injectable()
@@ -31,6 +32,7 @@ export class UsersService {
         private uploadFileUseCase: UploadFileUseCase,
         @Inject("DeleteFileByEntityUseCase")
         private deleteFileByEntityUseCase: DeleteFileByEntityUseCase,
+        private readonly defaultAdminSeeder: DefaultAdminSeederService,
     ) {}
 
     private async getUserAvatarUrl(userId: string): Promise<string | null> {
@@ -187,8 +189,13 @@ export class UsersService {
             throw new BadRequestException(error.message);
         }
 
-        return {
+        const presented = {
             user: await this.presentUser(result.value.user),
         };
+
+        // If all users were deleted, re-seed a default admin
+        await this.defaultAdminSeeder.seedDefaultAdminIfNeeded();
+
+        return presented;
     }
 }

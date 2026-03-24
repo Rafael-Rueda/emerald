@@ -23,6 +23,9 @@ interface PublicNavigationItem {
   id: string;
   label: string;
   slug: string;
+  nodeType: "document" | "group" | "external_link";
+  documentId: string | null;
+  externalUrl: string | null;
   children: PublicNavigationItem[];
 }
 
@@ -31,6 +34,9 @@ const PublicNavigationItemSchema: z.ZodType<PublicNavigationItem> = z.lazy(() =>
     id: z.string(),
     label: z.string(),
     slug: z.string(),
+    nodeType: z.enum(["document", "group", "external_link"]).default("document"),
+    documentId: z.string().nullable().default(null),
+    externalUrl: z.string().nullable().default(null),
     children: z.array(PublicNavigationItemSchema),
   }).passthrough(),
 );
@@ -78,6 +84,9 @@ function toNavigationItem(
     id: item.id,
     label: item.label,
     slug: item.slug,
+    nodeType: item.nodeType,
+    documentId: item.documentId,
+    externalUrl: item.externalUrl,
     children: item.children.map(toNavigationItem),
   };
 }

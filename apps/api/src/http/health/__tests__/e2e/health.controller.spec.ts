@@ -1,11 +1,11 @@
 import { INestApplication } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { Test, TestingModule } from "@nestjs/testing";
 import { cleanupOpenApiDoc, ZodValidationPipe } from "nestjs-zod";
 import request from "supertest";
 
-import { PrismaService } from "@/infra/database/prisma/prisma.service";
 import { ALLOWED_CORS_ORIGINS, AppModule } from "@/http/app.module";
+import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
 const configureHttpSurface = (app: INestApplication) => {
     const allowedOrigins = new Set<string>(ALLOWED_CORS_ORIGINS);

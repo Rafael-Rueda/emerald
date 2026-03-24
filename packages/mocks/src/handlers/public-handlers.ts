@@ -3,7 +3,6 @@ import type { ScenarioConfig } from "../scenarios";
 import { resolveScenarios } from "../scenarios";
 import { applyScenario } from "./utils";
 import {
-  findDocument,
   buildDocumentResponse,
   findNavigationTree,
   buildNavigationResponse,
@@ -11,6 +10,7 @@ import {
   buildSearchResponse,
   defaultSearchResults,
 } from "../fixtures";
+import { store } from "../store";
 
 const API_BASE = "*/api";
 
@@ -35,7 +35,7 @@ export function createPublicHandlers(config: ScenarioConfig = {}) {
         );
       }
 
-      const doc = findDocument(
+      const doc = store.findPublicDocument(
         params.space as string,
         params.version as string,
         params.slug as string,
@@ -104,6 +104,18 @@ export function createPublicHandlers(config: ScenarioConfig = {}) {
       }
 
       return HttpResponse.json(versionList);
+    }),
+
+    // Public spaces list: GET /api/public/spaces
+    http.get(`${API_BASE}/public/spaces`, async () => {
+      const spaces = store.getSpaces();
+      return HttpResponse.json({
+        spaces: spaces.map((s) => ({
+          key: s.key,
+          name: s.name,
+          description: s.description,
+        })),
+      });
     }),
 
     // Search: GET /api/search?q=:query

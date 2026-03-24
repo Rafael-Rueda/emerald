@@ -7,8 +7,8 @@ import { ZodValidationPipe } from "nestjs-zod";
 import request from "supertest";
 
 import type { IStorageProvider } from "@/domain/storage/application/providers/storage.provider";
-import { PrismaService } from "@/infra/database/prisma/prisma.service";
 import { AppModule } from "@/http/app.module";
+import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
 describe("StorageController (e2e)", () => {
     let app: INestApplication;

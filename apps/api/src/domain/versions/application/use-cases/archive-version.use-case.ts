@@ -1,7 +1,10 @@
 import { ReleaseVersionsRepository } from "../repositories/release-versions.repository";
 
 import { Either, Left, Right } from "@/domain/@shared/either";
-import { RELEASE_VERSION_STATUS, ReleaseVersionEntity } from "@/domain/versions/enterprise/entities/release-version.entity";
+import {
+    RELEASE_VERSION_STATUS,
+    ReleaseVersionEntity,
+} from "@/domain/versions/enterprise/entities/release-version.entity";
 import { ReleaseVersionNotFoundError } from "@/domain/versions/errors/release-version-not-found.error";
 
 interface ArchiveVersionRequest {

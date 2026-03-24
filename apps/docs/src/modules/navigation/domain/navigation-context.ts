@@ -40,6 +40,40 @@ export function findNavigationItem(
 }
 
 /**
+ * Find the first descendant node of type "document" (depth-first).
+ * Used to resolve where a group without a linked document should navigate.
+ */
+export function findFirstDocumentChild(items: NavigationItem[]): NavigationItem | null {
+  for (const item of items) {
+    if (item.nodeType === "document") {
+      return item;
+    }
+
+    if (item.children.length > 0) {
+      const found = findFirstDocumentChild(item.children);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the path a navigation node should link to.
+ * Groups without a linked document resolve to their first document child.
+ */
+function resolveNodePath(node: NavigationItem, space: string, version: string): string {
+  if (node.nodeType === "group" && !node.documentId) {
+    const firstDoc = findFirstDocumentChild(node.children);
+    if (firstDoc) {
+      return `/${space}/${version}/${firstDoc.slug}`;
+    }
+  }
+
+  return `/${space}/${version}/${node.slug}`;
+}
+
+/**
  * Build the breadcrumb trail for a given slug within the navigation tree.
  * Traverses the tree to find the path from root to the active item.
  */
@@ -56,7 +90,7 @@ export function buildBreadcrumbs(
       const crumb: BreadcrumbItem = {
         label: node.label,
         slug: node.slug,
-        path: `/${space}/${version}/${node.slug}`,
+        path: resolveNodePath(node, space, version),
       };
       const newPath = [...path, crumb];
 

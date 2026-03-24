@@ -5,8 +5,8 @@ import bcrypt from "bcryptjs";
 import { ZodValidationPipe } from "nestjs-zod";
 import request from "supertest";
 
-import { PrismaService } from "@/infra/database/prisma/prisma.service";
 import { AppModule } from "@/http/app.module";
+import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
 describe("SpacesController (e2e)", () => {
     let app: INestApplication;

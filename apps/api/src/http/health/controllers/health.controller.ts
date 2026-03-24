@@ -28,7 +28,9 @@ export class HealthController {
         description: "API is reachable but database is unavailable",
         type: HealthDegradedResponseDTO,
     })
-    async getHealth(@Res({ passthrough: true }) response: Response): Promise<HealthOkResponseDTO | HealthDegradedResponseDTO> {
+    async getHealth(
+        @Res({ passthrough: true }) response: Response,
+    ): Promise<HealthOkResponseDTO | HealthDegradedResponseDTO> {
         try {
             await this.prismaService.$queryRaw`SELECT 1`;
 

@@ -1,7 +1,7 @@
+import { SpacesRepository } from "../repositories/spaces.repository";
+
 import { Either, Right } from "@/domain/@shared/either";
 import { SpaceEntity } from "@/domain/spaces/enterprise/entities/space.entity";
-
-import { SpacesRepository } from "../repositories/spaces.repository";
 
 type ListSpacesResponse = Either<never, { spaces: SpaceEntity[] }>;
 

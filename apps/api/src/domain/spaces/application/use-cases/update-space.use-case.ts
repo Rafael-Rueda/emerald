@@ -1,9 +1,9 @@
+import { SpacesRepository } from "../repositories/spaces.repository";
+
 import { Either, Left, Right } from "@/domain/@shared/either";
 import { SpaceEntity } from "@/domain/spaces/enterprise/entities/space.entity";
 import { SpaceAlreadyExistsError } from "@/domain/spaces/errors/space-already-exists.error";
 import { SpaceNotFoundError } from "@/domain/spaces/errors/space-not-found.error";
-
-import { SpacesRepository } from "../repositories/spaces.repository";
 
 interface UpdateSpaceRequest {
     spaceId: string;

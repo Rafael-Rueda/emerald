@@ -12,6 +12,7 @@ import {
   useWorkspaceAiContext,
 } from "../application/use-workspace-ai-context";
 import type { AiContextScope } from "../infrastructure/workspace-ai-context-api";
+import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 
 const AI_ENTITY_TYPE = "document";
@@ -56,7 +57,8 @@ function formatRelevanceScore(score: number): string {
 }
 
 export function AiContextInspector() {
-  const listState = useWorkspaceDocumentsList();
+  const { activeSpaceId } = useWorkspaceContext();
+  const listState = useWorkspaceDocumentsList(activeSpaceId);
   const [scope, setScope] = useState<AiContextScope | null>(() =>
     getScopeFromSearchParams(),
   );

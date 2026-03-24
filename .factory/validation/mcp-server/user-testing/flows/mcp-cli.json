@@ -1,0 +1,129 @@
+{
+  "groupId": "mcp-cli",
+  "testedAt": "2026-03-23T13:14:48.690Z",
+  "isolation": {
+    "package": "packages/mcp-server",
+    "runner": "node test-cli.js"
+  },
+  "toolsUsed": [
+    "node",
+    "stdio"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-MCP-018",
+      "title": "packages/mcp-server Builds Without TypeScript Errors",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "build package",
+          "expected": "exit code 0",
+          "observed": "exit code 0"
+        }
+      ],
+      "evidence": {
+        "buildOutput": "already verified manually via pnpm --filter @emerald/mcp-server build"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-018b",
+      "title": "packages/mcp-server Workspace and Package Registration",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "check package.json and workspace",
+          "expected": "name, bin, dependencies present",
+          "observed": "fields are present in package.json and pnpm-workspace.yaml"
+        }
+      ],
+      "evidence": {
+        "packageJson": "already verified manually"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-013",
+      "title": "CLI Starts Without Error",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "spawn node dist/index.js and wait 2s",
+          "expected": "exit code null",
+          "observed": "exit code null"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "mcp-server/mcp-cli/VAL-MCP-013-stdout.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-014",
+      "title": "CLI Initialize Handshake via Stdio",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "send initialize request",
+          "expected": "valid init response",
+          "observed": "valid response"
+        }
+      ],
+      "evidence": {
+        "terminalSnapshots": "mcp-server/mcp-cli/VAL-MCP-014-init.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-015",
+      "title": "CLI tools/list Returns search_documentation via Stdio",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "send tools/list",
+          "expected": "returns search_documentation schema",
+          "observed": "tool found"
+        }
+      ],
+      "evidence": {
+        "terminalSnapshots": "mcp-server/mcp-cli/VAL-MCP-015-list.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-017",
+      "title": "CLI Respects API_URL Environment Variable",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "call tool with invalid API_URL",
+          "expected": "MCP error",
+          "observed": "error returned"
+        }
+      ],
+      "evidence": {
+        "terminalSnapshots": "mcp-server/mcp-cli/VAL-MCP-017-invalid-url.json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-019",
+      "title": "Tool Response Shape Consistent Across Both Transports",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "call tool with valid URL",
+          "expected": "Returns JSON text",
+          "observed": "conformant JSON"
+        }
+      ],
+      "evidence": {
+        "terminalSnapshots": "mcp-server/mcp-cli/VAL-MCP-019-valid-url.json"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed."
+}

@@ -4,17 +4,10 @@ import type { ScenarioConfig } from "../scenarios";
 import { resolveScenarios } from "../scenarios";
 import { applyScenario } from "./utils";
 import {
-  wsDocumentList,
-  wsDocGettingStarted,
-  wsDocApiReference,
-  wsNavigationList,
-  wsVersionList,
-  wsVersionV1,
-  wsVersionV2,
-  wsDocumentRevisions,
   mutationSuccess,
   mutationFailure,
 } from "../fixtures";
+import { store } from "../store";
 
 const API_BASE = "*/api/workspace";
 
@@ -23,21 +16,6 @@ const API_BASE = "*/api/workspace";
  */
 export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
   const scenarios = resolveScenarios(config);
-
-  const wsSpaces = [
-    {
-      id: "space-guides",
-      key: "guides",
-      name: "Guides",
-      description: "Product and developer guides",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    },
-  ];
-
-  const wsDocuments = [wsDocGettingStarted, wsDocApiReference];
-  const wsNavItems = structuredClone(wsNavigationList.items);
-  const wsVersionItems = [wsVersionV1, wsVersionV2];
 
   function nowIso() {
     return new Date().toISOString();
@@ -129,7 +107,38 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
   return [
     // Spaces list: GET /api/workspace/spaces
     http.get(`${API_BASE}/spaces`, async () => {
-      return HttpResponse.json(wsSpaces);
+      return HttpResponse.json(store.getSpaces());
+    }),
+
+    // Space detail: GET /api/workspace/spaces/:id
+    http.get(`${API_BASE}/spaces/:id`, async ({ params }) => {
+      const space = store.getSpace(params.id as string);
+      if (!space) return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      return HttpResponse.json(space);
+    }),
+
+    // Space create: POST /api/workspace/spaces
+    http.post(`${API_BASE}/spaces`, async ({ request }) => {
+      const body = await request.json() as any;
+      const existing = store.getSpaces().find((s) => s.key === body.key);
+      if (existing) return HttpResponse.json({ error: "Key already exists" }, { status: 409 });
+      const space = store.createSpace({ key: body.key, name: body.name, description: body.description ?? "" });
+      return HttpResponse.json(space, { status: 201 });
+    }),
+
+    // Space update: PATCH /api/workspace/spaces/:id
+    http.patch(`${API_BASE}/spaces/:id`, async ({ params, request }) => {
+      const body = await request.json() as any;
+      const space = store.updateSpace(params.id as string, body);
+      if (!space) return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      return HttpResponse.json(space);
+    }),
+
+    // Space delete: DELETE /api/workspace/spaces/:id
+    http.delete(`${API_BASE}/spaces/:id`, async ({ params }) => {
+      const space = store.deleteSpace(params.id as string);
+      if (!space) return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      return HttpResponse.json(space);
     }),
 
     // Document list: GET /api/workspace/documents
@@ -144,7 +153,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
         return HttpResponse.json({ documents: [] });
       }
 
-      return HttpResponse.json(wsDocumentList);
+      return HttpResponse.json(store.getWorkspaceDocuments());
     }),
 
     // Document detail: GET /api/workspace/documents/:id
@@ -155,12 +164,98 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       );
       if (scenarioResponse) return scenarioResponse;
 
-      const doc = wsDocuments.find((d) => d.id === params.id);
+      const doc = store.getWorkspaceDocument(params.id as string);
       if (!doc) {
         return HttpResponse.json({ error: "Not found" }, { status: 404 });
       }
 
-      return HttpResponse.json(doc);
+      // If requested from editor, include latest content_json if any
+      const revs = store.getRevisions(params.id as string);
+      const latestRev = revs.length > 0 ? revs[0] : null;
+      const editorDoc = {
+        ...doc,
+        spaceId: (doc as any).spaceId ?? "space-guides",
+        releaseVersionId: (doc as any).releaseVersionId ?? "ver-v1",
+        currentRevisionId: latestRev?.id ?? null,
+        createdBy: latestRev?.createdBy ?? "admin@test.com",
+        updatedBy: latestRev?.createdBy ?? "admin@test.com",
+        createdAt: doc.updatedAt,
+        content_json: latestRev?.content_json ?? {
+          type: "doc",
+          version: 1,
+          children: [{ type: "paragraph", children: [{ type: "text", text: "" }] }],
+        },
+      };
+
+      return HttpResponse.json(editorDoc);
+    }),
+
+    // Document creation (draft): POST /api/workspace/documents
+    http.post(`${API_BASE}/documents`, async ({ request }) => {
+      const body = await request.json() as any;
+      const createdAt = nowIso();
+      const newDoc = {
+        id: `doc-${Math.random().toString(36).slice(2, 9)}`,
+        title: body.title,
+        slug: body.slug,
+        space: store.getSpaces()[0]?.key ?? "default",
+        spaceId: body.spaceId,
+        releaseVersionId: body.releaseVersionId,
+        status: "draft",
+        createdAt,
+        updatedAt: createdAt,
+      };
+      store.workspaceDocuments.push(newDoc as any);
+
+      let currentRevisionId: string | null = null;
+      if (body.content_json) {
+        const rev = store.createRevision(newDoc.id, body.content_json, "Initial draft");
+        currentRevisionId = rev.id;
+      }
+
+      return HttpResponse.json({
+        ...newDoc,
+        currentRevisionId,
+        createdBy: "admin@test.com",
+        updatedBy: "admin@test.com",
+        content_json: body.content_json ?? null,
+      });
+    }),
+
+    // Document revision creation: POST /api/workspace/documents/:id/revisions
+    http.post(`${API_BASE}/documents/:id/revisions`, async ({ params, request }) => {
+      const body = await request.json() as any;
+      const rev = store.createRevision(
+        params.id as string,
+        body.content_json,
+        body.changeNote || "Autosave update"
+      );
+      return HttpResponse.json(rev);
+    }),
+
+    // Document unpublish: POST /api/workspace/documents/:id/unpublish
+    http.post(`${API_BASE}/documents/:id/unpublish`, async ({ params }) => {
+      const wsDoc = store.getWorkspaceDocument(params.id as string);
+      if (!wsDoc) {
+        return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      (wsDoc as any).status = "draft";
+      (wsDoc as any).updatedAt = nowIso();
+
+      const revs = store.getRevisions(params.id as string);
+      const latestRev = revs.length > 0 ? revs[0] : null;
+
+      return HttpResponse.json({
+        ...wsDoc,
+        spaceId: (wsDoc as any).spaceId ?? "space-guides",
+        releaseVersionId: (wsDoc as any).releaseVersionId ?? "ver-v1",
+        currentRevisionId: latestRev?.id ?? null,
+        createdBy: "admin@test.com",
+        updatedBy: "admin@test.com",
+        createdAt: (wsDoc as any).createdAt ?? wsDoc.updatedAt,
+        content_json: latestRev?.content_json ?? null,
+      });
     }),
 
     // Document revisions list: GET /api/workspace/documents/:id/revisions
@@ -172,11 +267,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       if (scenarioResponse) return scenarioResponse;
 
       const documentId = String(params.id ?? "");
-      const revisions = wsDocumentRevisions[documentId as keyof typeof wsDocumentRevisions];
-
-      if (!revisions) {
-        return HttpResponse.json({ revisions: [], total: 0 });
-      }
+      const revisions = store.getRevisions(documentId);
 
       return HttpResponse.json({
         revisions,
@@ -185,7 +276,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
     }),
 
     // Navigation list: GET /api/workspace/navigation
-    http.get(`${API_BASE}/navigation`, async () => {
+    http.get(`${API_BASE}/navigation`, async ({ request }) => {
       const scenarioResponse = await applyScenario(
         scenarios.workspaceNavigation,
         { items: 42 },
@@ -196,7 +287,24 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
         return HttpResponse.json({ items: [] });
       }
 
-      return HttpResponse.json({ items: wsNavItems });
+      const url = new URL(request.url);
+      const releaseVersionId = url.searchParams.get("releaseVersionId");
+      const nav = store.getNavigation();
+
+      if (!releaseVersionId) {
+        return HttpResponse.json(nav);
+      }
+
+      function filterByVersion(nodes: WorkspaceNavigation[]): WorkspaceNavigation[] {
+        return nodes
+          .filter((node) => node.releaseVersionId === releaseVersionId)
+          .map((node) => ({
+            ...node,
+            children: filterByVersion(node.children),
+          }));
+      }
+
+      return HttpResponse.json({ items: filterByVersion(nav.items) });
     }),
 
     // Navigation detail: GET /api/workspace/navigation/:id
@@ -207,7 +315,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       );
       if (scenarioResponse) return scenarioResponse;
 
-      const item = findNode(wsNavItems, String(params.id ?? ""));
+      const item = findNode(store.getNavigation().items, String(params.id ?? ""));
       if (!item) {
         return HttpResponse.json({ error: "Not found" }, { status: 404 });
       }
@@ -236,6 +344,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       };
 
       const parentId = body.parentId ?? null;
+      const wsNavItems = store.getNavigation().items;
       const siblings = findSiblings(wsNavItems, parentId);
       const nextOrder = Math.max(0, Math.min(body.order, siblings.length));
       const createdAt = nowIso();
@@ -271,7 +380,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       if (scenarioResponse) return scenarioResponse;
 
       const navigationId = String(params.id ?? "");
-      const node = findNode(wsNavItems, navigationId);
+      const node = findNode(store.getNavigation().items, navigationId);
 
       if (!node) {
         return HttpResponse.json({ error: "Not found" }, { status: 404 });
@@ -319,6 +428,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       );
       if (scenarioResponse) return scenarioResponse;
 
+      const wsNavItems = store.getNavigation().items;
       const navigationId = String(params.id ?? "");
       const body = (await request.json()) as {
         parentId?: string | null;
@@ -361,7 +471,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
         return HttpResponse.json({ versions: [] });
       }
 
-      return HttpResponse.json(wsVersionList);
+      return HttpResponse.json(store.getVersions());
     }),
 
     // Version detail: GET /api/workspace/versions/:id
@@ -372,7 +482,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
       );
       if (scenarioResponse) return scenarioResponse;
 
-      const ver = wsVersionItems.find((v) => v.id === params.id);
+      const ver = store.getVersions().versions.find((v) => v.id === params.id);
       if (!ver) {
         return HttpResponse.json({ error: "Not found" }, { status: 404 });
       }
@@ -381,7 +491,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
     }),
 
     // Document mutation: POST /api/workspace/documents/:id/publish
-    http.post(`${API_BASE}/documents/:id/publish`, async () => {
+    http.post(`${API_BASE}/documents/:id/publish`, async ({ params }) => {
       const scenarioResponse = await applyScenario(
         scenarios.workspaceMutation,
         { success: "maybe" },
@@ -390,6 +500,11 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
 
       if (scenarios.workspaceMutation === "not-found") {
         return HttpResponse.json(mutationFailure, { status: 400 });
+      }
+
+      const success = store.publishDocument(params.id as string);
+      if (!success) {
+        return HttpResponse.json({ success: false, message: "Document not found" }, { status: 404 });
       }
 
       return HttpResponse.json(mutationSuccess);
@@ -407,6 +522,7 @@ export function createWorkspaceHandlers(config: ScenarioConfig = {}) {
         return HttpResponse.json(mutationFailure, { status: 400 });
       }
 
+      const wsNavItems = store.getNavigation().items;
       const navigationId = String(params.id ?? "");
       const detached = detachNode(wsNavItems, navigationId);
       if (!detached) {

@@ -52,6 +52,7 @@ const makeDocumentsRepository = (): jest.Mocked<DocumentsRepository> => ({
     create: jest.fn(),
     update: jest.fn(),
     publish: jest.fn(),
+    unpublish: jest.fn(),
     createRevision: jest.fn<Promise<DocumentRevisionEntity | null>, any[]>(),
     findRevisions: jest.fn(),
 });

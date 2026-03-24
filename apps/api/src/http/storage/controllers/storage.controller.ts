@@ -51,8 +51,7 @@ export class StorageController {
     ) {}
 
     private getMaxFileSizeBytes() {
-        const maxFileSizeMb =
-            this.configService.get("MAX_FILE_SIZE_MB", { infer: true }) ?? DEFAULT_MAX_FILE_SIZE_MB;
+        const maxFileSizeMb = this.configService.get("MAX_FILE_SIZE_MB", { infer: true }) ?? DEFAULT_MAX_FILE_SIZE_MB;
         return maxFileSizeMb * BYTES_PER_MB;
     }
 

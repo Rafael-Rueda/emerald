@@ -1,7 +1,10 @@
 import { NavigationRepository } from "../repositories/navigation.repository";
 
 import { Either, Left, Right } from "@/domain/@shared/either";
-import { NavigationNodeEntity, type NavigationNodeType } from "@/domain/navigation/enterprise/entities/navigation-node.entity";
+import {
+    NavigationNodeEntity,
+    type NavigationNodeType,
+} from "@/domain/navigation/enterprise/entities/navigation-node.entity";
 import { NavigationNodeNotFoundError } from "@/domain/navigation/errors/navigation-node-not-found.error";
 
 interface CreateNavigationNodeRequest {

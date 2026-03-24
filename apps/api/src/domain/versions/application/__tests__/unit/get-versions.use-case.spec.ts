@@ -1,7 +1,4 @@
-import {
-    RELEASE_VERSION_STATUS,
-    ReleaseVersionEntity,
-} from "../../../enterprise/entities/release-version.entity";
+import { RELEASE_VERSION_STATUS, ReleaseVersionEntity } from "../../../enterprise/entities/release-version.entity";
 import { type ReleaseVersionsRepository } from "../../repositories/release-versions.repository";
 import { GetVersionsUseCase } from "../../use-cases/get-versions.use-case";
 

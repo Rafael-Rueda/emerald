@@ -12,8 +12,6 @@ import {
   resolveFirstSlug,
   buildDefaultDocumentContext,
   buildCanonicalPath,
-  MOCKED_DEFAULT_CONTEXT,
-  DEFAULT_SPACE,
 } from "./default-document-context";
 
 describe("resolveDefaultVersion", () => {
@@ -56,6 +54,9 @@ describe("resolveFirstSlug", () => {
       id: "parent",
       label: "Parent",
       slug: "",
+      nodeType: "group",
+      documentId: null,
+      externalUrl: null,
       children: [navApiReference],
     };
     expect(resolveFirstSlug([parent])).toBe("api-reference");
@@ -70,6 +71,9 @@ describe("resolveFirstSlug", () => {
       id: "empty",
       label: "Empty",
       slug: "",
+      nodeType: "group",
+      documentId: null,
+      externalUrl: null,
       children: [],
     };
     expect(resolveFirstSlug([empty])).toBeUndefined();
@@ -79,11 +83,12 @@ describe("resolveFirstSlug", () => {
 describe("buildDefaultDocumentContext", () => {
   it("builds context from fixtures", () => {
     const result = buildDefaultDocumentContext(
+      "guides",
       [versionV1, versionV2],
       [navGettingStarted, navApiReference],
     );
     expect(result).toEqual({
-      space: DEFAULT_SPACE,
+      space: "guides",
       version: "v1",
       slug: "getting-started",
     });
@@ -91,37 +96,27 @@ describe("buildDefaultDocumentContext", () => {
 
   it("returns undefined when no versions exist", () => {
     expect(
-      buildDefaultDocumentContext([], [navGettingStarted]),
+      buildDefaultDocumentContext("guides", [], [navGettingStarted]),
     ).toBeUndefined();
   });
 
   it("returns undefined when no navigation items exist", () => {
     expect(
-      buildDefaultDocumentContext([versionV1, versionV2], []),
+      buildDefaultDocumentContext("guides", [versionV1, versionV2], []),
     ).toBeUndefined();
   });
 });
 
 describe("buildCanonicalPath", () => {
   it("builds the expected URL path", () => {
-    expect(buildCanonicalPath(MOCKED_DEFAULT_CONTEXT)).toBe(
-      "/guides/v1/getting-started",
-    );
+    expect(
+      buildCanonicalPath({ space: "guides", version: "v1", slug: "getting-started" }),
+    ).toBe("/guides/v1/getting-started");
   });
 
   it("constructs path from arbitrary context", () => {
     expect(
       buildCanonicalPath({ space: "api", version: "v3", slug: "overview" }),
     ).toBe("/api/v3/overview");
-  });
-});
-
-describe("MOCKED_DEFAULT_CONTEXT", () => {
-  it("matches the canonical fixtures", () => {
-    expect(MOCKED_DEFAULT_CONTEXT).toEqual({
-      space: "guides",
-      version: "v1",
-      slug: "getting-started",
-    });
   });
 });

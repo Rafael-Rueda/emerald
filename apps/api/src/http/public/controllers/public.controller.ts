@@ -7,9 +7,10 @@ import {
     PublicDocumentResponseDTO,
     PublicNavigationResponseDTO,
     PublicSearchQueryDTO,
-    PublicSearchResponseDTO,
-    PublicVersionsResponseDTO,
     publicSearchQuerySchema,
+    PublicSearchResponseDTO,
+    PublicSpacesResponseDTO,
+    PublicVersionsResponseDTO,
 } from "@/http/public/schemas/public.schema";
 import { PublicService } from "@/http/public/services/public.service";
 
@@ -18,6 +19,13 @@ import { PublicService } from "@/http/public/services/public.service";
 @Controller("/api/public")
 export class PublicController {
     constructor(private readonly publicService: PublicService) {}
+
+    @Get("spaces")
+    @ApiOperation({ summary: "List public spaces with published content" })
+    @ApiResponse({ status: 200, description: "Public spaces list", type: PublicSpacesResponseDTO })
+    findSpaces() {
+        return this.publicService.findSpaces();
+    }
 
     @Get("spaces/:spaceKey/versions")
     @ApiOperation({ summary: "List published versions for a public space" })
@@ -44,7 +52,11 @@ export class PublicController {
     @ApiParam({ name: "slug", type: String, description: "Document slug" })
     @ApiResponse({ status: 200, description: "Document response", type: PublicDocumentResponseDTO })
     @ApiResponse({ status: 404, description: "Document not found" })
-    findDocument(@Param("spaceKey") spaceKey: string, @Param("versionKey") versionKey: string, @Param("slug") slug: string) {
+    findDocument(
+        @Param("spaceKey") spaceKey: string,
+        @Param("versionKey") versionKey: string,
+        @Param("slug") slug: string,
+    ) {
         return this.publicService.findDocument(spaceKey, versionKey, slug);
     }
 

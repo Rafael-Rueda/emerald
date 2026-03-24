@@ -3,7 +3,7 @@
  *
  * Determines the canonical default docs route from version metadata
  * and navigation fixtures. The default entry point is the first
- * navigation item of the default version in the default space.
+ * navigation item of the default version in the given space.
  */
 
 import type { Version, NavigationItem } from "@emerald/contracts";
@@ -14,9 +14,6 @@ export interface DefaultDocumentContext {
   version: string;
   slug: string;
 }
-
-/** The default space used by the public docs surface. */
-export const DEFAULT_SPACE = "guides";
 
 /**
  * Resolve the default version from a list of versions.
@@ -51,10 +48,11 @@ export function resolveFirstSlug(
 }
 
 /**
- * Build the canonical default document context from version metadata
+ * Build the canonical default document context from space, version metadata,
  * and navigation items.
  */
 export function buildDefaultDocumentContext(
+  space: string,
   versions: Version[],
   navigationItems: NavigationItem[],
 ): DefaultDocumentContext | undefined {
@@ -65,7 +63,7 @@ export function buildDefaultDocumentContext(
   if (!slug) return undefined;
 
   return {
-    space: DEFAULT_SPACE,
+    space,
     version: defaultVersion.slug,
     slug,
   };
@@ -77,13 +75,3 @@ export function buildDefaultDocumentContext(
 export function buildCanonicalPath(ctx: DefaultDocumentContext): string {
   return `/${ctx.space}/${ctx.version}/${ctx.slug}`;
 }
-
-/**
- * Fallback default document context for mocked/offline scenarios.
- * This matches the fixture: guides/v1/getting-started.
- */
-export const MOCKED_DEFAULT_CONTEXT: DefaultDocumentContext = {
-  space: "guides",
-  version: "v1",
-  slug: "getting-started",
-};

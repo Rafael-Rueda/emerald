@@ -38,3 +38,10 @@ export {
   useSidebarSlot,
   useSetSidebar,
 } from "./presentation/sidebar-context";
+
+// Presentation: header controls context
+export {
+  HeaderControlsProvider,
+  useHeaderControlsSlot,
+  useSetHeaderControls,
+} from "./presentation/header-controls-context";

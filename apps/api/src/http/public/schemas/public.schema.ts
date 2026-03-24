@@ -86,3 +86,15 @@ export const publicSearchQuerySchema = z.object({
 
 export class PublicSearchQueryDTO extends createZodDto(publicSearchQuerySchema) {}
 export class PublicSearchResponseDTO extends createZodDto(SearchResponseSchema) {}
+
+export const publicSpaceSchema = z.object({
+    key: z.string(),
+    name: z.string(),
+    description: z.string(),
+});
+
+export const publicSpacesResponseSchema = z.object({
+    spaces: z.array(publicSpaceSchema),
+});
+
+export class PublicSpacesResponseDTO extends createZodDto(publicSpacesResponseSchema) {}

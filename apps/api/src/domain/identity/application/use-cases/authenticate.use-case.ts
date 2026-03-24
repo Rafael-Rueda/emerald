@@ -107,9 +107,7 @@ export class AuthenticateUseCase {
             const usernameAlreadyTaken = await this.usersRepository.findByUsername(username);
 
             const response = await this.createUserUseCase.execute({
-                username: usernameAlreadyTaken
-                    ? Username.generateUniqueFrom(username).toString()
-                    : username,
+                username: usernameAlreadyTaken ? Username.generateUniqueFrom(username).toString() : username,
                 email: googleUser.email,
                 passwordHash: undefined,
                 roles: [ROLES.VIEWER],
@@ -128,7 +126,9 @@ export class AuthenticateUseCase {
                 const hasDifferentUserWithUsername =
                     existingUsernameOwner && existingUsernameOwner.id.toString() !== user.id.toString();
 
-                user.username = hasDifferentUserWithUsername ? Username.generateUniqueFrom(username).toString() : username;
+                user.username = hasDifferentUserWithUsername
+                    ? Username.generateUniqueFrom(username).toString()
+                    : username;
                 shouldUpdateUser = true;
             }
 

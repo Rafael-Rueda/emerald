@@ -15,6 +15,7 @@ import { delay, HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { AppProviders } from "@emerald/ui/providers";
 import type { WorkspaceReleaseVersion } from "@emerald/data-access";
+import { WorkspaceContextProvider } from "../../shared/application/workspace-context";
 import { VersionsInspector } from "./versions-inspector";
 
 const baseVersions: WorkspaceReleaseVersion[] = [
@@ -132,7 +133,9 @@ describe("VersionsInspector", () => {
   function renderInspector() {
     return render(
       <AppProviders defaultTheme="light">
-        <VersionsInspector />
+        <WorkspaceContextProvider>
+          <VersionsInspector />
+        </WorkspaceContextProvider>
       </AppProviders>,
     );
   }

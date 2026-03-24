@@ -8,6 +8,9 @@ export interface NavigationItem {
   id: string;
   label: string;
   slug: string;
+  nodeType: "document" | "group" | "external_link";
+  documentId: string | null;
+  externalUrl: string | null;
   children: NavigationItem[];
 }
 
@@ -16,6 +19,9 @@ export const NavigationItemSchema: z.ZodType<NavigationItem> = z.lazy(() =>
     id: z.string(),
     label: z.string(),
     slug: z.string(),
+    nodeType: z.enum(["document", "group", "external_link"]),
+    documentId: z.string().nullable(),
+    externalUrl: z.string().nullable(),
     children: z.array(NavigationItemSchema),
   }),
 );

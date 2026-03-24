@@ -26,9 +26,12 @@ export class PrismaNavigationRepository implements NavigationRepository {
         return PrismaNavigationMapper.toDomain(node);
     }
 
-    async listBySpaceId(spaceId: string): Promise<NavigationNodeEntity[]> {
+    async listBySpaceId(spaceId: string, releaseVersionId?: string | null): Promise<NavigationNodeEntity[]> {
         const nodes = await this.prisma.navigationNode.findMany({
-            where: { spaceId },
+            where: {
+                spaceId,
+                ...(releaseVersionId ? { releaseVersionId } : {}),
+            },
             orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         });
 
@@ -76,15 +79,51 @@ export class PrismaNavigationRepository implements NavigationRepository {
 
     async move(params: MoveNavigationNodeParams): Promise<NavigationNodeEntity | null> {
         try {
-            const node = await this.prisma.navigationNode.update({
+            const existing = await this.prisma.navigationNode.findUnique({
                 where: { id: params.nodeId },
-                data: {
-                    parentId: params.parentId,
-                    order: params.order,
-                },
             });
 
-            return PrismaNavigationMapper.toDomain(node);
+            if (!existing) {
+                return null;
+            }
+
+            const targetParentId = params.parentId ?? null;
+            const targetOrder = params.order;
+
+            return await this.prisma.$transaction(async (tx) => {
+                // Remove from old position: shift down siblings that were after it
+                await tx.navigationNode.updateMany({
+                    where: {
+                        spaceId: existing.spaceId,
+                        parentId: existing.parentId,
+                        id: { not: existing.id },
+                        order: { gt: existing.order },
+                    },
+                    data: { order: { decrement: 1 } },
+                });
+
+                // Make room at target position: shift up siblings at or after target order
+                await tx.navigationNode.updateMany({
+                    where: {
+                        spaceId: existing.spaceId,
+                        parentId: targetParentId,
+                        id: { not: existing.id },
+                        order: { gte: targetOrder },
+                    },
+                    data: { order: { increment: 1 } },
+                });
+
+                // Place the node at target position
+                const moved = await tx.navigationNode.update({
+                    where: { id: params.nodeId },
+                    data: {
+                        parentId: targetParentId,
+                        order: targetOrder,
+                    },
+                });
+
+                return PrismaNavigationMapper.toDomain(moved);
+            });
         } catch {
             return null;
         }

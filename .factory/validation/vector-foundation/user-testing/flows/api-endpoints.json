@@ -1,0 +1,212 @@
+{
+  "groupId": "api-endpoints",
+  "testedAt": "2026-03-23T10:23:11.020Z",
+  "isolation": {
+    "apiUrl": "http://localhost:3333"
+  },
+  "toolsUsed": [
+    "Node.js fetch"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-VEC-017",
+      "title": "POST /api/public/ai-context/search Reachable",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST /api/public/ai-context/search",
+          "expected": "HTTP 200",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "GET /api/public/ai-context/search",
+          "expected": "HTTP 404 or 405",
+          "observed": "HTTP 404"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-017-network.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-018",
+      "title": "Search Endpoint — Request Body Validation",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST with {}",
+          "expected": "HTTP 400",
+          "observed": "HTTP 400"
+        },
+        {
+          "action": "POST with {\"query\":\"test\"}",
+          "expected": "HTTP 400",
+          "observed": "HTTP 400"
+        },
+        {
+          "action": "POST with {\"query\":\"\",\"space\":\"docs\",\"version\":\"v1\"}",
+          "expected": "HTTP 400",
+          "observed": "HTTP 400"
+        },
+        {
+          "action": "POST with {\"query\":\"test\",\"space\":\"docs\",\"version\":\"v1\"}",
+          "expected": "HTTP 200",
+          "observed": "HTTP 200"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-018-network.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-019",
+      "title": "Search Endpoint — Public (No Auth Required)",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "POST without Authorization header",
+          "expected": "HTTP 200",
+          "observed": "HTTP 200"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-019-network.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-020",
+      "title": "Search Endpoint — Happy Path Response Conforms to AiContextResponseSchema",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Check schema of 200 response",
+          "expected": "Conforms to schema",
+          "observed": "Does not conform"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-020-network.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-021",
+      "title": "Search Endpoint — Results Ranked by Cosine Similarity Descending",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Check sorting of relevanceScore",
+          "expected": "Sorted descending",
+          "observed": "No chunks to verify"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-020-network.json"
+        ]
+      },
+      "issues": "No chunks returned from seed data to verify sorting"
+    },
+    {
+      "id": "VAL-VEC-022",
+      "title": "Search Endpoint — Maximum 10 Chunks Returned",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Count chunks",
+          "expected": "<= 10",
+          "observed": "0"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-020-network.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-023",
+      "title": "Search Endpoint — Filter by space",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Check source.space of results",
+          "expected": "guides",
+          "observed": "Match"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-020-network.json"
+        ]
+      },
+      "issues": "No chunks returned to verify space filter"
+    },
+    {
+      "id": "VAL-VEC-024",
+      "title": "Search Endpoint — Filter by version",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Check version filter",
+          "expected": "Filtered",
+          "observed": "No chunks to verify"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-024-network.json"
+        ]
+      },
+      "issues": "No chunks returned to verify version filter"
+    },
+    {
+      "id": "VAL-VEC-025",
+      "title": "Search Endpoint — Unknown Space/Version Returns Empty Chunks",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "POST with nonexistent space",
+          "expected": "200 with chunks: []",
+          "observed": "500, chunks length: undefined"
+        }
+      ],
+      "evidence": {
+        "network": [
+          "vector-foundation/api-endpoints/VAL-VEC-025-network.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VEC-026",
+      "title": "Search Endpoint — Empty DB Returns Empty Chunks",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Check empty DB behavior",
+          "expected": "chunks: []",
+          "observed": "DB is seeded, cannot verify empty DB"
+        }
+      ],
+      "evidence": {
+        "network": []
+      },
+      "issues": "Requires empty DB, but DB is seeded"
+    }
+  ],
+  "frictions": [],
+  "blockers": []
+}

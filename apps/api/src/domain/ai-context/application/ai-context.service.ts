@@ -107,6 +107,7 @@ export class AiContextService {
         });
 
         if (!spaceRecord) {
+            this.logger.warn("Semantic search: space not found", { space });
             return this.emptySemanticSearchResponse(query);
         }
 
@@ -121,6 +122,7 @@ export class AiContextService {
         });
 
         if (!versionRecord) {
+            this.logger.warn("Semantic search: version not found", { space, version, spaceId: spaceRecord.id });
             return this.emptySemanticSearchResponse(query);
         }
 
@@ -130,7 +132,16 @@ export class AiContextService {
                 model: "voyage-3-lite",
                 input_type: "query",
             })
-            .catch(() => null);
+            .catch((error) => {
+                this.logger.error("Voyage AI embedding request failed", {
+                    query,
+                    space,
+                    version,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+
+                return null;
+            });
 
         if (!embeddingResponse) {
             return this.emptySemanticSearchResponse(query);

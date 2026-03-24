@@ -1,0 +1,117 @@
+{
+  "groupId": "mcp-core-2",
+  "testedAt": "2026-03-23T13:21:47.113Z",
+  "isolation": {
+    "appUrl": "http://localhost:3333",
+    "authRequired": false
+  },
+  "toolsUsed": [
+    "node-fetch",
+    "docker"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-MCP-011",
+      "title": "McpController Registered in AppModule",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/mcp without session ID",
+          "expected": "Return non-404",
+          "observed": "Returned 400"
+        }
+      ],
+      "evidence": {
+        "network": "mcp-server/mcp-core-2/VAL-MCP-011-get-no-session.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-010",
+      "title": "/api/mcp Requires No Authorization",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "POST, GET, DELETE without Authorization header",
+          "expected": "No 401/403 errors",
+          "observed": "POST returned session null, GET: 404, DELETE: 404"
+        }
+      ],
+      "evidence": {
+        "network": "mcp-server/mcp-core-2/VAL-MCP-010-no-auth.txt"
+      },
+      "issues": "Failed auth check"
+    },
+    {
+      "id": "VAL-MCP-008",
+      "title": "GET /api/mcp Opens SSE Stream",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "GET /api/mcp with session ID",
+          "expected": "HTTP 200, Content-Type: text/event-stream, open >= 1s",
+          "observed": "Status 404, Type application/json; charset=utf-8, Time 1503ms"
+        }
+      ],
+      "evidence": {
+        "network": "mcp-server/mcp-core-2/VAL-MCP-008-sse.txt"
+      },
+      "issues": "Failed SSE stream check"
+    },
+    {
+      "id": "VAL-MCP-009",
+      "title": "DELETE /api/mcp Terminates Session",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "DELETE /api/mcp",
+          "expected": "HTTP 200/204",
+          "observed": "Status 404"
+        },
+        {
+          "action": "POST with same session",
+          "expected": "HTTP 404 or error",
+          "observed": "Status 400"
+        }
+      ],
+      "evidence": {
+        "network": "mcp-server/mcp-core-2/VAL-MCP-009-delete.txt"
+      },
+      "issues": "DELETE did not terminate session correctly"
+    },
+    {
+      "id": "VAL-MCP-012",
+      "title": "API DB Error Returns Graceful MCP Error (Not Crash)",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Pause DB",
+          "expected": "Paused",
+          "observed": "Paused"
+        },
+        {
+          "action": "Call search_documentation",
+          "expected": "HTTP 200 with JSON-RPC error or isError: true",
+          "observed": "Status 400, Error present: false"
+        },
+        {
+          "action": "Unpause DB",
+          "expected": "Unpaused",
+          "observed": "Unpaused"
+        },
+        {
+          "action": "Check server health",
+          "expected": "Server responds",
+          "observed": "Health check status 400"
+        }
+      ],
+      "evidence": {
+        "network": "mcp-server/mcp-core-2/VAL-MCP-012-db-error.txt"
+      },
+      "issues": "Tool response was not a graceful error"
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 1 passed, 4 failed/blocked."
+}

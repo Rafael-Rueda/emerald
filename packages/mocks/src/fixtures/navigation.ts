@@ -12,6 +12,9 @@ export const navGettingStarted: NavigationItem = {
   id: "nav-getting-started",
   label: "Getting Started",
   slug: "getting-started",
+  nodeType: "document",
+  documentId: "doc-getting-started",
+  externalUrl: null,
   children: [],
 };
 
@@ -19,6 +22,9 @@ export const navApiReference: NavigationItem = {
   id: "nav-api-reference",
   label: "API Reference",
   slug: "api-reference",
+  nodeType: "document",
+  documentId: "doc-api-reference",
+  externalUrl: null,
   children: [],
 };
 

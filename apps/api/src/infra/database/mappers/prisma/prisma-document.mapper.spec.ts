@@ -1,3 +1,4 @@
+import { DocumentResponseSchema } from "@emerald/contracts";
 import {
     type DocumentRevision,
     DocumentStatus,
@@ -5,7 +6,6 @@ import {
     ReleaseVersionStatus,
     type Space,
 } from "@prisma/client";
-import { DocumentResponseSchema } from "@emerald/contracts";
 
 import { PrismaDocumentMapper } from "./prisma-document.mapper";
 

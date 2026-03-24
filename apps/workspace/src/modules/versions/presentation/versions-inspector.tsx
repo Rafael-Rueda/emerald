@@ -8,6 +8,7 @@ import {
   useSetDefaultWorkspaceVersionAction,
   useWorkspaceVersionsList,
 } from "../application/use-workspace-versions";
+import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 import { generateVersionKeyFromLabel } from "../domain/version-key";
 import type { WorkspaceReleaseVersion } from "@emerald/data-access";
@@ -35,6 +36,7 @@ function formatTimestamp(value: string): string {
 }
 
 export function VersionsInspector() {
+  const { activeSpaceId, activeSpace, refetchVersions } = useWorkspaceContext();
   const listState = useWorkspaceVersionsList();
   const createAction = useCreateWorkspaceVersionAction();
   const publishAction = usePublishWorkspaceVersionAction();
@@ -127,6 +129,7 @@ export function VersionsInspector() {
     setActionFeedback(null);
 
     const result = await createAction.mutateAsync({
+      spaceId: activeSpaceId!,
       label,
       key,
     });
@@ -138,6 +141,7 @@ export function VersionsInspector() {
         message: `Version ${result.data.key} created successfully.`,
       });
       setIsCreateDialogOpen(false);
+      refetchVersions();
       return;
     }
 
@@ -165,6 +169,7 @@ export function VersionsInspector() {
         tone: "success",
         message: `Version ${result.data.key} is now published.`,
       });
+      refetchVersions();
       return;
     }
 
@@ -193,6 +198,7 @@ export function VersionsInspector() {
         tone: "success",
         message: `Version ${result.data.key} is now the default.`,
       });
+      refetchVersions();
       return;
     }
 
@@ -212,7 +218,7 @@ export function VersionsInspector() {
           <button
             type="button"
             onClick={openCreateDialog}
-            className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             New Version
           </button>
@@ -358,6 +364,19 @@ export function VersionsInspector() {
             </h2>
 
             <form className="mt-4 space-y-3" onSubmit={handleCreateVersion}>
+              <label className="block space-y-1 text-sm">
+                <span className="text-muted-foreground">Space</span>
+                <input
+                  type="text"
+                  disabled
+                  value={activeSpace?.name ?? "No space selected"}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 disabled:opacity-60"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Controlled by the sidebar space selector.
+                </p>
+              </label>
+
               <label className="block space-y-1 text-sm">
                 <span className="text-muted-foreground">Label</span>
                 <input

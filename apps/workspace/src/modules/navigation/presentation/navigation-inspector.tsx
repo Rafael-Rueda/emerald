@@ -26,6 +26,7 @@ import {
   useWorkspaceNavigationDocuments,
   useWorkspaceNavigationList,
 } from "../application/use-workspace-navigation";
+import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 import {
   Button,
@@ -48,6 +49,7 @@ type CreateNodeFormState = {
   slug: string;
   nodeType: WorkspaceNavigation["nodeType"];
   documentId: string;
+  externalUrl: string;
   underSelectedParent: boolean;
 };
 
@@ -56,6 +58,7 @@ type EditNodeFormState = {
   slug: string;
   nodeType: WorkspaceNavigation["nodeType"];
   documentId: string;
+  externalUrl: string;
 };
 
 function sortTreeByOrder(items: WorkspaceNavigation[]): WorkspaceNavigation[] {
@@ -234,7 +237,11 @@ function SortableNavigationRow({
   const isCollapsed = collapsedNodeIds.has(node.id);
 
   return (
-    <li className="list-none" data-testid={`navigation-node-${node.id}`}>
+    <li
+      className="list-none"
+      style={{ marginLeft: `${depth * 1.5}rem` }}
+      data-testid={`navigation-node-${node.id}`}
+    >
       <div
         ref={setNodeRef}
         style={style}
@@ -246,7 +253,7 @@ function SortableNavigationRow({
       >
         <button
           type="button"
-          className="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-xs"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border text-xs"
           onClick={() => onToggleCollapsed(node.id)}
           disabled={!hasChildren}
           aria-label={hasChildren ? "Toggle collapsed" : "No children"}
@@ -256,7 +263,7 @@ function SortableNavigationRow({
 
         <button
           type="button"
-          className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded border border-border text-xs"
+          className="inline-flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded border border-border text-xs"
           aria-label={`Drag ${node.label}`}
           {...attributes}
           {...listeners}
@@ -269,15 +276,24 @@ function SortableNavigationRow({
           className="min-w-0 flex-1 text-left"
           data-testid={`navigation-select-node-${node.id}`}
           onClick={() => onSelectNode(node.id)}
-          style={{ paddingLeft: `${depth * 1.25}rem` }}
         >
-          <p className="truncate text-sm font-medium text-foreground">{node.label}</p>
+          <p className="truncate text-sm font-medium text-foreground">
+            {node.label}
+            <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+              ({node.nodeType === "external_link" ? "external link" : node.nodeType})
+            </span>
+          </p>
           <p className="text-xs text-muted-foreground" data-testid={`navigation-node-order-${node.id}`}>
             /{node.slug} • order {node.order}
           </p>
           {linkedDocumentTitle ? (
             <p className="text-xs text-emerald-600" data-testid={`navigation-node-document-title-${node.id}`}>
               Linked document: {linkedDocumentTitle}
+            </p>
+          ) : null}
+          {node.nodeType === "external_link" && node.externalUrl ? (
+            <p className="truncate text-xs text-sky-600">
+              {node.externalUrl}
             </p>
           ) : null}
         </button>
@@ -352,8 +368,9 @@ function NavigationTreeList({
 }
 
 export function NavigationInspector() {
-  const listState = useWorkspaceNavigationList();
-  const documentsState = useWorkspaceNavigationDocuments();
+  const { activeSpaceId, activeSpace, activeVersionId, activeVersion } = useWorkspaceContext();
+  const listState = useWorkspaceNavigationList(activeSpaceId, activeVersionId);
+  const documentsState = useWorkspaceNavigationDocuments(activeSpaceId);
   const createAction = useCreateWorkspaceNavigationAction();
   const updateAction = useUpdateWorkspaceNavigationAction();
   const moveAction = useMoveWorkspaceNavigationAction();
@@ -377,6 +394,7 @@ export function NavigationInspector() {
     slug: "",
     nodeType: "group",
     documentId: "",
+    externalUrl: "",
     underSelectedParent: false,
   });
   const [editForm, setEditForm] = useState<EditNodeFormState>({
@@ -384,6 +402,7 @@ export function NavigationInspector() {
     slug: "",
     nodeType: "group",
     documentId: "",
+    externalUrl: "",
   });
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
 
@@ -461,6 +480,7 @@ export function NavigationInspector() {
       slug: node.slug,
       nodeType: node.nodeType,
       documentId: node.documentId ?? "",
+      externalUrl: node.externalUrl ?? "",
     });
     setActionFeedback(null);
     setIsEditDialogOpen(true);
@@ -500,18 +520,36 @@ export function NavigationInspector() {
       return;
     }
 
+    if (createForm.nodeType === "document" && !createForm.documentId) {
+      setActionFeedback({
+        tone: "error",
+        message: "A linked document is required for document nodes.",
+      });
+      return;
+    }
+
+    if (createForm.nodeType === "external_link" && !createForm.externalUrl.trim()) {
+      setActionFeedback({
+        tone: "error",
+        message: "An external URL is required for external link nodes.",
+      });
+      return;
+    }
+
     const parentId = createForm.underSelectedParent ? selectedNavigationId : null;
     const siblings = findSiblings(sortedTreeItems, parentId);
     const order = siblings.length;
 
     const result = await createAction.mutateAsync({
+      spaceId: activeSpaceId!,
+      releaseVersionId: activeVersionId,
       parentId,
-      documentId: createForm.documentId || null,
+      documentId: createForm.nodeType !== "external_link" ? (createForm.documentId || null) : null,
       label: createForm.label.trim(),
       slug: normalizedSlug,
       order,
       nodeType: createForm.nodeType,
-      externalUrl: null,
+      externalUrl: createForm.nodeType === "external_link" ? (createForm.externalUrl.trim() || null) : null,
     });
 
     if (result.status !== "success") {
@@ -541,6 +579,7 @@ export function NavigationInspector() {
       slug: "",
       nodeType: "group",
       documentId: "",
+      externalUrl: "",
       underSelectedParent: false,
     });
   }
@@ -561,13 +600,30 @@ export function NavigationInspector() {
       return;
     }
 
+    if (editForm.nodeType === "document" && !editForm.documentId) {
+      setActionFeedback({
+        tone: "error",
+        message: "A linked document is required for document nodes.",
+      });
+      return;
+    }
+
+    if (editForm.nodeType === "external_link" && !editForm.externalUrl.trim()) {
+      setActionFeedback({
+        tone: "error",
+        message: "An external URL is required for external link nodes.",
+      });
+      return;
+    }
+
     const result = await updateAction.mutateAsync({
       navigationId: selectedNode.id,
       payload: {
         label: editForm.label.trim(),
         slug: normalizedSlug,
         nodeType: editForm.nodeType,
-        documentId: editForm.documentId || null,
+        documentId: editForm.nodeType !== "external_link" ? (editForm.documentId || null) : null,
+        externalUrl: editForm.nodeType === "external_link" ? (editForm.externalUrl.trim() || null) : null,
       },
     });
 
@@ -586,6 +642,7 @@ export function NavigationInspector() {
         slug: result.data.slug,
         nodeType: result.data.nodeType,
         documentId: result.data.documentId,
+        externalUrl: result.data.externalUrl,
       })),
     );
 
@@ -696,27 +753,28 @@ export function NavigationInspector() {
   return (
     <section className="space-y-4" data-testid="admin-section-navigation">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">Navigation</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold text-foreground">Navigation</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void handleMoveSelectedNodeToTop();
+              }}
+              disabled={!selectedNode || selectedNode.order === 0 || moveAction.isPending}
+              data-testid="navigation-move-selected-to-top-button"
+            >
+              Move selected to top
+            </Button>
+            <Button type="button" onClick={openCreateDialog} data-testid="navigation-create-node-button">
+              Create node
+            </Button>
+          </div>
+        </div>
         <p className="text-muted-foreground">
-          Manage your navigation tree with inline editing, linked documents, and
-          same-level drag-and-drop reordering.
+          Manage the navigation tree for the active space and version.
         </p>
-
-        <Button type="button" onClick={openCreateDialog} data-testid="navigation-create-node-button">
-          Create node
-        </Button>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            void handleMoveSelectedNodeToTop();
-          }}
-          disabled={!selectedNode || selectedNode.order === 0 || moveAction.isPending}
-          data-testid="navigation-move-selected-to-top-button"
-        >
-          Move selected to top
-        </Button>
       </header>
 
       {listState.state === "loading" && (
@@ -798,6 +856,34 @@ export function NavigationInspector() {
           </DialogHeader>
 
           <form className="space-y-3" onSubmit={(event) => void handleCreateNodeSubmit(event)}>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-foreground">Space</span>
+              <input
+                type="text"
+                disabled
+                value={activeSpace?.name ?? "No space selected"}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60"
+                data-testid="navigation-create-space"
+              />
+              <p className="text-xs text-muted-foreground">
+                Controlled by the sidebar space selector.
+              </p>
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-foreground">Version</span>
+              <input
+                type="text"
+                disabled
+                value={activeVersion ? `${activeVersion.label} (${activeVersion.key})` : "No version selected"}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60"
+                data-testid="navigation-create-version"
+              />
+              <p className="text-xs text-muted-foreground">
+                Controlled by the sidebar version selector.
+              </p>
+            </label>
+
             <TextInput
               label="Label"
               value={createForm.label}
@@ -829,7 +915,12 @@ export function NavigationInspector() {
                 value={createForm.nodeType}
                 onChange={(event) => {
                   const nodeType = event.target.value as WorkspaceNavigation["nodeType"];
-                  setCreateForm((current) => ({ ...current, nodeType }));
+                  setCreateForm((current) => ({
+                    ...current,
+                    nodeType,
+                    documentId: nodeType === "external_link" ? "" : current.documentId,
+                    externalUrl: nodeType !== "external_link" ? "" : current.externalUrl,
+                  }));
                 }}
               >
                 <option value="group">Group</option>
@@ -838,28 +929,57 @@ export function NavigationInspector() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-foreground">Linked document</span>
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={createForm.documentId}
-                onChange={(event) => {
-                  setCreateForm((current) => ({
-                    ...current,
-                    documentId: event.target.value,
-                  }));
-                }}
-              >
-                <option value="">No linked document</option>
-                {documentsState.state === "success"
-                  ? documentsState.data.map((document) => (
-                      <option key={document.id} value={document.id}>
-                        {document.title}
-                      </option>
-                    ))
-                  : null}
-              </select>
-            </label>
+            {createForm.nodeType !== "external_link" && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  Linked document{createForm.nodeType === "document" ? " *" : ""}
+                </span>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={createForm.documentId}
+                  onChange={(event) => {
+                    setCreateForm((current) => ({
+                      ...current,
+                      documentId: event.target.value,
+                    }));
+                  }}
+                >
+                  <option value="">
+                    {createForm.nodeType === "document" ? "Select a document" : "No linked document (optional)"}
+                  </option>
+                  {documentsState.state === "success"
+                    ? documentsState.data.map((document) => (
+                        <option key={document.id} value={document.id}>
+                          {document.title}
+                        </option>
+                      ))
+                    : null}
+                </select>
+                {createForm.nodeType === "group" && (
+                  <p className="text-xs text-muted-foreground">
+                    Optional. If set, clicking this group will render the linked document.
+                  </p>
+                )}
+              </label>
+            )}
+
+            {createForm.nodeType === "external_link" && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-foreground">External URL *</span>
+                <input
+                  type="url"
+                  placeholder="https://example.com"
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={createForm.externalUrl}
+                  onChange={(event) => {
+                    setCreateForm((current) => ({
+                      ...current,
+                      externalUrl: event.target.value,
+                    }));
+                  }}
+                />
+              </label>
+            )}
 
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input
@@ -927,9 +1047,12 @@ export function NavigationInspector() {
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 value={editForm.nodeType}
                 onChange={(event) => {
+                  const nodeType = event.target.value as WorkspaceNavigation["nodeType"];
                   setEditForm((current) => ({
                     ...current,
-                    nodeType: event.target.value as WorkspaceNavigation["nodeType"],
+                    nodeType,
+                    documentId: nodeType === "external_link" ? "" : current.documentId,
+                    externalUrl: nodeType !== "external_link" ? "" : current.externalUrl,
                   }));
                 }}
               >
@@ -939,28 +1062,57 @@ export function NavigationInspector() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-foreground">Linked document</span>
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={editForm.documentId}
-                onChange={(event) => {
-                  setEditForm((current) => ({
-                    ...current,
-                    documentId: event.target.value,
-                  }));
-                }}
-              >
-                <option value="">No linked document</option>
-                {documentsState.state === "success"
-                  ? documentsState.data.map((document) => (
-                      <option key={document.id} value={document.id}>
-                        {document.title}
-                      </option>
-                    ))
-                  : null}
-              </select>
-            </label>
+            {editForm.nodeType !== "external_link" && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  Linked document{editForm.nodeType === "document" ? " *" : ""}
+                </span>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={editForm.documentId}
+                  onChange={(event) => {
+                    setEditForm((current) => ({
+                      ...current,
+                      documentId: event.target.value,
+                    }));
+                  }}
+                >
+                  <option value="">
+                    {editForm.nodeType === "document" ? "Select a document" : "No linked document (optional)"}
+                  </option>
+                  {documentsState.state === "success"
+                    ? documentsState.data.map((document) => (
+                        <option key={document.id} value={document.id}>
+                          {document.title}
+                        </option>
+                      ))
+                    : null}
+                </select>
+                {editForm.nodeType === "group" && (
+                  <p className="text-xs text-muted-foreground">
+                    Optional. If set, clicking this group will render the linked document.
+                  </p>
+                )}
+              </label>
+            )}
+
+            {editForm.nodeType === "external_link" && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-foreground">External URL *</span>
+                <input
+                  type="url"
+                  placeholder="https://example.com"
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={editForm.externalUrl}
+                  onChange={(event) => {
+                    setEditForm((current) => ({
+                      ...current,
+                      externalUrl: event.target.value,
+                    }));
+                  }}
+                />
+              </label>
+            )}
 
             <DialogFooter>
               <Button

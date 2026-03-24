@@ -13,7 +13,7 @@ import { NavigationError } from "./navigation-error";
 import { Breadcrumbs } from "./breadcrumbs";
 import { TableOfContents } from "./table-of-contents";
 import { useSetSidebar } from "./sidebar-context";
-import { SearchPanel } from "@/modules/search";
+import { useSetHeaderControls } from "./header-controls-context";
 
 interface ReadingShellProps {
   space: string;
@@ -52,6 +52,7 @@ export function ReadingShell({
 }: ReadingShellProps) {
   const navState = useNavigation(space, version);
   const setSidebar = useSetSidebar();
+  const setHeaderControls = useSetHeaderControls();
 
   // Build breadcrumbs from navigation data
   const breadcrumbs = useMemo(() => {
@@ -109,6 +110,14 @@ export function ReadingShell({
     };
   }, [sidebarContent, setSidebar]);
 
+  // Push version selector into header via context
+  useEffect(() => {
+    setHeaderControls(versionSelector ?? null);
+    return () => {
+      setHeaderControls(null);
+    };
+  }, [versionSelector, setHeaderControls]);
+
   // Show transition skeleton whenever document content is loading.
   const showTransition = isDocumentLoading;
 
@@ -162,16 +171,6 @@ export function ReadingShell({
 
   return (
     <div data-testid="reading-shell" className="flex flex-col gap-4">
-      {/* Search + versioning regions */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div data-testid="reading-shell-search" className="flex-1 min-w-0">
-          <SearchPanel currentRoute={{ space, version, slug }} />
-        </div>
-        {versionSelector ? (
-          <div data-testid="reading-shell-versioning">{versionSelector}</div>
-        ) : null}
-      </div>
-
       {/* Breadcrumbs region */}
       <div data-testid="reading-shell-breadcrumbs">
         <Breadcrumbs items={breadcrumbs} space={space} version={version} />

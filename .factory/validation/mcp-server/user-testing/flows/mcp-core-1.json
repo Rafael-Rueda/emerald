@@ -1,0 +1,97 @@
+{
+  "groupId": "mcp-core-1",
+  "testedAt": "2026-03-23T13:16:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:3333"
+  },
+  "toolsUsed": ["Node.js", "curl"],
+  "assertions": [
+    {
+      "id": "VAL-MCP-001",
+      "title": "Initialize Handshake — Session ID Issued",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/mcp with valid initialize JSON-RPC 2.0 body", "expected": "HTTP 200 with Mcp-Session-Id header and result fields", "observed": "HTTP 200, Mcp-Session-Id header present, valid result fields" }
+      ],
+      "evidence": {
+        "network": "POST /api/mcp -> 200",
+        "snapshots": ["mcp-server/mcp-core-1/VAL-MCP-001-initialize.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-002",
+      "title": "Subsequent Request Accepted With Session ID",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/mcp with tools/list body and Mcp-Session-Id header", "expected": "HTTP 200, result.tools non-empty array", "observed": "HTTP 200, result.tools returned 1 tool" }
+      ],
+      "evidence": {
+        "network": "POST /api/mcp -> 200",
+        "snapshots": ["mcp-server/mcp-core-1/VAL-MCP-002-tools-list.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-003",
+      "title": "Unknown Session ID Rejected",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/mcp with unrecognized Mcp-Session-Id", "expected": "HTTP 404 or body with error field", "observed": "HTTP 400 with BadRequestException and error field" }
+      ],
+      "evidence": {
+        "network": "POST /api/mcp -> 400",
+        "snapshots": ["mcp-server/mcp-core-1/VAL-MCP-003-unknown-session.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-004",
+      "title": "tools/list Returns search_documentation With Correct inputSchema",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/mcp tools/list", "expected": "search_documentation tool present with correct schema", "observed": "search_documentation present, schema contains query, space, version as required strings" }
+      ],
+      "evidence": {
+        "network": "POST /api/mcp -> 200",
+        "snapshots": ["mcp-server/mcp-core-1/VAL-MCP-002-tools-list.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-006",
+      "title": "search_documentation Missing Required Args Returns MCP Error",
+      "status": "pass",
+      "steps": [
+        { "action": "POST /api/mcp tools/call missing query arg", "expected": "JSON-RPC error or isError: true", "observed": "HTTP 200 with result.content item having isError: true" },
+        { "action": "POST /api/mcp tools/call missing space arg", "expected": "JSON-RPC error or isError: true", "observed": "HTTP 200 with result.content item having isError: true" },
+        { "action": "POST /api/mcp tools/call missing version arg", "expected": "JSON-RPC error or isError: true", "observed": "HTTP 200 with result.content item having isError: true" }
+      ],
+      "evidence": {
+        "network": "POST /api/mcp -> 200",
+        "snapshots": [
+          "mcp-server/mcp-core-1/VAL-MCP-006-missing-query.txt",
+          "mcp-server/mcp-core-1/VAL-MCP-006-missing-space.txt",
+          "mcp-server/mcp-core-1/VAL-MCP-006-missing-version.txt"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Server responded with 406 Not Acceptable unless Accept: application/json, text/event-stream header was provided",
+      "resolved": true,
+      "resolution": "Added Accept header to test script",
+      "affectedAssertions": ["VAL-MCP-001"]
+    },
+    {
+      "description": "Using PowerShell with curl.exe resulted in quoting issues for the JSON body payload",
+      "resolved": true,
+      "resolution": "Created a custom Node.js script reading payload from files",
+      "affectedAssertions": ["VAL-MCP-001", "VAL-MCP-002", "VAL-MCP-003", "VAL-MCP-004", "VAL-MCP-006"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 5 passed, 0 failed."
+}

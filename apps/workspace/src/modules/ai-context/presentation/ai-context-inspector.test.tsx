@@ -15,6 +15,7 @@ import { delay, HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { createAllHandlers } from "@emerald/mocks";
 import { AppProviders } from "@emerald/ui/providers";
+import { WorkspaceContextProvider } from "../../shared/application/workspace-context";
 import { AiContextInspector } from "./ai-context-inspector";
 
 describe("AiContextInspector", () => {
@@ -28,7 +29,9 @@ describe("AiContextInspector", () => {
   function renderInspector() {
     return render(
       <AppProviders defaultTheme="light">
-        <AiContextInspector />
+        <WorkspaceContextProvider>
+          <AiContextInspector />
+        </WorkspaceContextProvider>
       </AppProviders>,
     );
   }

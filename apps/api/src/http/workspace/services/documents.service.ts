@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 
 import { CreateDocumentUseCase } from "@/domain/documents/application/use-cases/create-document.use-case";
 import { CreateRevisionUseCase } from "@/domain/documents/application/use-cases/create-revision.use-case";
@@ -6,6 +6,7 @@ import { GetDocumentByIdUseCase } from "@/domain/documents/application/use-cases
 import { GetRevisionsUseCase } from "@/domain/documents/application/use-cases/get-revisions.use-case";
 import { ListDocumentsUseCase } from "@/domain/documents/application/use-cases/list-documents.use-case";
 import { PublishDocumentUseCase } from "@/domain/documents/application/use-cases/publish-document.use-case";
+import { UnpublishDocumentUseCase } from "@/domain/documents/application/use-cases/unpublish-document.use-case";
 import { UpdateDocumentUseCase } from "@/domain/documents/application/use-cases/update-document.use-case";
 import { GetVersionByIdUseCase } from "@/domain/versions/application/use-cases/get-version-by-id.use-case";
 import { DocumentPresenter, DocumentRevisionPresenter } from "@/http/workspace/presenters/document.presenter";
@@ -18,6 +19,8 @@ import { CreateRevisionBodyDTO } from "@/http/workspace/schemas/revisions.schema
 
 @Injectable()
 export class DocumentsService {
+    private readonly logger = new Logger(DocumentsService.name);
+
     constructor(
         @Inject("CreateDocumentUseCase")
         private createDocumentUseCase: CreateDocumentUseCase,
@@ -29,6 +32,8 @@ export class DocumentsService {
         private updateDocumentUseCase: UpdateDocumentUseCase,
         @Inject("PublishDocumentUseCase")
         private publishDocumentUseCase: PublishDocumentUseCase,
+        @Inject("UnpublishDocumentUseCase")
+        private unpublishDocumentUseCase: UnpublishDocumentUseCase,
         @Inject("CreateRevisionUseCase")
         private createRevisionUseCase: CreateRevisionUseCase,
         @Inject("GetRevisionsUseCase")
@@ -138,6 +143,25 @@ export class DocumentsService {
         return DocumentPresenter.toHTTP(publishedDocument);
     }
 
+    async unpublish(documentId: string, userId: string) {
+        const result = await this.unpublishDocumentUseCase.execute({
+            documentId,
+            updatedBy: userId,
+        });
+
+        if (result.isLeft()) {
+            const error = result.value;
+
+            if (error.name === "DocumentNotFoundError") {
+                throw new NotFoundException(error.message);
+            }
+
+            throw new BadRequestException(error.message);
+        }
+
+        return DocumentPresenter.toHTTP(result.value.document);
+    }
+
     async createRevision(documentId: string, body: CreateRevisionBodyDTO, userId: string) {
         const result = await this.createRevisionUseCase.execute({
             documentId,
@@ -197,13 +221,11 @@ export class DocumentsService {
             });
 
             if (!response.ok) {
-                console.warn(
-                    `[documents.publish] public docs revalidation failed for ${path}: ${response.status}`,
-                );
+                this.logger.warn(`[documents.publish] public docs revalidation failed for ${path}: ${response.status}`);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            console.warn(`[documents.publish] unable to revalidate public docs path ${path}: ${errorMessage}`);
+            this.logger.warn(`[documents.publish] unable to revalidate public docs path ${path}: ${errorMessage}`);
         }
     }
 }

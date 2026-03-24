@@ -18,6 +18,8 @@ export const wsDocGettingStarted: WorkspaceDocument = {
   title: "Getting Started",
   slug: "getting-started",
   space: "guides",
+  spaceId: "space-guides",
+  releaseVersionId: "ver-v1",
   status: "published",
   updatedAt: "2025-01-15T10:00:00Z",
 };
@@ -27,6 +29,8 @@ export const wsDocApiReference: WorkspaceDocument = {
   title: "API Reference",
   slug: "api-reference",
   space: "guides",
+  spaceId: "space-guides",
+  releaseVersionId: "ver-v1",
   status: "draft",
   updatedAt: "2025-01-20T14:30:00Z",
 };

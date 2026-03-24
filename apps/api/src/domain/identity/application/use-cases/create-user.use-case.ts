@@ -34,9 +34,7 @@ export class CreateUserUseCase {
             return Left.call(new UserAlreadyExistsError());
         }
 
-        const roles = request.roles.length
-            ? request.roles
-            : [request.admin ? ROLES.SUPER_ADMIN : ROLES.USER];
+        const roles = request.roles.length ? request.roles : [request.admin ? ROLES.SUPER_ADMIN : ROLES.USER];
 
         const userToCreate = User.create({
             email: request.email,

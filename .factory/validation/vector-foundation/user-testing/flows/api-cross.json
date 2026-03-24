@@ -1,0 +1,25 @@
+{
+  "results": {
+    "VAL-CROSS-001": {
+      "status": "pass"
+    },
+    "VAL-CROSS-002": {
+      "status": "pass"
+    },
+    "VAL-CROSS-005": {
+      "status": "pass"
+    },
+    "VAL-CROSS-006": {
+      "status": "pass"
+    },
+    "VAL-CROSS-008": {
+      "status": "fail"
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "node",
+    "docker"
+  ]
+}

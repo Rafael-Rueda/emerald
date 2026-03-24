@@ -2,7 +2,10 @@ import type { DocumentContent } from "@emerald/contracts";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { DocumentStatus, ReleaseVersionStatus } from "@prisma/client";
 
-import { NavigationNodeEntity, type NavigationTreeNode } from "@/domain/navigation/enterprise/entities/navigation-node.entity";
+import {
+    NavigationNodeEntity,
+    type NavigationTreeNode,
+} from "@/domain/navigation/enterprise/entities/navigation-node.entity";
 import { PrismaNavigationMapper } from "@/infra/database/mappers/prisma/prisma-navigation.mapper";
 import { PrismaReleaseVersionMapper } from "@/infra/database/mappers/prisma/prisma-release-version.mapper";
 import { PrismaService } from "@/infra/database/prisma/prisma.service";
@@ -19,6 +22,27 @@ interface SearchDocumentRow {
 @Injectable()
 export class PublicService {
     constructor(private readonly prisma: PrismaService) {}
+
+    async findSpaces() {
+        const spaces = await this.prisma.space.findMany({
+            where: {
+                releaseVersion: {
+                    some: {
+                        status: ReleaseVersionStatus.PUBLISHED,
+                    },
+                },
+            },
+            orderBy: { name: "asc" },
+        });
+
+        return {
+            spaces: spaces.map((space) => ({
+                key: space.key,
+                name: space.name,
+                description: space.description ?? "",
+            })),
+        };
+    }
 
     async findVersions(spaceKey: string) {
         const versions = await this.prisma.releaseVersion.findMany({
@@ -83,7 +107,8 @@ export class PublicService {
     }
 
     async findDocument(spaceKey: string, versionKey: string, slug: string) {
-        const document = await this.prisma.document.findFirst({
+        // 1. Try direct document lookup by slug
+        let document = await this.prisma.document.findFirst({
             where: {
                 slug,
                 status: DocumentStatus.PUBLISHED,
@@ -101,6 +126,37 @@ export class PublicService {
                 currentRevision: true,
             },
         });
+
+        // 2. If no document found, check if a navigation node with this slug
+        //    links to a document (e.g. group nodes with an associated document)
+        if (!document) {
+            const navNode = await this.prisma.navigationNode.findFirst({
+                where: {
+                    slug,
+                    documentId: { not: null },
+                    space: { key: spaceKey },
+                    OR: [
+                        { releaseVersion: { key: versionKey, status: ReleaseVersionStatus.PUBLISHED } },
+                        { releaseVersionId: null },
+                    ],
+                },
+                select: { documentId: true },
+            });
+
+            if (navNode?.documentId) {
+                document = await this.prisma.document.findFirst({
+                    where: {
+                        id: navNode.documentId,
+                        status: DocumentStatus.PUBLISHED,
+                    },
+                    include: {
+                        space: true,
+                        releaseVersion: true,
+                        currentRevision: true,
+                    },
+                });
+            }
+        }
 
         if (!document) {
             throw new NotFoundException("Document not found");

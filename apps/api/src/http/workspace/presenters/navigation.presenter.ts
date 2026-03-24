@@ -1,4 +1,7 @@
-import { NavigationNodeEntity, type NavigationTreeNode } from "@/domain/navigation/enterprise/entities/navigation-node.entity";
+import {
+    NavigationNodeEntity,
+    type NavigationTreeNode,
+} from "@/domain/navigation/enterprise/entities/navigation-node.entity";
 
 export class NavigationPresenter {
     static toHTTP(node: NavigationNodeEntity) {

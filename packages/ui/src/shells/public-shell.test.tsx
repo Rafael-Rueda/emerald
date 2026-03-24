@@ -23,12 +23,14 @@ describe("PublicShell", () => {
 
   it("renders the header with default title", () => {
     renderShell();
-    expect(screen.getByText("Emerald Docs")).toBeInTheDocument();
+    const matches = screen.getAllByText("Emerald Docs");
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the header with a custom title", () => {
     renderShell({ title: "Custom Title" });
-    expect(screen.getByText("Custom Title")).toBeInTheDocument();
+    const matches = screen.getAllByText("Custom Title");
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the main content", () => {

@@ -162,6 +162,15 @@ curl http://localhost:3100/guides/v1/getting-started | grep "og:description"
 - API_URL env var (default: http://localhost:3333)
 - VOYAGE_API_KEY must be set for end-to-end semantic search to work
 
+### Voyage AI Rate Limits
+
+The Voyage AI free tier allows **3 requests per minute (3 RPM)**. Validators testing assertions that involve Voyage AI calls (publish-to-search, semantic search with real documents) MUST account for this:
+- Run assertions that trigger embedding calls SEQUENTIALLY (not concurrently)
+- Add at least **25 seconds** between consecutive Voyage AI calls
+- The `voyageai` SDK has built-in retry (2 retries, exponential backoff) for 429 errors — but with 3 RPM the backoff window can be 20+ seconds
+- Affected assertions: VAL-CROSS-001, VAL-CROSS-005, VAL-CROSS-006, VAL-CROSS-008 (all involve publish → embed → search flows)
+- Use a max of 1 concurrent validator for assertions involving Voyage AI calls
+
 ### VOYAGE_API_KEY Requirement
 - **Required in apps/api/.env** for semantic search and embedding to work
 - Without it, the API will refuse to start

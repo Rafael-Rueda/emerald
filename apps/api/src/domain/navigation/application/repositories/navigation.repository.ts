@@ -31,7 +31,7 @@ export interface MoveNavigationNodeParams {
 
 export interface NavigationRepository {
     findById(id: string): Promise<NavigationNodeEntity | null>;
-    listBySpaceId(spaceId: string): Promise<NavigationNodeEntity[]>;
+    listBySpaceId(spaceId: string, releaseVersionId?: string | null): Promise<NavigationNodeEntity[]>;
     create(params: CreateNavigationNodeParams): Promise<NavigationNodeEntity>;
     update(params: UpdateNavigationNodeParams): Promise<NavigationNodeEntity | null>;
     move(params: MoveNavigationNodeParams): Promise<NavigationNodeEntity | null>;

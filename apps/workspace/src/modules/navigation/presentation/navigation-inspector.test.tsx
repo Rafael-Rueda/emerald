@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { setupServer } from "msw/node";
 import { createAllHandlers } from "@emerald/mocks";
 import { AppProviders } from "@emerald/ui/providers";
+import { WorkspaceContextProvider } from "../../shared/application/workspace-context";
 import { NavigationInspector } from "./navigation-inspector";
 
 describe("NavigationInspector", () => {
@@ -22,7 +23,9 @@ describe("NavigationInspector", () => {
   function renderInspector() {
     return render(
       <AppProviders defaultTheme="light">
-        <NavigationInspector />
+        <WorkspaceContextProvider>
+          <NavigationInspector />
+        </WorkspaceContextProvider>
       </AppProviders>,
     );
   }
@@ -101,7 +104,7 @@ describe("NavigationInspector", () => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
-    expect(screen.getByLabelText("Linked document")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Linked document/)).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Getting Started" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "API Reference" })).toBeInTheDocument();
 

@@ -13,6 +13,13 @@ const mocks = vi.hoisted(() => {
     toggleBulletList: vi.fn(),
     insertTable: vi.fn(),
     insertTabs: vi.fn(),
+    toggleBold: vi.fn(),
+    toggleItalic: vi.fn(),
+    setParagraph: vi.fn(),
+    toggleHeading: vi.fn(),
+    toggleCodeBlock: vi.fn(),
+    setCodeBlock: vi.fn(),
+    updateAttributes: vi.fn(),
   };
 
   chain.focus.mockReturnValue(chain);
@@ -21,12 +28,22 @@ const mocks = vi.hoisted(() => {
   chain.toggleBulletList.mockReturnValue(chain);
   chain.insertTable.mockReturnValue(chain);
   chain.insertTabs.mockReturnValue(chain);
+  chain.toggleBold.mockReturnValue(chain);
+  chain.toggleItalic.mockReturnValue(chain);
+  chain.setParagraph.mockReturnValue(chain);
+  chain.toggleHeading.mockReturnValue(chain);
+  chain.toggleCodeBlock.mockReturnValue(chain);
+  chain.setCodeBlock.mockReturnValue(chain);
+  chain.updateAttributes.mockReturnValue(chain);
 
   return {
     chain,
     editor: {
       chain: vi.fn(() => chain),
       getJSON: vi.fn(() => ({ type: "doc", content: [] })),
+      isActive: vi.fn(() => false),
+      getAttributes: vi.fn(() => ({})),
+      state: { selection: { from: 0, to: 0 } },
     },
     uploadImageMock: vi.fn(),
   };
@@ -37,14 +54,23 @@ vi.mock("@tiptap/react", () => ({
   EditorContent: ({ className }: { className?: string }) => (
     <div data-testid="mock-tiptap-editor" className={className} />
   ),
+  BubbleMenu: () => null,
 }));
 
 vi.mock("./get-editor-extensions", () => ({
   getEditorExtensions: () => [],
+  SUPPORTED_LANGUAGES: ["plaintext", "ts", "js"],
 }));
 
 vi.mock("./infrastructure/editor-assets-api", () => ({
   uploadWorkspaceEditorImageAsset: (...args: unknown[]) => mocks.uploadImageMock(...args),
+}));
+
+vi.mock("next/image", () => ({
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img {...props} />
+  ),
 }));
 
 describe("EditorContent image upload", () => {
@@ -73,6 +99,7 @@ describe("EditorContent image upload", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: /insert block/i }));
     await user.click(screen.getByTestId("editor-insert-image"));
 
     const fileInput = screen.getByTestId("editor-image-upload-input") as HTMLInputElement;
@@ -112,6 +139,7 @@ describe("EditorContent image upload", () => {
 
     render(<EditorContent />);
 
+    await user.click(screen.getByRole("button", { name: /insert block/i }));
     await user.click(screen.getByTestId("editor-insert-image"));
 
     const fileInput = screen.getByTestId("editor-image-upload-input") as HTMLInputElement;
@@ -147,6 +175,7 @@ describe("EditorContent image upload", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: /insert block/i }));
     await user.click(screen.getByTestId("editor-insert-image"));
 
     const fileInput = screen.getByTestId("editor-image-upload-input") as HTMLInputElement;

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(find '/c/_Local/_Web-Devlopment/_Templates/Rueda Gems/Emerald/apps/workspace/src/modules' -type f -name *.ts*)",
+      "Bash(find '/c/_Local/_Web-Devlopment/_Templates/Rueda Gems/Emerald/packages/data-access/src' -type f -name *.ts*)",
+      "Bash(find:*)",
+      "Bash(find '/c/_Local/_Web-Devlopment/_Templates/Rueda Gems/Emerald/apps/api/src/domain/documents/application' -type f -name *.ts)",
+      "Bash(npx vitest:*)",
+      "Bash(pnpm test:*)",
+      "mcp__emerald__search_documentation"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "emerald"
+  ]
+}

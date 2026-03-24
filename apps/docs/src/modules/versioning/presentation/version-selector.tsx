@@ -40,45 +40,39 @@ export function VersionSelector({
   }
 
   return (
-    <section
+    <div
       data-testid="version-selector"
-      className="rounded-lg border border-border bg-card px-3 py-2"
+      className="flex items-center gap-1.5"
+      role="group"
       aria-label="Version selector"
     >
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Version
-        </span>
-        <div className="flex items-center gap-2">
-          <span
-            className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary"
-            data-testid="version-active-label"
+      <span
+        className="sr-only"
+        data-testid="version-active-label"
+      >
+        {buildCanonicalVersionLabel(activeVersionEntry?.label ?? activeVersion)}
+      </span>
+      <label htmlFor="version-select" className="min-w-[4rem] text-xs font-medium text-muted-foreground">
+        Version
+      </label>
+      <select
+        id="version-select"
+        value={activeVersion}
+        onChange={handleVersionChange}
+        disabled={disabled}
+        className="min-w-[100px] rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground outline-none ring-offset-background transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+        data-testid="version-select"
+      >
+        {versions.map((version) => (
+          <option
+            key={version.id}
+            value={version.slug}
+            data-testid={`version-option-${version.slug}`}
           >
-            {buildCanonicalVersionLabel(activeVersionEntry?.label ?? activeVersion)}
-          </span>
-          <label htmlFor="version-select" className="sr-only">
-            Select documentation version
-          </label>
-          <select
-            id="version-select"
-            value={activeVersion}
-            onChange={handleVersionChange}
-            disabled={disabled}
-            className="min-w-[120px] rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground outline-none ring-offset-background transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-            data-testid="version-select"
-          >
-            {versions.map((version) => (
-              <option
-                key={version.id}
-                value={version.slug}
-                data-testid={`version-option-${version.slug}`}
-              >
-                {buildCanonicalVersionLabel(version.label)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </section>
+            {buildCanonicalVersionLabel(version.label)}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

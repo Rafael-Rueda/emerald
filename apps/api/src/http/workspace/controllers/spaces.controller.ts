@@ -2,16 +2,16 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/commo
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { Validator } from "@/http/@shared/decorators/validator.decorator";
-import { SuperAdmin } from "@/http/auth/decorators/super-admin.decorator";
 import { Roles } from "@/http/auth/decorators/roles.decorator";
+import { SuperAdmin } from "@/http/auth/decorators/super-admin.decorator";
 import { Role } from "@/http/auth/enums/role.enum";
 import {
-    createSpaceBodySchema,
     CreateSpaceBodyDTO,
+    createSpaceBodySchema,
     SpaceResponseDTO,
     SpacesListResponseDTO,
-    updateSpaceBodySchema,
     UpdateSpaceBodyDTO,
+    updateSpaceBodySchema,
 } from "@/http/workspace/schemas/spaces.schema";
 import { SpacesService } from "@/http/workspace/services/spaces.service";
 

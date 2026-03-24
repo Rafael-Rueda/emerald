@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import * as pgvector from "pgvector";
 import { randomUUID } from "crypto";
+import * as pgvector from "pgvector";
 
 import type {
     DocumentChunkCreate,

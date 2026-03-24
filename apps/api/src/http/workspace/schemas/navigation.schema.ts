@@ -56,6 +56,7 @@ export class MoveNavigationNodeBodyDTO extends createZodDto(moveNavigationNodeBo
 
 export const getNavigationTreeQuerySchema = z.object({
     spaceId: z.uuid().describe("Space UUID"),
+    releaseVersionId: z.uuid().optional().describe("Release version UUID"),
 });
 
 export class GetNavigationTreeQueryDTO extends createZodDto(getNavigationTreeQuerySchema) {}

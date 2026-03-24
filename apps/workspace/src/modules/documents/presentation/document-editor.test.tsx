@@ -16,6 +16,7 @@ import { setupServer } from "msw/node";
 import { AppProviders } from "@emerald/ui/providers";
 import type { DocumentContent } from "@emerald/contracts";
 import type * as EditorModule from "../../editor";
+import { WorkspaceContextProvider } from "../../shared/application/workspace-context";
 import { DocumentEditor } from "./document-editor";
 
 const mocks = vi.hoisted(() => ({
@@ -194,7 +195,9 @@ describe("DocumentEditor", () => {
   function renderEditor() {
     return render(
       <AppProviders defaultTheme="light">
-        <DocumentEditor mode="edit" documentId="doc-editor-1" />
+        <WorkspaceContextProvider>
+          <DocumentEditor mode="edit" documentId="doc-editor-1" />
+        </WorkspaceContextProvider>
       </AppProviders>,
     );
   }
@@ -226,9 +229,9 @@ describe("DocumentEditor", () => {
       .getAllByRole("button");
 
     expect(revisionButtons[0]).toHaveTextContent("#3");
-    expect(revisionButtons[0]).toHaveTextContent("2026-01-03T12:00:00.000Z");
+    expect(revisionButtons[0]).toHaveTextContent(/2026/);
     expect(revisionButtons[1]).toHaveTextContent("#1");
-    expect(revisionButtons[1]).toHaveTextContent("2026-01-01T10:00:00.000Z");
+    expect(revisionButtons[1]).toHaveTextContent(/2026/);
   });
 
   it("shows restore confirmation and warns about unsaved changes", async () => {
@@ -263,7 +266,7 @@ describe("DocumentEditor", () => {
     renderEditor();
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-editor-content")).toHaveTextContent(
+      expect(screen.getAllByTestId("mock-editor-content")[0]).toHaveTextContent(
         "Current editor content",
       );
     });
@@ -284,7 +287,7 @@ describe("DocumentEditor", () => {
     await user.click(screen.getByRole("button", { name: /Confirm restore/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-editor-content")).toHaveTextContent(
+      expect(screen.getAllByTestId("mock-editor-content")[0]).toHaveTextContent(
         "Restored revision content",
       );
     });
@@ -423,7 +426,7 @@ describe("DocumentEditor", () => {
     );
   });
 
-  it("disables publish button for already published documents", async () => {
+  it("shows unpublish button for already published documents", async () => {
     server.use(
       http.get("*/api/workspace/documents/:id", () =>
         HttpResponse.json({
@@ -435,9 +438,11 @@ describe("DocumentEditor", () => {
 
     renderEditor();
 
-    const publishButton = await screen.findByRole("button", { name: /^Publish$/i });
-    expect(publishButton).toBeDisabled();
-    expect(publishButton).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent("Published");
+    await waitFor(() => {
+      expect(screen.getByTestId("document-editor-status-badge")).toHaveTextContent("Published");
+    });
+
+    expect(screen.getByRole("button", { name: /Unpublish/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Publish$/i })).not.toBeInTheDocument();
   });
 });

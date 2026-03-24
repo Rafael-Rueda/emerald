@@ -1,7 +1,6 @@
 import {
   type DocumentContent,
   type MutationResult,
-  type Space,
   type WorkspaceDocument,
   type WorkspaceDocumentList,
 } from "@emerald/contracts";
@@ -13,33 +12,6 @@ import {
 } from "@emerald/data-access";
 
 const workspaceApiClient = createApiClient(process.env.NEXT_PUBLIC_API_URL);
-
-type WorkspaceSpaceIdResult =
-  | { status: "success"; data: string }
-  | { status: "error"; message: string }
-  | { status: "validation-error"; message: string };
-
-async function resolveWorkspaceSpaceId(): Promise<WorkspaceSpaceIdResult> {
-  const spacesResult = await workspaceApiClient.getSpaces();
-
-  switch (spacesResult.status) {
-    case "success": {
-      const [firstSpace] = spacesResult.data;
-
-      if (!firstSpace) {
-        return { status: "error", message: "No workspace spaces available" };
-      }
-
-      return { status: "success", data: firstSpace.id };
-    }
-    case "validation-error":
-      return { status: "validation-error", message: spacesResult.message };
-    case "error":
-      return { status: "error", message: spacesResult.message };
-    case "not-found":
-      return { status: "error", message: "Request failed with status 404" };
-  }
-}
 
 export type WorkspaceDocumentsListFetchResult =
   | { status: "success"; data: WorkspaceDocumentList }
@@ -55,11 +27,6 @@ export type WorkspaceDocumentDetailFetchResult =
 export type WorkspaceDocumentEditorFetchResult =
   | { status: "success"; data: WorkspaceDocumentEditor }
   | { status: "not-found" }
-  | { status: "error"; message: string }
-  | { status: "validation-error"; message: string };
-
-export type WorkspaceSpacesFetchResult =
-  | { status: "success"; data: Space[] }
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
@@ -89,14 +56,10 @@ export type WorkspaceDocumentRevisionsFetchResult =
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
-export async function fetchWorkspaceDocumentsList(): Promise<WorkspaceDocumentsListFetchResult> {
-  const spaceIdResult = await resolveWorkspaceSpaceId();
-
-  if (spaceIdResult.status !== "success") {
-    return spaceIdResult;
-  }
-
-  const result = await workspaceApiClient.getWorkspaceDocuments(spaceIdResult.data);
+export async function fetchWorkspaceDocumentsList(
+  spaceId: string,
+): Promise<WorkspaceDocumentsListFetchResult> {
+  const result = await workspaceApiClient.getWorkspaceDocuments(spaceId);
 
   switch (result.status) {
     case "success":
@@ -141,21 +104,6 @@ export async function fetchWorkspaceDocumentEditor(
       return { status: "validation-error", message: result.message };
     case "error":
       return { status: "error", message: result.message };
-  }
-}
-
-export async function fetchWorkspaceSpaces(): Promise<WorkspaceSpacesFetchResult> {
-  const result = await workspaceApiClient.getSpaces();
-
-  switch (result.status) {
-    case "success":
-      return { status: "success", data: result.data };
-    case "validation-error":
-      return { status: "validation-error", message: result.message };
-    case "error":
-      return { status: "error", message: result.message };
-    case "not-found":
-      return { status: "error", message: "Request failed with status 404" };
   }
 }
 
@@ -247,6 +195,28 @@ export async function publishWorkspaceDocument(
   switch (result.status) {
     case "success":
       return { status: "success", data: result.data };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
+  }
+}
+
+export type WorkspaceDocumentUnpublishResult =
+  | { status: "success" }
+  | { status: "error"; message: string }
+  | { status: "validation-error"; message: string };
+
+export async function unpublishWorkspaceDocument(
+  documentId: string,
+): Promise<WorkspaceDocumentUnpublishResult> {
+  const result = await workspaceApiClient.unpublishWorkspaceDocument(documentId);
+
+  switch (result.status) {
+    case "success":
+      return { status: "success" };
     case "validation-error":
       return { status: "validation-error", message: result.message };
     case "error":

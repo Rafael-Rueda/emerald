@@ -9,3 +9,4 @@
 export * from "./scenarios";
 export * from "./fixtures";
 export * from "./handlers";
+export { store } from "./store";

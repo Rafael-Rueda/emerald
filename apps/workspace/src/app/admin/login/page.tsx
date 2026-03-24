@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 function resolveNextPath(nextValue: string | null): string {
   if (!nextValue || !nextValue.startsWith("/admin")) {
@@ -12,15 +12,14 @@ function resolveNextPath(nextValue: string | null): string {
 }
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = useMemo(
     () => resolveNextPath(searchParams.get("next")),
     [searchParams],
   );
 
-  const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -58,8 +57,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.replace(redirectPath);
-      router.refresh();
+      window.location.href = redirectPath;
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unexpected authentication error",

@@ -531,10 +531,25 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
-    getWorkspaceNavigation(spaceId: string) {
+    unpublishWorkspaceDocument(documentId: string) {
       return request(
         resolvedBaseUrl,
-        `/api/workspace/navigation?spaceId=${encodeURIComponent(spaceId)}`,
+        `/api/workspace/documents/${encodeURIComponent(documentId)}/unpublish`,
+        WorkspaceDocumentEditorSchema,
+        {
+          method: "POST",
+        },
+      );
+    },
+
+    getWorkspaceNavigation(spaceId: string, releaseVersionId?: string | null) {
+      const params = new URLSearchParams({ spaceId });
+      if (releaseVersionId) {
+        params.set("releaseVersionId", releaseVersionId);
+      }
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/navigation?${params.toString()}`,
         WorkspaceNavigationListSchema,
       );
     },
@@ -741,6 +756,36 @@ export function createApiClient(baseUrl?: string) {
         resolvedBaseUrl,
         `/api/workspace/spaces/${encodeURIComponent(spaceId)}`,
         SpaceSchema,
+      );
+    },
+
+    createSpace(payload: { key: string; name: string; description: string }) {
+      return request(resolvedBaseUrl, "/api/workspace/spaces", SpaceSchema, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    },
+
+    updateSpace(spaceId: string, payload: { name?: string; description?: string; key?: string }) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/spaces/${encodeURIComponent(spaceId)}`,
+        SpaceSchema,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    deleteSpace(spaceId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/spaces/${encodeURIComponent(spaceId)}`,
+        SpaceSchema,
+        { method: "DELETE" },
       );
     },
 

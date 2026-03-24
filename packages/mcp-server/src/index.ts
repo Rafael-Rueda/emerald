@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as z from "zod/v4";
 
-import { searchDocumentation } from "./client.js";
+import { listSpaces, listVersions, searchDocumentation } from "./client.js";
 
 function buildErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -31,6 +31,54 @@ export function createMcpServer(): McpServer {
     async ({ query, space, version }) => {
       try {
         const response = await searchDocumentation({ query, space, version });
+
+        return {
+          content: [{ type: "text", text: JSON.stringify(response) }],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: buildErrorMessage(error) }],
+        };
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_spaces",
+    {
+      description:
+        "List all available documentation spaces. Use this to discover valid space keys before searching.",
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        const response = await listSpaces();
+
+        return {
+          content: [{ type: "text", text: JSON.stringify(response) }],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: buildErrorMessage(error) }],
+        };
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_versions",
+    {
+      description:
+        "List published versions for a given space. Use this to discover valid version keys before searching.",
+      inputSchema: {
+        space: z.string().min(1),
+      },
+    },
+    async ({ space }) => {
+      try {
+        const response = await listVersions(space);
 
         return {
           content: [{ type: "text", text: JSON.stringify(response) }],

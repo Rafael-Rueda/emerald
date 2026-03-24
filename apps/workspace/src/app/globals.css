@@ -3,3 +3,92 @@
  * App-specific overrides (if any) can be added below the import.
  */
 @import "@emerald/ui/styles/globals.css";
+
+/*
+ * Syntax highlighting for code blocks (highlight.js / lowlight).
+ * Dark theme adapted from GitHub Dark.
+ */
+.hljs-comment,
+.hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-type {
+  color: #ff7b72;
+}
+
+.hljs-string,
+.hljs-addition {
+  color: #a5d6ff;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag .hljs-attr {
+  color: #79c0ff;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id {
+  color: #d2a8ff;
+  font-weight: bold;
+}
+
+.hljs-title.function_,
+.hljs-title.class_ {
+  color: #d2a8ff;
+}
+
+.hljs-built_in {
+  color: #ffa657;
+}
+
+.hljs-attr,
+.hljs-attribute {
+  color: #79c0ff;
+}
+
+.hljs-name,
+.hljs-tag {
+  color: #7ee787;
+}
+
+.hljs-selector-class {
+  color: #d2a8ff;
+}
+
+.hljs-deletion {
+  color: #ffa198;
+  background-color: rgba(255, 129, 130, 0.1);
+}
+
+.hljs-addition {
+  background-color: rgba(63, 185, 80, 0.1);
+}
+
+.hljs-meta {
+  color: #ffa657;
+}
+
+.hljs-regexp {
+  color: #a5d6ff;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #ffa657;
+}
+
+.hljs-params {
+  color: #c9d1d9;
+}
+
+.hljs-subst {
+  color: #c9d1d9;
+}

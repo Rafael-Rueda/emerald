@@ -106,4 +106,8 @@
   body {
     @apply bg-background text-foreground;
   }
+  select,
+  option {
+    @apply cursor-pointer;
+  }
 }

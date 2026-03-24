@@ -66,10 +66,7 @@ export class UploadFileUseCase {
             if (!validationResult.isValid) {
                 if (validationResult.error?.includes("type")) {
                     return Left.call(
-                        new InvalidFileTypeError(
-                            validationResult.detectedMimeType,
-                            validationOptions.allowedMimeTypes,
-                        ),
+                        new InvalidFileTypeError(validationResult.detectedMimeType, validationOptions.allowedMimeTypes),
                     );
                 }
                 if (validationResult.error?.includes("size")) {

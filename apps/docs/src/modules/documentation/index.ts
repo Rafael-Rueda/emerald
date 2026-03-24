@@ -5,7 +5,6 @@
 // Domain: default document context
 export {
   type DefaultDocumentContext,
-  DEFAULT_SPACE,
   resolveDefaultVersion,
   resolveFirstSlug,
   buildDefaultDocumentContext,

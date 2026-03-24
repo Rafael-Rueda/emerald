@@ -1,7 +1,4 @@
-import {
-    RELEASE_VERSION_STATUS,
-    ReleaseVersionEntity,
-} from "../../../enterprise/entities/release-version.entity";
+import { RELEASE_VERSION_STATUS, ReleaseVersionEntity } from "../../../enterprise/entities/release-version.entity";
 import { ReleaseVersionNotFoundError } from "../../../errors/release-version-not-found.error";
 import { type ReleaseVersionsRepository } from "../../repositories/release-versions.repository";
 import { ArchiveVersionUseCase } from "../../use-cases/archive-version.use-case";
@@ -45,7 +42,9 @@ describe("ArchiveVersionUseCase", () => {
     });
 
     it("archives an existing release version", async () => {
-        releaseVersionsRepository.findById.mockResolvedValue(makeReleaseVersion({ status: RELEASE_VERSION_STATUS.DRAFT }));
+        releaseVersionsRepository.findById.mockResolvedValue(
+            makeReleaseVersion({ status: RELEASE_VERSION_STATUS.DRAFT }),
+        );
         releaseVersionsRepository.archive.mockResolvedValue(
             makeReleaseVersion({ status: RELEASE_VERSION_STATUS.ARCHIVED, isDefault: false }),
         );

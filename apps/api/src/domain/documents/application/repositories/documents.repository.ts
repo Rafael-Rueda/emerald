@@ -50,6 +50,7 @@ export interface DocumentsRepository {
     create(params: CreateDocumentParams): Promise<DocumentEntity>;
     update(params: UpdateDocumentParams): Promise<DocumentEntity | null>;
     publish(documentId: string, updatedBy: string): Promise<DocumentEntity | null>;
+    unpublish(documentId: string, updatedBy: string): Promise<DocumentEntity | null>;
     createRevision(params: CreateRevisionParams): Promise<DocumentRevisionEntity | null>;
     findRevisions(documentId: string): Promise<DocumentRevisionEntity[]>;
 }

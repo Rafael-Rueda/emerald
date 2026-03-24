@@ -26,12 +26,14 @@ import { PrismaNavigationRepository } from "@/infra/database/repositories/prisma
         {
             provide: "GetNavigationTreeUseCase",
             inject: ["NavigationRepository"],
-            useFactory: (navigationRepository: NavigationRepository) => new GetNavigationTreeUseCase(navigationRepository),
+            useFactory: (navigationRepository: NavigationRepository) =>
+                new GetNavigationTreeUseCase(navigationRepository),
         },
         {
             provide: "MoveNavigationNodeUseCase",
             inject: ["NavigationRepository"],
-            useFactory: (navigationRepository: NavigationRepository) => new MoveNavigationNodeUseCase(navigationRepository),
+            useFactory: (navigationRepository: NavigationRepository) =>
+                new MoveNavigationNodeUseCase(navigationRepository),
         },
         {
             provide: "UpdateNavigationNodeUseCase",

@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import type { NavigationItem } from "@emerald/contracts";
 import { buildCanonicalNavigationLabel } from "@emerald/contracts";
+import { findFirstDocumentChild } from "../domain/navigation-context";
 
 interface SidebarProps {
   items: NavigationItem[];
@@ -66,24 +67,81 @@ function SidebarItem({
   onNavigate,
 }: SidebarItemProps) {
   const isActive = item.slug === activeSlug;
-  const href = `/${space}/${version}/${item.slug}`;
+  const label = buildCanonicalNavigationLabel(item.label);
+  const paddingLeft = `${(depth + 1) * 12}px`;
+
+  const baseClassName = `block rounded-md px-3 py-2 text-sm transition-colors ${
+    isActive
+      ? "bg-primary/10 font-medium text-primary"
+      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+  }`;
+
+  // External links open in a new tab
+  if (item.nodeType === "external_link" && item.externalUrl) {
+    return (
+      <div>
+        <a
+          href={item.externalUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onNavigate}
+          className={baseClassName}
+          style={{ paddingLeft }}
+          data-testid={`sidebar-item-${item.slug}`}
+        >
+          {label}
+          <span className="ml-1 text-xs opacity-60">↗</span>
+        </a>
+      </div>
+    );
+  }
+
+  // Groups without a linked document navigate to their first document child
+  const isGroupWithoutDocument =
+    item.nodeType === "group" && !item.documentId;
+
+  let groupHref: string | null = null;
+  if (isGroupWithoutDocument) {
+    const firstDocChild = findFirstDocumentChild(item.children);
+    if (firstDocChild) {
+      groupHref = `/${space}/${version}/${firstDocChild.slug}`;
+    }
+  }
 
   return (
     <div>
-      <Link
-        href={href}
-        onClick={onNavigate}
-        className={`block rounded-md px-3 py-2 text-sm transition-colors ${
-          isActive
-            ? "bg-primary/10 font-medium text-primary"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground"
-        }`}
-        style={{ paddingLeft: `${(depth + 1) * 12}px` }}
-        aria-current={isActive ? "page" : undefined}
-        data-testid={`sidebar-item-${item.slug}`}
-      >
-        {buildCanonicalNavigationLabel(item.label)}
-      </Link>
+      {isGroupWithoutDocument ? (
+        groupHref ? (
+          <Link
+            href={groupHref}
+            onClick={onNavigate}
+            className={baseClassName}
+            style={{ paddingLeft }}
+            data-testid={`sidebar-item-${item.slug}`}
+          >
+            {label}
+          </Link>
+        ) : (
+          <span
+            className="block rounded-md px-3 py-2 text-sm text-muted-foreground"
+            style={{ paddingLeft }}
+            data-testid={`sidebar-item-${item.slug}`}
+          >
+            {label}
+          </span>
+        )
+      ) : (
+        <Link
+          href={`/${space}/${version}/${item.slug}`}
+          onClick={onNavigate}
+          className={baseClassName}
+          style={{ paddingLeft }}
+          aria-current={isActive ? "page" : undefined}
+          data-testid={`sidebar-item-${item.slug}`}
+        >
+          {label}
+        </Link>
+      )}
       {item.children.length > 0 && (
         <div className="ml-2">
           {item.children.map((child) => (

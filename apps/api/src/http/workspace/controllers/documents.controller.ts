@@ -93,4 +93,17 @@ export class DocumentsController {
     publish(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
         return this.documentsService.publish(id, request.user.id);
     }
+
+    @Post(":id/unpublish")
+    @HttpCode(200)
+    @Author()
+    @ApiOperation({ summary: "Unpublish workspace document (revert to draft)" })
+    @ApiParam({ name: "id", type: String, description: "Document UUID" })
+    @ApiResponse({ status: 200, description: "Document unpublished", type: WorkspaceDocumentResponseDTO })
+    @ApiResponse({ status: 401, description: "Unauthorized" })
+    @ApiResponse({ status: 403, description: "Forbidden" })
+    @ApiResponse({ status: 404, description: "Document not found" })
+    unpublish(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
+        return this.documentsService.unpublish(id, request.user.id);
+    }
 }

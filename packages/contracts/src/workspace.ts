@@ -11,6 +11,8 @@ export const WorkspaceDocumentSchema = z.object({
     .string()
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must be URL-safe"),
   space: z.string(),
+  spaceId: z.string().optional(),
+  releaseVersionId: z.string().optional(),
   status: z.enum(["published", "draft", "archived"]),
   updatedAt: z.string(),
 });

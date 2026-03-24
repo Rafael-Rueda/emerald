@@ -42,6 +42,7 @@ export class NavigationController {
     @Validator(getNavigationTreeQuerySchema)
     @ApiOperation({ summary: "Get navigation tree" })
     @ApiQuery({ name: "spaceId", type: String, required: true })
+    @ApiQuery({ name: "releaseVersionId", type: String, required: false })
     @ApiResponse({ status: 200, description: "Navigation tree", type: NavigationTreeResponseDTO })
     @ApiResponse({ status: 401, description: "Unauthorized" })
     getTree(@Query() query: GetNavigationTreeQueryDTO) {

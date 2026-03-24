@@ -1,0 +1,49 @@
+{
+  "milestone": "production-integration",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 21,
+    "passed": 18,
+    "failed": 3,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-PROD-001",
+    "VAL-PROD-002",
+    "VAL-PROD-003",
+    "VAL-PROD-004",
+    "VAL-PROD-005",
+    "VAL-PROD-006",
+    "VAL-PROD-007",
+    "VAL-PROD-008",
+    "VAL-PROD-009",
+    "VAL-PROD-010",
+    "VAL-PROD-011",
+    "VAL-PROD-012",
+    "VAL-PROD-013",
+    "VAL-PROD-014",
+    "VAL-CROSS-001",
+    "VAL-CROSS-004",
+    "VAL-CROSS-006",
+    "VAL-CROSS-007",
+    "VAL-CROSS-008"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-CROSS-002",
+      "reason": "Navigation items do not appear rendered inside the public doc's sidebar DOM elements."
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "reason": "Searching for a verified indexed document via the public docs search overlay yields no matching DOM elements (search result links fail to render)."
+    },
+    {
+      "id": "VAL-CROSS-009",
+      "reason": "A comprehensively populated TipTap JSON document fails to render correctly (client-side/hydration crashes prevent the doc-title and content from resolving in the browser)."
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null
+}

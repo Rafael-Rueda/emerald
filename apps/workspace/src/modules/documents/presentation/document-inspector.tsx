@@ -13,6 +13,7 @@ import {
   useWorkspaceDocumentDetail,
   useWorkspaceDocumentsList,
 } from "../application/use-workspace-documents";
+import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 import { DocumentStatusBadge } from "./document-status-badge";
 
@@ -39,7 +40,8 @@ function formatUpdatedAt(value: string): string {
 }
 
 export function DocumentInspector() {
-  const listState = useWorkspaceDocumentsList();
+  const { activeSpaceId, activeVersionId, versions } = useWorkspaceContext();
+  const listState = useWorkspaceDocumentsList(activeSpaceId);
   const publishAction = usePublishWorkspaceDocumentAction();
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
@@ -49,13 +51,26 @@ export function DocumentInspector() {
   >({});
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
 
-  const listDocuments = useMemo(() => {
+  const allDocuments = useMemo(() => {
     if (listState.state !== "success") {
       return [];
     }
 
     return listState.data.documents;
   }, [listState]);
+
+  const listDocuments = useMemo(() => {
+    if (!activeVersionId) return allDocuments;
+    return allDocuments.filter((d) => d.releaseVersionId === activeVersionId);
+  }, [allDocuments, activeVersionId]);
+
+  const versionLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const v of versions) {
+      map.set(v.id, v.label);
+    }
+    return map;
+  }, [versions]);
 
   useEffect(() => {
     if (listDocuments.length === 0) {
@@ -159,16 +174,13 @@ export function DocumentInspector() {
           <h1 className="text-2xl font-semibold text-foreground">Documents</h1>
           <Link
             href="/admin/documents/new"
-            className={cn(
-              "inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-              "border-border text-foreground hover:bg-accent",
-            )}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Create Document
           </Link>
         </div>
         <p className="text-muted-foreground">
-          Inspect mocked document records and review the selected item details.
+          Manage documents for the active space and version.
         </p>
       </header>
 
@@ -204,24 +216,23 @@ export function DocumentInspector() {
             />
           )}
 
-          {listState.state === "success" && listState.data.documents.length === 0 && (
+          {listState.state === "success" && listDocuments.length === 0 && (
             <AdminFeedbackState
               testId="documents-list-empty"
               title="No documents found"
-              message="This workspace has no document records to inspect yet."
+              message={activeVersionId ? "No documents in this version." : "This workspace has no document records to inspect yet."}
               variant="warning"
             />
           )}
 
-          {listState.state === "success" && listState.data.documents.length > 0 && (
+          {listState.state === "success" && listDocuments.length > 0 && (
             <ul className="mt-3 space-y-2" data-testid="documents-list">
-              {listState.data.documents.map((document) => {
+              {listDocuments.map((document) => {
                 const isSelected = selectedDocumentId === document.id;
                 const status = getEffectiveStatus(document.id, document.status);
-                const pathLabel = buildCanonicalPathLabel({
-                  space: document.space,
-                  slug: document.slug,
-                });
+                const versionLabel = document.releaseVersionId
+                  ? versionLabelById.get(document.releaseVersionId)
+                  : undefined;
 
                 return (
                   <li
@@ -243,11 +254,15 @@ export function DocumentInspector() {
                         {buildCanonicalDocumentTitleLabel(document.title)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {pathLabel} •{" "}
                         <DocumentStatusBadge
                           status={status}
                           testId={`document-list-item-${document.id}-status`}
                         />
+                        {versionLabel && (
+                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-2xs">
+                            {versionLabel}
+                          </span>
+                        )}
                       </p>
                     </button>
                   </li>
@@ -314,7 +329,7 @@ export function DocumentInspector() {
             </div>
           )}
 
-          {listState.state === "success" && listState.data.documents.length === 0 && (
+          {listState.state === "success" && listDocuments.length === 0 && (
             <AdminFeedbackState
               testId="document-detail-empty"
               title="No selected document"

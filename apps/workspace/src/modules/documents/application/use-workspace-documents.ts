@@ -6,8 +6,10 @@ import {
   fetchWorkspaceDocumentDetail,
   fetchWorkspaceDocumentsList,
   publishWorkspaceDocument,
+  unpublishWorkspaceDocument,
   type WorkspaceDocumentDetailFetchResult,
   type WorkspaceDocumentPublishResult,
+  type WorkspaceDocumentUnpublishResult,
   type WorkspaceDocumentsListFetchResult,
 } from "../infrastructure/workspace-documents-api";
 
@@ -24,8 +26,10 @@ export type WorkspaceDocumentDetailViewState =
   | { state: "error"; message: string }
   | { state: "validation-error"; message: string };
 
-export function workspaceDocumentsListQueryKey(): readonly string[] {
-  return ["workspace", "documents", "list"] as const;
+export function workspaceDocumentsListQueryKey(
+  spaceId: string | null,
+): readonly string[] {
+  return ["workspace", "documents", "list", spaceId ?? "none"] as const;
 }
 
 export function workspaceDocumentDetailQueryKey(
@@ -34,16 +38,21 @@ export function workspaceDocumentDetailQueryKey(
   return ["workspace", "documents", "detail", documentId] as const;
 }
 
-export function useWorkspaceDocumentsList(): WorkspaceDocumentsListViewState {
+export function useWorkspaceDocumentsList(
+  spaceId: string | null,
+): WorkspaceDocumentsListViewState {
+  const enabled = !!spaceId;
+
   const { data, error, isLoading, isPending } =
     useQuery<WorkspaceDocumentsListFetchResult>({
-      queryKey: workspaceDocumentsListQueryKey(),
-      queryFn: fetchWorkspaceDocumentsList,
+      queryKey: workspaceDocumentsListQueryKey(spaceId),
+      queryFn: () => fetchWorkspaceDocumentsList(spaceId!),
+      enabled,
       retry: false,
       staleTime: 30_000,
     });
 
-  if (isLoading || isPending) {
+  if (!enabled || isLoading || isPending) {
     return { state: "loading" };
   }
 
@@ -112,5 +121,11 @@ export function useWorkspaceDocumentDetail(
 export function usePublishWorkspaceDocumentAction() {
   return useMutation<WorkspaceDocumentPublishResult, Error, string>({
     mutationFn: publishWorkspaceDocument,
+  });
+}
+
+export function useUnpublishWorkspaceDocumentAction() {
+  return useMutation<WorkspaceDocumentUnpublishResult, Error, string>({
+    mutationFn: unpublishWorkspaceDocument,
   });
 }

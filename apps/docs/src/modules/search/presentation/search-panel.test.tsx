@@ -30,17 +30,34 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ space: "guides", version: "v1", slug: "getting-started" }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/guides/v1/getting-started",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 function renderSearchPanel() {
-  return renderWithProviders(
-    <SearchPanel currentRoute={{ space: "guides", version: "v1", slug: "getting-started" }} />,
-  );
+  return renderWithProviders(<SearchPanel />);
+}
+
+async function openSearchDialog() {
+  const user = userEvent.setup();
+  await user.click(screen.getByTestId("search-trigger"));
 }
 
 async function submitQuery(query: string) {
   const user = userEvent.setup();
   await user.clear(screen.getByTestId("search-input"));
   await user.type(screen.getByTestId("search-input"), query);
-  await user.click(screen.getByTestId("search-submit"));
+  await user.keyboard("{Enter}");
 }
 
 describe("SearchPanel — successful search", () => {
@@ -50,17 +67,25 @@ describe("SearchPanel — successful search", () => {
   afterEach(() => server.resetHandlers());
   afterAll(() => server.stop());
 
-  it("renders a search entry point", () => {
+  it("renders a search trigger button with Ctrl+K hint", () => {
     renderSearchPanel();
+
+    expect(screen.getByTestId("search-trigger")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl K")).toBeInTheDocument();
+  });
+
+  it("opens the search dialog when trigger is clicked", async () => {
+    renderSearchPanel();
+    await openSearchDialog();
 
     expect(screen.getByTestId("search-panel")).toBeInTheDocument();
     expect(screen.getByTestId("search-input")).toBeInTheDocument();
-    expect(screen.getByTestId("search-submit")).toBeInTheDocument();
+    expect(screen.getByTestId("search-form")).toBeInTheDocument();
   });
 
   it("shows disambiguating route context for similarly named documents", async () => {
     renderSearchPanel();
-
+    await openSearchDialog();
     await submitQuery("getting");
 
     await waitFor(() => {
@@ -83,7 +108,8 @@ describe("SearchPanel — successful search", () => {
       screen.getByTestId("search-result-link-sr-getting-started-v2"),
     ).toHaveAttribute("href", "/guides/v2/getting-started");
 
-    expect(screen.getAllByTestId("search-result-item")).toHaveLength(2);
+    expect(screen.getByTestId("search-result-sr-getting-started")).toBeInTheDocument();
+    expect(screen.getByTestId("search-result-sr-getting-started-v2")).toBeInTheDocument();
   });
 });
 
@@ -96,7 +122,7 @@ describe("SearchPanel — non-success states", () => {
 
   it("shows an empty state when no results match", async () => {
     renderSearchPanel();
-
+    await openSearchDialog();
     await submitQuery("zzzzzzzzzzz");
 
     await waitFor(() => {
@@ -114,6 +140,7 @@ describe("SearchPanel — non-success states", () => {
     );
 
     renderSearchPanel();
+    await openSearchDialog();
     await submitQuery("getting");
 
     await waitFor(() => {
@@ -131,6 +158,7 @@ describe("SearchPanel — non-success states", () => {
     );
 
     renderSearchPanel();
+    await openSearchDialog();
     await submitQuery("getting");
 
     await waitFor(() => {
@@ -142,6 +170,7 @@ describe("SearchPanel — non-success states", () => {
 
   it("clears prior results while a newer query is loading", async () => {
     renderSearchPanel();
+    await openSearchDialog();
     await submitQuery("getting");
 
     await waitFor(() => {

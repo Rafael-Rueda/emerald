@@ -30,6 +30,14 @@ vi.mock("./sidebar-context", () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Track header controls set via context
+const mockSetHeaderControls = vi.fn();
+vi.mock("./header-controls-context", () => ({
+  useSetHeaderControls: () => mockSetHeaderControls,
+  useHeaderControlsSlot: () => null,
+  HeaderControlsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 // Mock next/link as a simple anchor tag for testing
 vi.mock("next/link", () => ({
   default: ({
@@ -123,13 +131,15 @@ describe("ReadingShell — success navigation", () => {
     expect(screen.getByTestId("reading-shell-toc")).toBeInTheDocument();
   });
 
-  it("renders the versioning region when version selector content is provided", () => {
+  it("injects version selector into header controls context when provided", () => {
     renderReadingShell({
       versionSelector: <div data-testid="version-selector-mock">Version selector</div>,
     });
 
-    expect(screen.getByTestId("reading-shell-versioning")).toBeInTheDocument();
-    expect(screen.getByTestId("version-selector-mock")).toBeInTheDocument();
+    // Version selector is pushed into header via context, not rendered inline
+    expect(mockSetHeaderControls).toHaveBeenCalled();
+    const lastCall = mockSetHeaderControls.mock.calls[mockSetHeaderControls.mock.calls.length - 1];
+    expect(lastCall[0]).not.toBeNull();
   });
 
   it("renders empty TOC for heading-less documents", () => {
@@ -199,6 +209,7 @@ describe("ReadingShell — sidebar context integration", () => {
   afterEach(() => {
     server.resetHandlers();
     mockSetSidebar.mockClear();
+    mockSetHeaderControls.mockClear();
   });
   afterAll(() => server.stop());
 
@@ -239,6 +250,7 @@ describe("ReadingShell — error navigation", () => {
   afterEach(() => {
     server.resetHandlers();
     mockSetSidebar.mockClear();
+    mockSetHeaderControls.mockClear();
   });
   afterAll(() => server.stop());
 
@@ -264,6 +276,7 @@ describe("ReadingShell — malformed navigation", () => {
   afterEach(() => {
     server.resetHandlers();
     mockSetSidebar.mockClear();
+    mockSetHeaderControls.mockClear();
   });
   afterAll(() => server.stop());
 

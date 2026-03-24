@@ -51,6 +51,7 @@ export class NavigationService {
     async getTree(query: GetNavigationTreeQueryDTO) {
         const result = await this.getNavigationTreeUseCase.execute({
             spaceId: query.spaceId,
+            releaseVersionId: query.releaseVersionId,
         });
 
         return {

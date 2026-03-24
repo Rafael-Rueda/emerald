@@ -1,7 +1,7 @@
 import { AiContextResponseSchema } from "@emerald/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { searchDocumentation } from "../client";
+import { listSpaces, listVersions, searchDocumentation } from "../client";
 
 describe("searchDocumentation", () => {
   afterEach(() => {
@@ -116,5 +116,107 @@ describe("searchDocumentation", () => {
     ).rejects.toThrow(
       "Failed to call http://localhost:9999/api/public/ai-context/search: connect ECONNREFUSED",
     );
+  });
+});
+
+describe("listSpaces", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fetches spaces from the default API URL", async () => {
+    const mockResponse = {
+      spaces: [{ key: "guides", name: "Guides", description: "Product guides" }],
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await listSpaces({ fetchImplementation: fetchMock });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3333/api/public/spaces",
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      },
+    );
+
+    expect(result).toEqual(mockResponse);
+  });
+
+  it("throws a clear error for network failures", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED"));
+
+    await expect(
+      listSpaces({
+        apiUrl: "http://localhost:9999",
+        fetchImplementation: fetchMock,
+      }),
+    ).rejects.toThrow(
+      "Failed to call http://localhost:9999/api/public/spaces: connect ECONNREFUSED",
+    );
+  });
+});
+
+describe("listVersions", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fetches versions for a given space key", async () => {
+    const mockResponse = {
+      space: "guides",
+      versions: [{ key: "v1", label: "Version 1", status: "published" }],
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await listVersions("guides", { fetchImplementation: fetchMock });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3333/api/public/spaces/guides/versions",
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      },
+    );
+
+    expect(result).toEqual(mockResponse);
+  });
+
+  it("encodes the space key in the URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ space: "my space", versions: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await listVersions("my space", { fetchImplementation: fetchMock });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3333/api/public/spaces/my%20space/versions",
+      expect.any(Object),
+    );
+  });
+
+  it("throws a clear error for non-2xx HTTP responses", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("Not Found", { status: 404, statusText: "Not Found" }),
+    );
+
+    await expect(
+      listVersions("unknown", { fetchImplementation: fetchMock }),
+    ).rejects.toThrow("API request failed (404 Not Found)");
   });
 });

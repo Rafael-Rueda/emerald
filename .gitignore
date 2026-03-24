@@ -17,6 +17,10 @@ coverage/
 test-results/
 playwright-report/
 
+# Docker volumes (local Postgres data)
+apps/api/data/
+apps/api/data/*
+
 # Environment
 .env
 .env.local

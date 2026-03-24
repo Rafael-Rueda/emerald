@@ -11,6 +11,7 @@ export interface DocumentAutosaveResult {
   status: AutosaveState;
   message: string | null;
   isDirty: boolean;
+  lastSavedAt: Date | null;
 }
 
 export interface UseDocumentAutosaveOptions {
@@ -32,6 +33,7 @@ export function useDocumentAutosave({
   const [status, setStatus] = useState<AutosaveState>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const lastSavedSerializedRef = useRef<string | null>(null);
   const currentDocumentIdRef = useRef<string | null>(null);
@@ -94,6 +96,7 @@ export function useDocumentAutosave({
         lastSavedSerializedRef.current = serialized;
         setIsDirty(false);
         setStatus("saved");
+        setLastSavedAt(new Date());
         setMessage(null);
         return;
       }
@@ -113,7 +116,8 @@ export function useDocumentAutosave({
       status,
       message,
       isDirty,
+      lastSavedAt,
     }),
-    [isDirty, message, status],
+    [isDirty, message, status, lastSavedAt],
   );
 }

@@ -7,33 +7,6 @@ import { createApiClient } from "@emerald/data-access";
 
 const workspaceApiClient = createApiClient(process.env.NEXT_PUBLIC_API_URL);
 
-type WorkspaceSpaceIdResult =
-  | { status: "success"; data: string }
-  | { status: "error"; message: string }
-  | { status: "validation-error"; message: string };
-
-async function resolveWorkspaceSpaceId(): Promise<WorkspaceSpaceIdResult> {
-  const spacesResult = await workspaceApiClient.getSpaces();
-
-  switch (spacesResult.status) {
-    case "success": {
-      const [firstSpace] = spacesResult.data;
-
-      if (!firstSpace) {
-        return { status: "error", message: "No workspace spaces available" };
-      }
-
-      return { status: "success", data: firstSpace.id };
-    }
-    case "validation-error":
-      return { status: "validation-error", message: spacesResult.message };
-    case "error":
-      return { status: "error", message: spacesResult.message };
-    case "not-found":
-      return { status: "error", message: "Request failed with status 404" };
-  }
-}
-
 export type WorkspaceNavigationListFetchResult =
   | { status: "success"; data: WorkspaceNavigationList }
   | { status: "error"; message: string }
@@ -50,14 +23,11 @@ export type WorkspaceNavigationMutationResult =
   | { status: "error"; message: string }
   | { status: "validation-error"; message: string };
 
-export async function fetchWorkspaceNavigationList(): Promise<WorkspaceNavigationListFetchResult> {
-  const spaceIdResult = await resolveWorkspaceSpaceId();
-
-  if (spaceIdResult.status !== "success") {
-    return spaceIdResult;
-  }
-
-  const result = await workspaceApiClient.getWorkspaceNavigation(spaceIdResult.data);
+export async function fetchWorkspaceNavigationList(
+  spaceId: string,
+  releaseVersionId?: string | null,
+): Promise<WorkspaceNavigationListFetchResult> {
+  const result = await workspaceApiClient.getWorkspaceNavigation(spaceId, releaseVersionId);
 
   switch (result.status) {
     case "success":
@@ -71,14 +41,10 @@ export async function fetchWorkspaceNavigationList(): Promise<WorkspaceNavigatio
   }
 }
 
-export async function fetchWorkspaceNavigationDocuments(): Promise<WorkspaceNavigationDocumentsFetchResult> {
-  const spaceIdResult = await resolveWorkspaceSpaceId();
-
-  if (spaceIdResult.status !== "success") {
-    return spaceIdResult;
-  }
-
-  const result = await workspaceApiClient.getWorkspaceDocuments(spaceIdResult.data);
+export async function fetchWorkspaceNavigationDocuments(
+  spaceId: string,
+): Promise<WorkspaceNavigationDocumentsFetchResult> {
+  const result = await workspaceApiClient.getWorkspaceDocuments(spaceId);
 
   switch (result.status) {
     case "success":
@@ -93,6 +59,8 @@ export async function fetchWorkspaceNavigationDocuments(): Promise<WorkspaceNavi
 }
 
 export async function createWorkspaceNavigationNode(payload: {
+  spaceId: string;
+  releaseVersionId?: string | null;
   parentId?: string | null;
   documentId?: string | null;
   label: string;
@@ -101,14 +69,9 @@ export async function createWorkspaceNavigationNode(payload: {
   nodeType: "document" | "group" | "external_link";
   externalUrl?: string | null;
 }): Promise<WorkspaceNavigationMutationResult> {
-  const spaceIdResult = await resolveWorkspaceSpaceId();
-
-  if (spaceIdResult.status !== "success") {
-    return spaceIdResult;
-  }
-
   const result = await workspaceApiClient.createWorkspaceNavigation({
-    spaceId: spaceIdResult.data,
+    spaceId: payload.spaceId,
+    releaseVersionId: payload.releaseVersionId,
     parentId: payload.parentId,
     documentId: payload.documentId,
     label: payload.label,

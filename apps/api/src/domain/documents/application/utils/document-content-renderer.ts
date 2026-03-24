@@ -1,10 +1,4 @@
-import type {
-    BlockNode,
-    DocumentContent,
-    ListItem,
-    TabsItem,
-    TextNode,
-} from "@emerald/contracts";
+import type { BlockNode, DocumentContent, ListItem, TabsItem, TextNode } from "@emerald/contracts";
 
 const escapeHtml = (value: string): string =>
     value
@@ -69,7 +63,7 @@ const renderBlock = (block: BlockNode): string => {
         case "code_block":
             return `<pre><code class="language-${escapeHtml(block.language)}">${escapeHtml(block.code)}</code></pre>`;
         case "image":
-            return `<figure><img data-asset-id="${escapeHtml(block.assetId)}" alt="${escapeHtml(block.alt)}" /><figcaption>${escapeHtml(block.caption)}</figcaption></figure>`;
+            return `<figure><img src="${escapeHtml(block.assetId)}" data-asset-id="${escapeHtml(block.assetId)}" alt="${escapeHtml(block.alt)}" /><figcaption>${escapeHtml(block.caption)}</figcaption></figure>`;
         case "table": {
             const header = `<thead><tr>${block.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead>`;
             const body = `<tbody>${block.rows

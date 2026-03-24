@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -5,10 +6,23 @@ import { apiReference } from "@scalar/nestjs-api-reference";
 import { cleanupOpenApiDoc } from "nestjs-zod";
 
 import type { Env } from "@/env/env";
+import { GlobalExceptionFilter } from "@/http/@shared/filters/global-exception.filter";
 import { ALLOWED_CORS_ORIGINS, AppModule } from "@/http/app.module";
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {
+        logger:
+            (process.env.LOG_LEVEL as Env["LOG_LEVEL"]) === "verbose"
+                ? ["error", "warn", "log", "debug", "verbose"]
+                : (process.env.LOG_LEVEL as Env["LOG_LEVEL"]) === "debug"
+                  ? ["error", "warn", "log", "debug"]
+                  : ["error", "warn", "log"],
+    });
+
+    const logger = new Logger("Bootstrap");
+
+    // Global exception filter — catches all unhandled errors
+    app.useGlobalFilters(new GlobalExceptionFilter());
 
     const allowedOrigins = new Set<string>(ALLOWED_CORS_ORIGINS);
 
@@ -61,12 +75,12 @@ async function bootstrap() {
     });
 
     const port = configService.get("PORT", { infer: true });
+    const logLevel = configService.get("LOG_LEVEL", { infer: true });
 
     await app.listen(port);
 
-    console.log(`Application running on: http://localhost:${port}`);
-    console.log(`API Documentation (Scalar): http://localhost:${port}/docs`);
-    console.log(`API Documentation (Swagger): http://localhost:${port}/swagger`);
-    console.log(`OpenAPI JSON: http://localhost:${port}/docs.json`);
+    logger.log(`Application running on http://localhost:${port}`);
+    logger.log(`Log level: ${logLevel}`);
+    logger.log(`API docs: http://localhost:${port}/docs`);
 }
 bootstrap();

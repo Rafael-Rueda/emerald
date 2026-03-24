@@ -119,6 +119,8 @@ describe("fetchNavigation URL resolution", () => {
                 label: "Getting Started",
                 slug: "getting-started",
                 nodeType: "document",
+                documentId: "doc-1",
+                externalUrl: null,
                 children: [],
               },
             ],
@@ -137,6 +139,9 @@ describe("fetchNavigation URL resolution", () => {
           id: "node-1",
           label: "Getting Started",
           slug: "getting-started",
+          nodeType: "document",
+          documentId: "doc-1",
+          externalUrl: null,
           children: [],
         },
       ]);

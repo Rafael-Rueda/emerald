@@ -2,10 +2,12 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { WorkspaceReleaseVersion } from "@emerald/data-access";
-import { createWorkspaceVersion, setDefaultWorkspaceVersion } from "../infrastructure/workspace-versions-api";
+import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import {
+  createWorkspaceVersion,
   fetchWorkspaceVersionsList,
   publishWorkspaceVersion,
+  setDefaultWorkspaceVersion,
   type WorkspaceVersionMutationResult,
   type WorkspaceVersionsListFetchResult,
 } from "../infrastructure/workspace-versions-api";
@@ -16,20 +18,28 @@ export type WorkspaceVersionsListViewState =
   | { state: "error"; message: string }
   | { state: "validation-error"; message: string };
 
-export function workspaceVersionsListQueryKey(): readonly string[] {
-  return ["workspace", "versions", "list"] as const;
+export function workspaceVersionsListQueryKey(
+  spaceId: string,
+): readonly string[] {
+  return ["workspace", "versions", "list", spaceId] as const;
 }
 
-export function useWorkspaceVersionsList(): WorkspaceVersionsListViewState {
+export function useWorkspaceVersionsList(
+  spaceId?: string | null,
+): WorkspaceVersionsListViewState {
+  const { activeSpaceId } = useWorkspaceContext();
+  const resolvedSpaceId = spaceId ?? activeSpaceId;
+
   const { data, error, isLoading, isPending } =
     useQuery<WorkspaceVersionsListFetchResult>({
-      queryKey: workspaceVersionsListQueryKey(),
-      queryFn: fetchWorkspaceVersionsList,
+      queryKey: workspaceVersionsListQueryKey(resolvedSpaceId ?? "none"),
+      queryFn: () => fetchWorkspaceVersionsList(resolvedSpaceId!),
+      enabled: !!resolvedSpaceId,
       retry: false,
       staleTime: 30_000,
     });
 
-  if (isLoading || isPending) {
+  if (!resolvedSpaceId || isLoading || isPending) {
     return { state: "loading" };
   }
 
@@ -56,6 +66,7 @@ export function useWorkspaceVersionsList(): WorkspaceVersionsListViewState {
 
 export function useCreateWorkspaceVersionAction() {
   return useMutation<WorkspaceVersionMutationResult, Error, {
+    spaceId: string;
     label: string;
     key: string;
   }>({

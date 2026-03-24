@@ -77,9 +77,9 @@ None required. Use `curl.exe` for manual verification (NOT PowerShell's `curl` a
 4. For Docker changes: run `docker compose -f apps/api/docker-compose.yml down && docker compose -f apps/api/docker-compose.yml up -d`.
 
 ### Step 5: Run validators
-1. `pnpm --filter @emerald/api test:unit` — all unit tests pass
+1. `pnpm --filter @emerald/api test:unit --testPathPatterns=<pattern>` — targeted tests pass (note: Jest v30 uses `--testPathPatterns`, NOT `--testPathPattern`)
 2. `pnpm typecheck` — no TypeScript errors across the monorepo
-3. `pnpm lint` — no ESLint errors
+3. `pnpm --filter @emerald/api lint` — no ESLint errors in the API (use scoped lint; root `pnpm lint` has pre-existing failures in e2e/*.js files unrelated to this mission)
 
 ### Step 6: Handoff
 Complete the feature handoff with all required fields.

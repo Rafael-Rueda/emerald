@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
+import { Validator } from "@/http/@shared/decorators/validator.decorator";
 import { Author } from "@/http/auth/decorators/author.decorator";
 import { Roles } from "@/http/auth/decorators/roles.decorator";
 import { Role } from "@/http/auth/enums/role.enum";
-import { Validator } from "@/http/@shared/decorators/validator.decorator";
 import {
-    createWorkspaceDocumentBodySchema,
     CreateWorkspaceDocumentBodyDTO,
+    createWorkspaceDocumentBodySchema,
     WorkspaceDocumentResponseDTO,
     WorkspaceDocumentsListResponseDTO,
 } from "@/http/workspace/schemas/workspace-documents.schema";

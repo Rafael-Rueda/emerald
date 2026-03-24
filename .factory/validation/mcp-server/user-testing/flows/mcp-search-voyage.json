@@ -1,0 +1,131 @@
+{
+  "groupId": "mcp-search-voyage",
+  "testedAt": "2026-03-23T13:45:18.097Z",
+  "isolation": {
+    "url": "http://localhost:3333"
+  },
+  "toolsUsed": [
+    "node-fetch",
+    "mcp-cli"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-009",
+      "title": "Empty Database returns empty gracefully",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "REST Search",
+          "expected": "chunks: []",
+          "observed": "chunks: [] (HTTP 200)"
+        },
+        {
+          "action": "MCP Search",
+          "expected": "chunks: []",
+          "observed": "chunks: [] (HTTP 200)"
+        }
+      ],
+      "evidence": {
+        "network": "POST /api/public/ai-context/search -> 200",
+        "screenshots": [
+          "VAL-CROSS-009-rest-search.json",
+          "VAL-CROSS-009-mcp-search.json"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-010",
+      "title": "End-to-End Publish-to-MCP-Search Round Trip",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Create & Publish",
+          "expected": "Published",
+          "observed": "Published"
+        },
+        {
+          "action": "MCP Search",
+          "expected": "Chunk found with unique text",
+          "observed": "Chunk found"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "VAL-CROSS-010-mcp-search.json"
+        ],
+        "network": "POST /publish",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-005",
+      "title": "search_documentation Executes With Valid Args Returns AiContextResponseSchema",
+      "status": "pass",
+      "steps": [],
+      "evidence": {
+        "screenshots": [
+          "VAL-CROSS-010-mcp-search.json"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-016",
+      "title": "CLI search_documentation Proxies to Semantic Search API",
+      "status": "pass",
+      "steps": [],
+      "evidence": {
+        "screenshots": [
+          "VAL-CROSS-010-mcp-search.json"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "MCP Tool Returns AiContextResponseSchema-Conforming Payload",
+      "status": "pass",
+      "steps": [],
+      "evidence": {
+        "screenshots": [
+          "VAL-CROSS-010-mcp-search.json"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "title": "MCP Tool and REST Endpoint Return Same Chunks for Same Query",
+      "status": "pass",
+      "steps": [],
+      "evidence": {
+        "screenshots": [
+          "VAL-CROSS-004-rest-search.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MCP-007",
+      "title": "search_documentation Empty Results Returned Gracefully",
+      "status": "pass",
+      "steps": [],
+      "evidence": {
+        "screenshots": [
+          "VAL-MCP-007-mcp-search-empty.json"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed."
+}

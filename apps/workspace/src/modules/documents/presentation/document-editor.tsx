@@ -23,11 +23,10 @@ import {
   createWorkspaceDocumentRevision,
   fetchWorkspaceDocumentRevisions,
   fetchWorkspaceDocumentEditor,
-  fetchWorkspaceReleaseVersions,
-  fetchWorkspaceSpaces,
 } from "../infrastructure/workspace-documents-api";
+import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import { generateDocumentSlug } from "../domain/slug";
-import { usePublishWorkspaceDocumentAction } from "../application/use-workspace-documents";
+import { usePublishWorkspaceDocumentAction, useUnpublishWorkspaceDocumentAction } from "../application/use-workspace-documents";
 import { AdminFeedbackState } from "../../shared/presentation/admin-feedback-state";
 import { DocumentStatusBadge } from "./document-status-badge";
 
@@ -36,7 +35,7 @@ const EMPTY_EDITOR_CONTENT: JSONContent = {
   content: [
     {
       type: "paragraph",
-      content: [{ type: "text", text: "Start writing your document..." }],
+      content: [],
     },
   ],
 };
@@ -51,12 +50,12 @@ type ActionFeedback =
   | { tone: "error"; message: string }
   | null;
 
-function getAutosaveIndicatorLabel(status: "idle" | "saving" | "saved" | "save-failed" | "validation-error") {
+function getAutosaveIndicatorLabel(status: "idle" | "saving" | "saved" | "save-failed" | "validation-error", lastSavedAt: Date | null) {
   switch (status) {
     case "saving":
       return "Saving...";
     case "saved":
-      return "Saved";
+      return lastSavedAt ? `Saved at ${lastSavedAt.toLocaleTimeString()}` : "Saved";
     case "save-failed":
       return "Save failed";
     case "validation-error":
@@ -66,58 +65,22 @@ function getAutosaveIndicatorLabel(status: "idle" | "saving" | "saved" | "save-f
   }
 }
 
-function extractRevisionPreview(content: DocumentContent): string {
-  function collectTextBlocks(blocks: DocumentContent["children"]): string {
-    for (const block of blocks) {
-      if (block.type === "paragraph" || block.type === "heading") {
-        const text = block.children.map((child) => child.text).join(" ").trim();
-        if (text) {
-          return text;
-        }
-      }
+/** Read-only rendered preview of a revision's content_json */
+function RevisionContentPreview({ content }: { content: DocumentContent }) {
+  const tiptapJson = useMemo(() => fromDocumentContent(content), [content]);
 
-      if (block.type === "code_block") {
-        const code = block.code.trim();
-        if (code) {
-          return code;
-        }
-      }
-
-      if (block.type === "ordered_list" || block.type === "unordered_list") {
-        for (const item of block.items) {
-          const text = item.children.map((child) => child.text).join(" ").trim();
-          if (text) {
-            return text;
-          }
-        }
-      }
-
-      if (block.type === "callout") {
-        const nested = collectTextBlocks(block.children);
-        if (nested) {
-          return nested;
-        }
-      }
-
-      if (block.type === "tabs") {
-        for (const tab of block.items) {
-          const nested = collectTextBlocks(tab.children);
-          if (nested) {
-            return nested;
-          }
-        }
-      }
-    }
-
-    return "";
-  }
-
-  const preview = collectTextBlocks(content.children);
-  return preview || "No textual preview available for this revision.";
+  return (
+    <EditorContent
+      key={JSON.stringify(content).slice(0, 64)}
+      initialContent={tiptapJson}
+      editable={false}
+    />
+  );
 }
 
 export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const router = useRouter();
+  const { spaces, activeSpaceId, activeSpace, activeVersionId, versions } = useWorkspaceContext();
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -142,24 +105,10 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false);
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [isRestoreConfirmationOpen, setIsRestoreConfirmationOpen] = useState(false);
+  const [editingRevisionNumber, setEditingRevisionNumber] = useState<number | null>(null);
   const [isPublishConfirmationOpen, setIsPublishConfirmationOpen] = useState(false);
   const [documentStatusOverride, setDocumentStatusOverride] = useState<WorkspaceDocument["status"] | null>(null);
   const [publishFeedback, setPublishFeedback] = useState<ActionFeedback>(null);
-
-  const spacesQuery = useQuery({
-    queryKey: ["workspace", "spaces", "editor"],
-    queryFn: fetchWorkspaceSpaces,
-    retry: false,
-    staleTime: 30_000,
-  });
-
-  const versionsQuery = useQuery({
-    queryKey: ["workspace", "release-versions", spaceId || "none"],
-    queryFn: () => fetchWorkspaceReleaseVersions(spaceId),
-    enabled: spaceId.length > 0,
-    retry: false,
-    staleTime: 30_000,
-  });
 
   const documentQuery = useQuery({
     queryKey: ["workspace", "documents", "editor", documentId ?? "none"],
@@ -174,6 +123,7 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   });
 
   const publishAction = usePublishWorkspaceDocumentAction();
+  const unpublishAction = useUnpublishWorkspaceDocumentAction();
 
   const revisionsQuery = useQuery({
     queryKey: ["workspace", "documents", "revisions", documentId ?? "none"],
@@ -206,7 +156,7 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   }, []);
 
   const autosave = useDocumentAutosave({
-    documentId: mode === "edit" ? documentId ?? null : null,
+    documentId: mode === "edit" && editingRevisionNumber === null ? documentId ?? null : null,
     editorJson,
     saveRevision,
   });
@@ -218,34 +168,24 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
       return;
     }
 
-    if (spacesQuery.data?.status !== "success" || spaceId.length > 0) {
+    if (spaceId.length > 0 || !activeSpaceId) {
       return;
     }
 
-    const [firstSpace] = spacesQuery.data.data;
-    if (firstSpace) {
-      setSpaceId(firstSpace.id);
-    }
-  }, [mode, spaceId, spacesQuery.data]);
+    setSpaceId(activeSpaceId);
+  }, [mode, spaceId, activeSpaceId]);
 
   useEffect(() => {
     if (mode !== "create") {
       return;
     }
 
-    if (versionsQuery.data?.status !== "success") {
-      return;
+    if (activeVersionId && activeVersionId !== releaseVersionId) {
+      setReleaseVersionId(activeVersionId);
     }
+  }, [mode, activeVersionId, releaseVersionId]);
 
-    const preferredVersion =
-      versionsQuery.data.data.find((version) => version.isDefault)
-      ?? versionsQuery.data.data.find((version) => version.status === "published")
-      ?? versionsQuery.data.data[0];
-
-    if (preferredVersion && preferredVersion.id !== releaseVersionId) {
-      setReleaseVersionId(preferredVersion.id);
-    }
-  }, [mode, releaseVersionId, versionsQuery.data]);
+  const hasLoadedEditorContentRef = React.useRef(false);
 
   useEffect(() => {
     if (mode !== "edit") {
@@ -256,12 +196,17 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
       return;
     }
 
+    if (hasLoadedEditorContentRef.current) {
+      return;
+    }
+
+    hasLoadedEditorContentRef.current = true;
     setTitle(documentQuery.data.data.title);
     setSlug(documentQuery.data.data.slug);
     setSpaceId(documentQuery.data.data.spaceId);
     setReleaseVersionId(documentQuery.data.data.releaseVersionId);
     setEditorJson(fromDocumentContent(documentQuery.data.data.content_json));
-    setEditorResetVersion(0);
+    setEditorResetVersion((v) => v + 1);
     setDocumentStatusOverride(null);
   }, [documentQuery.data, mode]);
 
@@ -298,9 +243,12 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
     [selectedRevisionId, sortedRevisions],
   );
 
-  const selectedRevisionPreview = useMemo(
-    () => (selectedRevision ? extractRevisionPreview(selectedRevision.content_json) : ""),
-    [selectedRevision],
+  const REVISIONS_PER_PAGE = 10;
+  const [revisionsPage, setRevisionsPage] = useState(0);
+  const totalRevisionPages = Math.max(1, Math.ceil(sortedRevisions.length / REVISIONS_PER_PAGE));
+  const paginatedRevisions = useMemo(
+    () => sortedRevisions.slice(revisionsPage * REVISIONS_PER_PAGE, (revisionsPage + 1) * REVISIONS_PER_PAGE),
+    [sortedRevisions, revisionsPage],
   );
 
   function toggleRevisionHistory() {
@@ -330,7 +278,39 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
 
     setEditorJson(fromDocumentContent(selectedRevision.content_json));
     setEditorResetVersion((currentValue) => currentValue + 1);
+    setEditingRevisionNumber(selectedRevision.revisionNumber);
     setIsRestoreConfirmationOpen(false);
+  }
+
+  async function handleCreateNewDraft() {
+    if (!editorJson || !documentId) {
+      return;
+    }
+
+    const mappedContent = toDocumentContent(editorJson);
+    const parsedContent = DocumentContentSchema.safeParse(mappedContent);
+
+    if (!parsedContent.success) {
+      setPublishFeedback({ tone: "error", message: "Editor content is invalid." });
+      return;
+    }
+
+    const result = await createWorkspaceDocumentRevision({
+      documentId,
+      content_json: parsedContent.data,
+      changeNote: editingRevisionNumber
+        ? `New draft from revision #${editingRevisionNumber}`
+        : "New draft",
+    });
+
+    if (result.status === "success") {
+      setEditingRevisionNumber(null);
+      setPublishFeedback({ tone: "success", message: "New draft revision created." });
+      void revisionsQuery.refetch();
+      return;
+    }
+
+    setPublishFeedback({ tone: "error", message: result.message });
   }
 
   const resolvedDocumentStatus: WorkspaceDocument["status"] =
@@ -342,7 +322,7 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
     mode !== "edit"
     || documentQuery.data?.status !== "success"
     || publishAction.isPending
-    || resolvedDocumentStatus === "published";
+    || unpublishAction.isPending;
 
   function openPublishConfirmation() {
     if (isPublishButtonDisabled) {
@@ -384,6 +364,36 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
     }
   }
 
+  async function handleUnpublishDocument() {
+    if (mode !== "edit" || documentQuery.data?.status !== "success") {
+      return;
+    }
+
+    const currentDocumentId = documentQuery.data.data.id;
+    const previousStatus = documentStatusOverride ?? documentQuery.data.data.status;
+
+    setPublishFeedback(null);
+    setDocumentStatusOverride("draft");
+
+    try {
+      const result = await unpublishAction.mutateAsync(currentDocumentId);
+
+      if (result.status === "success") {
+        setPublishFeedback({ tone: "success", message: "Document unpublished." });
+        return;
+      }
+
+      setDocumentStatusOverride(previousStatus);
+      setPublishFeedback({ tone: "error", message: result.message });
+    } catch (error) {
+      setDocumentStatusOverride(previousStatus);
+      setPublishFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Unknown mutation failure",
+      });
+    }
+  }
+
   useEffect(() => {
     if (mode !== "create" || isSlugManuallyEdited) {
       return;
@@ -393,12 +403,12 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
   }, [isSlugManuallyEdited, mode, title]);
 
   const selectedSpaceName = useMemo(() => {
-    if (spacesQuery.data?.status !== "success") {
-      return "";
+    if (spaceId === activeSpaceId) {
+      return activeSpace?.name ?? "";
     }
 
-    return spacesQuery.data.data.find((space) => space.id === spaceId)?.name ?? "";
-  }, [spaceId, spacesQuery.data]);
+    return spaces.find((space) => space.id === spaceId)?.name ?? "";
+  }, [spaceId, activeSpaceId, activeSpace, spaces]);
 
   async function handleCreateDocument(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -517,33 +527,56 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
                 >
                   {isRevisionHistoryOpen ? "Close Revision History" : "Revision History"}
                 </button>
-                <button
-                  type="button"
-                  onClick={openPublishConfirmation}
-                  disabled={isPublishButtonDisabled}
-                  aria-disabled={isPublishButtonDisabled}
-                  className={cn(
-                    "rounded-md border border-border px-3 py-1.5 text-sm",
-                    "hover:bg-accent",
-                    "disabled:cursor-not-allowed disabled:opacity-60",
-                  )}
-                >
-                  {publishAction.isPending ? "Publishing…" : "Publish"}
-                </button>
+                {resolvedDocumentStatus === "published" ? (
+                  <button
+                    type="button"
+                    onClick={() => { void handleUnpublishDocument(); }}
+                    disabled={isPublishButtonDisabled}
+                    className={cn(
+                      "rounded-md border border-amber-500 px-3 py-1.5 text-sm text-amber-600",
+                      "hover:bg-amber-500/10",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    )}
+                  >
+                    {unpublishAction.isPending ? "Unpublishing…" : "Unpublish"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openPublishConfirmation}
+                    disabled={isPublishButtonDisabled}
+                    className={cn(
+                      "rounded-md border border-border px-3 py-1.5 text-sm",
+                      "hover:bg-accent",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    )}
+                  >
+                    {publishAction.isPending ? "Publishing…" : "Publish"}
+                  </button>
+                )}
               </>
             )}
-            <span
-              className={cn(
-                "rounded-md border px-2 py-1",
-                autosave.status === "saved" && "border-emerald-300 text-emerald-700",
-                autosave.status === "saving" && "border-amber-300 text-amber-700",
-                (autosave.status === "save-failed" || autosave.status === "validation-error")
-                && "border-destructive/50 text-destructive",
-              )}
-              data-testid="document-editor-autosave-indicator"
-            >
-              {getAutosaveIndicatorLabel(autosave.status)}
-            </span>
+            {editingRevisionNumber !== null ? (
+              <span
+                className="rounded-md border border-amber-400 bg-amber-500/10 px-2 py-1 text-amber-500"
+                data-testid="document-editor-revision-indicator"
+              >
+                Editing Revision #{editingRevisionNumber}
+              </span>
+            ) : (
+              <span
+                className={cn(
+                  "rounded-md border px-2 py-1",
+                  autosave.status === "saved" && "border-emerald-300 text-emerald-700",
+                  autosave.status === "saving" && "border-amber-300 text-amber-700",
+                  (autosave.status === "save-failed" || autosave.status === "validation-error")
+                  && "border-destructive/50 text-destructive",
+                )}
+                data-testid="document-editor-autosave-indicator"
+              >
+                {getAutosaveIndicatorLabel(autosave.status, autosave.lastSavedAt)}
+              </span>
+            )}
             <Link
               href="/admin/documents"
               className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
@@ -651,57 +684,85 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
 
           {revisionsQuery.data?.status === "success" && sortedRevisions.length > 0 && (
             <div className="grid gap-3 lg:grid-cols-[18rem_1fr]">
-              <div className="space-y-2" data-testid="document-editor-revision-list">
-                {sortedRevisions.map((revision) => {
-                  const isSelected = revision.id === selectedRevisionId;
+              <div className="flex flex-col gap-2" data-testid="document-editor-revision-list">
+                <div className="space-y-1.5 flex-1">
+                  {paginatedRevisions.map((revision) => {
+                    const isSelected = revision.id === selectedRevisionId;
 
-                  return (
+                    return (
+                      <button
+                        key={revision.id}
+                        type="button"
+                        className={cn(
+                          "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                          isSelected
+                            ? "border-primary bg-accent text-foreground"
+                            : "border-border text-muted-foreground hover:bg-accent",
+                        )}
+                        onClick={() => setSelectedRevisionId(revision.id)}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="block font-medium text-foreground">
+                          Revision #{revision.revisionNumber}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {new Date(revision.createdAt).toLocaleString()}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination controls */}
+                {totalRevisionPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
                     <button
-                      key={revision.id}
                       type="button"
-                      className={cn(
-                        "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                        isSelected
-                          ? "border-primary bg-accent text-foreground"
-                          : "border-border text-muted-foreground hover:bg-accent",
-                      )}
-                      onClick={() => setSelectedRevisionId(revision.id)}
-                      aria-pressed={isSelected}
+                      disabled={revisionsPage === 0}
+                      onClick={() => setRevisionsPage((p) => Math.max(0, p - 1))}
+                      className="rounded border border-border px-2 py-1 hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <span className="block font-medium text-foreground">
-                        Revision #{revision.revisionNumber}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {revision.createdAt}
-                      </span>
+                      Previous
                     </button>
-                  );
-                })}
+                    <span>
+                      {revisionsPage + 1} / {totalRevisionPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={revisionsPage >= totalRevisionPages - 1}
+                      onClick={() => setRevisionsPage((p) => Math.min(totalRevisionPages - 1, p + 1))}
+                      className="rounded border border-border px-2 py-1 hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-3 rounded-md border border-border bg-background p-3" data-testid="document-editor-revision-preview">
+              <div className="space-y-3 rounded-md border border-border bg-background p-4 overflow-y-auto max-h-[32rem]" data-testid="document-editor-revision-preview">
                 {selectedRevision ? (
                   <>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">
-                        Revision #{selectedRevision.revisionNumber}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Created at {selectedRevision.createdAt}
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium text-foreground">
+                          Revision #{selectedRevision.revisionNumber}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Created at {selectedRevision.createdAt}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-sm text-primary hover:bg-primary/20"
+                        onClick={openRestoreConfirmation}
+                      >
+                        Restore this revision
+                      </button>
                     </div>
 
-                    <p className="text-sm text-foreground" data-testid="document-editor-revision-preview-text">
-                      {selectedRevisionPreview}
-                    </p>
-
-                    <button
-                      type="button"
-                      className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
-                      onClick={openRestoreConfirmation}
-                    >
-                      Restore this revision
-                    </button>
+                    <div className="border-t border-border pt-3" data-testid="document-editor-revision-preview-text">
+                      <RevisionContentPreview content={selectedRevision.content_json} />
+                    </div>
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">Select a revision to preview.</p>
@@ -752,24 +813,6 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
         </div>
       )}
 
-      {spacesQuery.data?.status === "error" && (
-        <AdminFeedbackState
-          testId="document-editor-spaces-error"
-          title="Could not load spaces"
-          message={spacesQuery.data.message}
-          variant="destructive"
-        />
-      )}
-
-      {spacesQuery.data?.status === "validation-error" && (
-        <AdminFeedbackState
-          testId="document-editor-spaces-validation-error"
-          title="Invalid spaces payload"
-          message={spacesQuery.data.message}
-          variant="destructive"
-        />
-      )}
-
       <form onSubmit={handleCreateDocument} className="grid gap-4 lg:grid-cols-[22rem_1fr]">
         <aside className="space-y-4 rounded-lg border border-border bg-card p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -805,25 +848,45 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
             <span className="text-muted-foreground">Space</span>
             <select
               value={spaceId}
-              onChange={(event) => setSpaceId(event.target.value)}
-              disabled={mode === "edit"}
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
+              disabled
+              className="w-full rounded-md border border-border bg-background px-3 py-2 disabled:opacity-60"
               data-testid="document-editor-space"
             >
               <option value="">Select a space</option>
-              {spacesQuery.data?.status === "success" && spacesQuery.data.data.map((space) => (
+              {spaces.map((space) => (
                 <option key={space.id} value={space.id}>
                   {space.name}
                 </option>
               ))}
             </select>
+            {mode === "create" && (
+              <p className="text-xs text-muted-foreground">
+                Controlled by the sidebar space selector.
+              </p>
+            )}
           </label>
 
-          <div className="text-xs text-muted-foreground" data-testid="document-editor-version-label">
-            {releaseVersionId
-              ? `Release version ID: ${releaseVersionId}`
-              : "Release version will be selected automatically."}
-          </div>
+          <label className="block space-y-1 text-sm">
+            <span className="text-muted-foreground">Version</span>
+            <select
+              value={releaseVersionId}
+              disabled
+              className="w-full rounded-md border border-border bg-background px-3 py-2 disabled:opacity-60"
+              data-testid="document-editor-version"
+            >
+              <option value="">Select a version</option>
+              {versions.map((version) => (
+                <option key={version.id} value={version.id}>
+                  {version.label} ({version.key}){version.isDefault ? " - Default" : ""}
+                </option>
+              ))}
+            </select>
+            {mode === "create" && (
+              <p className="text-xs text-muted-foreground">
+                Controlled by the sidebar version selector.
+              </p>
+            )}
+          </label>
 
           {mode === "edit" && selectedSpaceName && (
             <p className="text-xs text-muted-foreground">
@@ -852,10 +915,29 @@ export function DocumentEditor({ mode, documentId }: DocumentEditorProps) {
           )}
         </aside>
 
-        <div className="space-y-2 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Editor
-          </h2>
+        <div className="min-w-0 space-y-3">
+          {mode === "edit" && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Editor
+              </h2>
+              <button
+                type="button"
+                onClick={() => { void handleCreateNewDraft(); }}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+                  editingRevisionNumber !== null
+                    ? "border-primary bg-primary text-primary-foreground hover:opacity-90"
+                    : "border-border text-foreground hover:bg-accent",
+                )}
+                data-testid="document-editor-create-draft"
+              >
+                {editingRevisionNumber !== null
+                  ? `Save as New Draft (from Rev #${editingRevisionNumber})`
+                  : "Create New Draft"}
+              </button>
+            </div>
+          )}
           <EditorContent
             key={`${mode}-${documentId ?? "new"}-${editorResetVersion}`}
             initialContent={editorJson ?? EMPTY_EDITOR_CONTENT}

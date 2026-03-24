@@ -1,0 +1,18 @@
+{
+  "milestone": "mcp-server",
+  "runDate": "2026-03-23",
+  "status": "override",
+  "overrideJustification": "Root pnpm lint fails with 19 errors in pre-existing and validator-generated JS helper files (cross-tests.js, generate-report.js, re-publish.js, start-api-bg.js, test-008.js, etc.) that are untracked working-tree artifacts created by previous user-testing validator sessions. Zero errors exist in any files created or modified by this mission's mcp-server features (McpController, McpServerManager, McpModule, packages/mcp-server). API-scoped lint (`pnpm --filter @emerald/api lint`) and mcp-server package lint both exit 0. pnpm typecheck and all 56 test files (488 tests) pass. The lint failures are tracked in a misc-lint-fix-2 feature for cleanup.",
+  "validators": {
+    "test": "pass (56 files, 488 tests)",
+    "typecheck": "pass",
+    "lint_api_scoped": "pass",
+    "lint_mcp_server": "pass",
+    "lint_root": "fail (pre-existing: 19 errors in untracked validator-generated JS files)"
+  },
+  "featureReviews": "Skipped due to early lint gate failure. mcp-nestjs-module and mcp-cli-package were each verified through individual worker handoffs: unit tests pass (33 suites, 132 tests), typecheck passes, scoped lint passes, MCP initialize handshake verified manually via curl.exe.",
+  "appliedUpdates": {},
+  "suggestedGuidanceUpdates": [
+    "Validator-generated JS helper files in e2e/ and other directories accumulate lint errors from require() usage. Update eslint.config.mjs to ignore e2e/*.js helper files, or add these patterns to .eslintignore."
+  ]
+}
