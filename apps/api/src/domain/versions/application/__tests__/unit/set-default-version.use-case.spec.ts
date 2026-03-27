@@ -79,6 +79,18 @@ class InMemoryReleaseVersionsRepository implements ReleaseVersionsRepository {
     async archive(versionId: string): Promise<ReleaseVersionEntity | null> {
         return this.findById(versionId);
     }
+
+    async unpublish(versionId: string): Promise<ReleaseVersionEntity | null> {
+        return this.findById(versionId);
+    }
+
+    async update(versionId: string): Promise<ReleaseVersionEntity | null> {
+        return this.findById(versionId);
+    }
+
+    async delete(versionId: string): Promise<ReleaseVersionEntity | null> {
+        return this.findById(versionId);
+    }
 }
 
 describe("SetDefaultVersionUseCase", () => {

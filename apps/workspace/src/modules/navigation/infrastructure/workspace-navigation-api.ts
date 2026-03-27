@@ -121,6 +121,23 @@ export async function updateWorkspaceNavigationNode(
   }
 }
 
+export async function deleteWorkspaceNavigationNode(
+  navigationId: string,
+): Promise<WorkspaceNavigationMutationResult> {
+  const result = await workspaceApiClient.deleteWorkspaceNavigation(navigationId);
+
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "not-found":
+      return { status: "not-found" };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+  }
+}
+
 export async function moveWorkspaceNavigationNode(
   navigationId: string,
   payload: {

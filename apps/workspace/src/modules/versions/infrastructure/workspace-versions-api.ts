@@ -72,6 +72,62 @@ export async function publishWorkspaceVersion(
   }
 }
 
+export async function updateWorkspaceVersion(payload: {
+  versionId: string;
+  label?: string;
+  key?: string;
+}): Promise<WorkspaceVersionMutationResult> {
+  const result = await workspaceApiClient.updateWorkspaceReleaseVersion(
+    payload.versionId,
+    { label: payload.label, key: payload.key },
+  );
+
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
+  }
+}
+
+export async function deleteWorkspaceVersion(
+  versionId: string,
+): Promise<WorkspaceVersionMutationResult> {
+  const result = await workspaceApiClient.deleteWorkspaceReleaseVersion(versionId);
+
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
+  }
+}
+
+export async function unpublishWorkspaceVersion(
+  versionId: string,
+): Promise<WorkspaceVersionMutationResult> {
+  const result = await workspaceApiClient.unpublishWorkspaceReleaseVersion(versionId);
+
+  switch (result.status) {
+    case "success":
+      return { status: "success", data: result.data };
+    case "validation-error":
+      return { status: "validation-error", message: result.message };
+    case "error":
+      return { status: "error", message: result.message };
+    case "not-found":
+      return { status: "error", message: "Request failed with status 404" };
+  }
+}
+
 export async function setDefaultWorkspaceVersion(
   versionId: string,
 ): Promise<WorkspaceVersionMutationResult> {

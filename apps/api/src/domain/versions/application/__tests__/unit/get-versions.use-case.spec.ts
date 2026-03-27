@@ -29,8 +29,11 @@ const makeVersionsRepository = (): jest.Mocked<ReleaseVersionsRepository> => ({
     listBySpaceId: jest.fn(),
     create: jest.fn(),
     publish: jest.fn(),
+    unpublish: jest.fn(),
     setDefault: jest.fn(),
     archive: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
 });
 
 describe("GetVersionsUseCase", () => {

@@ -15,6 +15,7 @@ import {
     type DocumentChunkCreate,
     type DocumentChunkInput,
     type DocumentChunkRepository,
+    type DocumentChunkStats,
 } from "./repositories/document-chunk.repository";
 
 import { renderDocumentContent } from "@/domain/documents/application/utils/document-content-renderer";
@@ -225,6 +226,56 @@ export class AiContextService {
                 };
             }),
         };
+    }
+
+    async getDocumentContext(documentId: string): Promise<AiContextResponse> {
+        const document = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                space: { select: { key: true } },
+                releaseVersion: { select: { id: true, label: true } },
+            },
+        });
+
+        if (!document) {
+            return { entityId: documentId, entityType: "document", chunks: [] };
+        }
+
+        const chunks = await this.documentChunkRepository.findByDocumentId(documentId);
+
+        const navigationNode = await this.prisma.navigationNode.findFirst({
+            where: { documentId },
+            select: { label: true },
+            orderBy: { order: "asc" },
+        });
+
+        return {
+            entityId: documentId,
+            entityType: "document",
+            chunks: chunks.map((chunk) => ({
+                id: chunk.id,
+                content: chunk.content,
+                relevanceScore: 1,
+                source: {
+                    documentId: document.id,
+                    documentTitle: document.title,
+                    versionId: document.releaseVersion.id,
+                    versionLabel: document.releaseVersion.label,
+                    navigationLabel: navigationNode?.label ?? document.title,
+                    sectionId: chunk.sectionId,
+                    sectionTitle: chunk.sectionTitle,
+                    slug: document.slug,
+                    space: document.space.key,
+                },
+            })),
+        };
+    }
+
+    async getChunkStatsBySpaceId(spaceId: string): Promise<DocumentChunkStats[]> {
+        return this.documentChunkRepository.getStatsBySpaceId(spaceId);
     }
 
     async generateAndStoreEmbeddings(documentId: string): Promise<void> {

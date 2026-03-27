@@ -630,6 +630,15 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
+    deleteWorkspaceNavigation(navigationId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/navigation/${encodeURIComponent(navigationId)}`,
+        WorkspaceNavigationSchema,
+        { method: "DELETE" },
+      );
+    },
+
     reorderWorkspaceNavigation(navigationId: string) {
       return executeWorkspaceMutation(
         resolvedBaseUrl,
@@ -699,6 +708,17 @@ export function createApiClient(baseUrl?: string) {
       );
     },
 
+    unpublishWorkspaceReleaseVersion(versionId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions/${encodeURIComponent(versionId)}/unpublish`,
+        WorkspaceReleaseVersionSchema,
+        {
+          method: "POST",
+        },
+      );
+    },
+
     setDefaultWorkspaceReleaseVersion(versionId: string) {
       return request(
         resolvedBaseUrl,
@@ -707,6 +727,33 @@ export function createApiClient(baseUrl?: string) {
         {
           method: "POST",
         },
+      );
+    },
+
+    updateWorkspaceReleaseVersion(
+      versionId: string,
+      payload: { label?: string; key?: string },
+    ) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions/${encodeURIComponent(versionId)}`,
+        WorkspaceReleaseVersionSchema,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+
+    deleteWorkspaceReleaseVersion(versionId: string) {
+      return request(
+        resolvedBaseUrl,
+        `/api/workspace/versions/${encodeURIComponent(versionId)}`,
+        WorkspaceReleaseVersionSchema,
+        { method: "DELETE" },
       );
     },
 

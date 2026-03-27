@@ -5,10 +5,13 @@ import { PrismaModule } from "./prisma.module";
 import { ReleaseVersionsRepository } from "@/domain/versions/application/repositories/release-versions.repository";
 import { ArchiveVersionUseCase } from "@/domain/versions/application/use-cases/archive-version.use-case";
 import { CreateReleaseVersionUseCase } from "@/domain/versions/application/use-cases/create-release-version.use-case";
+import { DeleteVersionUseCase } from "@/domain/versions/application/use-cases/delete-version.use-case";
 import { GetVersionByIdUseCase } from "@/domain/versions/application/use-cases/get-version-by-id.use-case";
 import { GetVersionsUseCase } from "@/domain/versions/application/use-cases/get-versions.use-case";
 import { PublishVersionUseCase } from "@/domain/versions/application/use-cases/publish-version.use-case";
 import { SetDefaultVersionUseCase } from "@/domain/versions/application/use-cases/set-default-version.use-case";
+import { UnpublishVersionUseCase } from "@/domain/versions/application/use-cases/unpublish-version.use-case";
+import { UpdateVersionUseCase } from "@/domain/versions/application/use-cases/update-version.use-case";
 import { PrismaReleaseVersionsRepository } from "@/infra/database/repositories/prisma/prisma-release-versions.repository";
 
 @Module({
@@ -54,6 +57,24 @@ import { PrismaReleaseVersionsRepository } from "@/infra/database/repositories/p
             useFactory: (releaseVersionsRepository: ReleaseVersionsRepository) =>
                 new ArchiveVersionUseCase(releaseVersionsRepository),
         },
+        {
+            provide: "UnpublishVersionUseCase",
+            inject: ["ReleaseVersionsRepository"],
+            useFactory: (releaseVersionsRepository: ReleaseVersionsRepository) =>
+                new UnpublishVersionUseCase(releaseVersionsRepository),
+        },
+        {
+            provide: "UpdateVersionUseCase",
+            inject: ["ReleaseVersionsRepository"],
+            useFactory: (releaseVersionsRepository: ReleaseVersionsRepository) =>
+                new UpdateVersionUseCase(releaseVersionsRepository),
+        },
+        {
+            provide: "DeleteVersionUseCase",
+            inject: ["ReleaseVersionsRepository"],
+            useFactory: (releaseVersionsRepository: ReleaseVersionsRepository) =>
+                new DeleteVersionUseCase(releaseVersionsRepository),
+        },
     ],
     exports: [
         "ReleaseVersionsRepository",
@@ -63,6 +84,9 @@ import { PrismaReleaseVersionsRepository } from "@/infra/database/repositories/p
         "PublishVersionUseCase",
         "SetDefaultVersionUseCase",
         "ArchiveVersionUseCase",
+        "UnpublishVersionUseCase",
+        "UpdateVersionUseCase",
+        "DeleteVersionUseCase",
     ],
 })
 export class VersionsSharedModule {}

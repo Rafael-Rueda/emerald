@@ -23,6 +23,13 @@ export const listVersionsQuerySchema = z.object({
 
 export class ListVersionsQueryDTO extends createZodDto(listVersionsQuerySchema) {}
 
+export const updateVersionBodySchema = z.object({
+    label: z.string().min(1).optional().describe("Version display label"),
+    key: versionKeySchema.optional(),
+});
+
+export class UpdateVersionBodyDTO extends createZodDto(updateVersionBodySchema) {}
+
 export const versionResponseSchema = z.object({
     id: z.uuid(),
     spaceId: z.uuid(),

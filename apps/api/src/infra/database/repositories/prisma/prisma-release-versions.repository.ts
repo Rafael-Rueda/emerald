@@ -4,6 +4,7 @@ import { ReleaseVersionStatus } from "@prisma/client";
 import {
     CreateReleaseVersionParams,
     ReleaseVersionsRepository,
+    UpdateReleaseVersionParams,
 } from "@/domain/versions/application/repositories/release-versions.repository";
 import { ReleaseVersionEntity } from "@/domain/versions/enterprise/entities/release-version.entity";
 import { PrismaReleaseVersionMapper } from "@/infra/database/mappers/prisma/prisma-release-version.mapper";
@@ -65,6 +66,35 @@ export class PrismaReleaseVersionsRepository implements ReleaseVersionsRepositor
         return PrismaReleaseVersionMapper.toDomain(version);
     }
 
+    async update(versionId: string, params: UpdateReleaseVersionParams): Promise<ReleaseVersionEntity | null> {
+        try {
+            const data: Record<string, unknown> = {};
+            if (params.label !== undefined) data.label = params.label;
+            if (params.key !== undefined) data.key = params.key;
+
+            const version = await this.prisma.releaseVersion.update({
+                where: { id: versionId },
+                data,
+            });
+
+            return PrismaReleaseVersionMapper.toDomain(version);
+        } catch {
+            return null;
+        }
+    }
+
+    async delete(versionId: string): Promise<ReleaseVersionEntity | null> {
+        try {
+            const version = await this.prisma.releaseVersion.delete({
+                where: { id: versionId },
+            });
+
+            return PrismaReleaseVersionMapper.toDomain(version);
+        } catch {
+            return null;
+        }
+    }
+
     async publish(versionId: string): Promise<ReleaseVersionEntity | null> {
         try {
             const version = await this.prisma.releaseVersion.update({
@@ -72,6 +102,22 @@ export class PrismaReleaseVersionsRepository implements ReleaseVersionsRepositor
                 data: {
                     status: ReleaseVersionStatus.PUBLISHED,
                     publishedAt: new Date(),
+                },
+            });
+
+            return PrismaReleaseVersionMapper.toDomain(version);
+        } catch {
+            return null;
+        }
+    }
+
+    async unpublish(versionId: string): Promise<ReleaseVersionEntity | null> {
+        try {
+            const version = await this.prisma.releaseVersion.update({
+                where: { id: versionId },
+                data: {
+                    status: ReleaseVersionStatus.DRAFT,
+                    publishedAt: null,
                 },
             });
 

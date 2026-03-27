@@ -4,8 +4,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { cn } from "@emerald/ui/lib/cn";
 import {
   useCreateWorkspaceVersionAction,
+  useDeleteWorkspaceVersionAction,
   usePublishWorkspaceVersionAction,
   useSetDefaultWorkspaceVersionAction,
+  useUnpublishWorkspaceVersionAction,
+  useUpdateWorkspaceVersionAction,
   useWorkspaceVersionsList,
 } from "../application/use-workspace-versions";
 import { useWorkspaceContext } from "../../shared/application/workspace-context";
@@ -41,6 +44,9 @@ export function VersionsInspector() {
   const createAction = useCreateWorkspaceVersionAction();
   const publishAction = usePublishWorkspaceVersionAction();
   const setDefaultAction = useSetDefaultWorkspaceVersionAction();
+  const unpublishAction = useUnpublishWorkspaceVersionAction();
+  const updateAction = useUpdateWorkspaceVersionAction();
+  const deleteAction = useDeleteWorkspaceVersionAction();
 
   const [versions, setVersions] = useState<WorkspaceReleaseVersion[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -49,8 +55,17 @@ export function VersionsInspector() {
   const [isKeyManuallyEdited, setIsKeyManuallyEdited] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [publishingVersionId, setPublishingVersionId] = useState<string | null>(null);
+  const [unpublishingVersionId, setUnpublishingVersionId] = useState<string | null>(null);
   const [settingDefaultVersionId, setSettingDefaultVersionId] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback>(null);
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingVersion, setEditingVersion] = useState<WorkspaceReleaseVersion | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editKey, setEditKey] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null);
 
   const listVersions = listState.state === "success" ? listState.data : null;
 
@@ -73,6 +88,14 @@ export function VersionsInspector() {
     setIsKeyManuallyEdited(false);
     setCreateError(null);
     setIsCreateDialogOpen(true);
+  }
+
+  function openEditDialog(version: WorkspaceReleaseVersion) {
+    setEditingVersion(version);
+    setEditLabel(version.label);
+    setEditKey(version.key);
+    setEditError(null);
+    setIsEditDialogOpen(true);
   }
 
   function normalizeVersionKey(value: string): string {
@@ -153,6 +176,80 @@ export function VersionsInspector() {
     setCreateError(result.message);
   }
 
+  async function handleEditVersion(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingVersion) return;
+
+    const label = editLabel.trim();
+    const key = normalizeVersionKey(editKey);
+
+    if (!label) {
+      setEditError("Version label is required.");
+      return;
+    }
+
+    if (!key) {
+      setEditError("Version key is required.");
+      return;
+    }
+
+    setEditError(null);
+    setActionFeedback(null);
+
+    const result = await updateAction.mutateAsync({
+      versionId: editingVersion.id,
+      label,
+      key,
+    });
+
+    if (result.status === "success") {
+      replaceVersion(result.data);
+      setActionFeedback({
+        tone: "success",
+        message: `Version ${result.data.key} updated successfully.`,
+      });
+      setIsEditDialogOpen(false);
+      setEditingVersion(null);
+      refetchVersions();
+      return;
+    }
+
+    if (/409|already exists/i.test(result.message)) {
+      setEditError(`Version key "${key}" already exists for this space.`);
+      return;
+    }
+
+    setEditError(result.message);
+  }
+
+  async function handleDeleteVersion(versionId: string) {
+    const previousVersions = versions;
+
+    setActionFeedback(null);
+    setDeletingVersionId(versionId);
+    setVersions((current) => current.filter((v) => v.id !== versionId));
+
+    const result = await deleteAction.mutateAsync(versionId);
+
+    if (result.status === "success") {
+      setDeletingVersionId(null);
+      setActionFeedback({
+        tone: "success",
+        message: `Version ${result.data.key} deleted.`,
+      });
+      refetchVersions();
+      return;
+    }
+
+    setVersions(previousVersions);
+    setDeletingVersionId(null);
+    setActionFeedback({
+      tone: "error",
+      message: result.message,
+    });
+  }
+
   async function handlePublishVersion(versionId: string) {
     const previousVersions = versions;
 
@@ -175,6 +272,38 @@ export function VersionsInspector() {
 
     setVersions(previousVersions);
     setPublishingVersionId(null);
+    setActionFeedback({
+      tone: "error",
+      message: result.message,
+    });
+  }
+
+  async function handleUnpublishVersion(versionId: string) {
+    const previousVersions = versions;
+
+    setActionFeedback(null);
+    setUnpublishingVersionId(versionId);
+    setVersions((currentVersions) => currentVersions.map((version) => (
+      version.id === versionId
+        ? { ...version, status: "draft", publishedAt: null }
+        : version
+    )));
+
+    const result = await unpublishAction.mutateAsync(versionId);
+
+    if (result.status === "success") {
+      replaceVersion(result.data);
+      setUnpublishingVersionId(null);
+      setActionFeedback({
+        tone: "success",
+        message: `Version ${result.data.key} reverted to draft.`,
+      });
+      refetchVersions();
+      return;
+    }
+
+    setVersions(previousVersions);
+    setUnpublishingVersionId(null);
     setActionFeedback({
       tone: "error",
       message: result.message,
@@ -316,18 +445,47 @@ export function VersionsInspector() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      void handlePublishVersion(version.id);
-                    }}
-                    disabled={publishingVersionId === version.id || version.status === "published"}
+                    onClick={() => openEditDialog(version)}
                     className={cn(
                       "rounded-md border px-3 py-2 text-sm",
                       "border-border hover:bg-accent",
-                      "disabled:cursor-not-allowed disabled:opacity-60",
                     )}
+                    data-testid={`version-edit-${version.id}`}
                   >
-                    {publishingVersionId === version.id ? "Publishing…" : "Publish"}
+                    Edit
                   </button>
+
+                  {version.status === "published" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleUnpublishVersion(version.id);
+                      }}
+                      disabled={unpublishingVersionId === version.id}
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-sm",
+                        "border-amber-500/50 text-amber-600 hover:bg-amber-500/10",
+                        "disabled:cursor-not-allowed disabled:opacity-60",
+                      )}
+                    >
+                      {unpublishingVersionId === version.id ? "Unpublishing…" : "Unpublish"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handlePublishVersion(version.id);
+                      }}
+                      disabled={publishingVersionId === version.id}
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-sm",
+                        "border-border hover:bg-accent",
+                        "disabled:cursor-not-allowed disabled:opacity-60",
+                      )}
+                    >
+                      {publishingVersionId === version.id ? "Publishing…" : "Publish"}
+                    </button>
+                  )}
 
                   <button
                     type="button"
@@ -342,6 +500,24 @@ export function VersionsInspector() {
                     )}
                   >
                     {settingDefaultVersionId === version.id ? "Setting default…" : "Set default"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete version "${version.label}"? This action cannot be undone.`)) {
+                        void handleDeleteVersion(version.id);
+                      }
+                    }}
+                    disabled={deletingVersionId === version.id || version.isDefault}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-sm",
+                      "border-destructive text-destructive hover:bg-destructive/10",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    )}
+                    data-testid={`version-delete-${version.id}`}
+                  >
+                    {deletingVersionId === version.id ? "Deleting…" : "Delete"}
                   </button>
                 </div>
               </div>
@@ -432,6 +608,72 @@ export function VersionsInspector() {
                   className="rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {createAction.isPending ? "Creating…" : "Create version"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditDialogOpen && editingVersion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="versions-edit-dialog-title"
+          data-testid="versions-edit-dialog"
+        >
+          <div className="w-full max-w-md rounded-lg border border-border bg-background p-5 shadow-lg">
+            <h2 id="versions-edit-dialog-title" className="text-lg font-semibold text-foreground">
+              Edit Version
+            </h2>
+
+            <form className="mt-4 space-y-3" onSubmit={handleEditVersion}>
+              <label className="block space-y-1 text-sm">
+                <span className="text-muted-foreground">Label</span>
+                <input
+                  type="text"
+                  value={editLabel}
+                  onChange={(event) => setEditLabel(event.target.value)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                  data-testid="versions-edit-label"
+                />
+              </label>
+
+              <label className="block space-y-1 text-sm">
+                <span className="text-muted-foreground">Key</span>
+                <input
+                  type="text"
+                  value={editKey}
+                  onChange={(event) => setEditKey(normalizeVersionKey(event.target.value))}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                  data-testid="versions-edit-key"
+                />
+              </label>
+
+              {editError && (
+                <p className="text-sm text-destructive" data-testid="versions-edit-error">
+                  {editError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingVersion(null);
+                  }}
+                  className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateAction.isPending}
+                  className="rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {updateAction.isPending ? "Saving…" : "Save"}
                 </button>
               </div>
             </form>

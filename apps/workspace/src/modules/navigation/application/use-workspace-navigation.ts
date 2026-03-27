@@ -7,6 +7,7 @@ import type {
 } from "@emerald/contracts";
 import {
   createWorkspaceNavigationNode,
+  deleteWorkspaceNavigationNode,
   fetchWorkspaceNavigationDocuments,
   fetchWorkspaceNavigationList,
   moveWorkspaceNavigationNode,
@@ -157,6 +158,12 @@ export function useUpdateWorkspaceNavigationAction() {
   >({
     mutationFn: ({ navigationId, payload }) =>
       updateWorkspaceNavigationNode(navigationId, payload),
+  });
+}
+
+export function useDeleteWorkspaceNavigationAction() {
+  return useMutation<WorkspaceNavigationMutationResult, Error, string>({
+    mutationFn: deleteWorkspaceNavigationNode,
   });
 }
 

@@ -13,6 +13,8 @@ type MockVoyageClient = {
 const makeChunkRepository = (): jest.Mocked<DocumentChunkRepository> => ({
     deleteByDocumentId: jest.fn(),
     createMany: jest.fn(),
+    findByDocumentId: jest.fn(),
+    getStatsBySpaceId: jest.fn(),
 });
 
 const makePrismaService = (): jest.Mocked<Pick<PrismaService, "document">> => ({

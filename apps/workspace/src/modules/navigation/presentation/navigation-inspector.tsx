@@ -21,6 +21,7 @@ import type { WorkspaceNavigation } from "@emerald/contracts";
 import { cn } from "@emerald/ui/lib/cn";
 import {
   useCreateWorkspaceNavigationAction,
+  useDeleteWorkspaceNavigationAction,
   useMoveWorkspaceNavigationAction,
   useUpdateWorkspaceNavigationAction,
   useWorkspaceNavigationDocuments,
@@ -159,6 +160,18 @@ function moveNodeWithinTree(
   return true;
 }
 
+function removeNodeFromTree(
+  items: WorkspaceNavigation[],
+  nodeId: string,
+): WorkspaceNavigation[] {
+  return items
+    .filter((item) => item.id !== nodeId)
+    .map((item) => ({
+      ...item,
+      children: removeNodeFromTree(item.children, nodeId),
+    }));
+}
+
 function updateNodeById(
   items: WorkspaceNavigation[],
   nodeId: string,
@@ -200,6 +213,8 @@ type SortableNavigationRowProps = {
   selectedNavigationId: string | null;
   collapsedNodeIds: Set<string>;
   onSelectNode: (navigationId: string) => void;
+  onEditNode: (navigationId: string) => void;
+  onDeleteNode: (navigationId: string) => void;
   onToggleCollapsed: (navigationId: string) => void;
   linkedDocumentTitle: string | null;
 };
@@ -210,6 +225,8 @@ function SortableNavigationRow({
   selectedNavigationId,
   collapsedNodeIds,
   onSelectNode,
+  onEditNode,
+  onDeleteNode,
   onToggleCollapsed,
   linkedDocumentTitle,
 }: SortableNavigationRowProps) {
@@ -253,22 +270,41 @@ function SortableNavigationRow({
       >
         <button
           type="button"
-          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border text-xs"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border text-muted-foreground hover:bg-accent disabled:opacity-40"
           onClick={() => onToggleCollapsed(node.id)}
           disabled={!hasChildren}
           aria-label={hasChildren ? "Toggle collapsed" : "No children"}
         >
-          {hasChildren ? (isCollapsed ? "+" : "−") : "•"}
+          {hasChildren ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {isCollapsed ? (
+                <path d="m9 18 6-6-6-6" />
+              ) : (
+                <path d="m6 9 6 6 6-6" />
+              )}
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" aria-hidden="true">
+              <circle cx="4" cy="4" r="3" fill="currentColor" />
+            </svg>
+          )}
         </button>
 
         <button
           type="button"
-          className="inline-flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded border border-border text-xs"
+          className="inline-flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded border border-border text-muted-foreground hover:bg-accent"
           aria-label={`Drag ${node.label}`}
           {...attributes}
           {...listeners}
         >
-          ↕
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="9" cy="6" r="1" fill="currentColor" />
+            <circle cx="15" cy="6" r="1" fill="currentColor" />
+            <circle cx="9" cy="12" r="1" fill="currentColor" />
+            <circle cx="15" cy="12" r="1" fill="currentColor" />
+            <circle cx="9" cy="18" r="1" fill="currentColor" />
+            <circle cx="15" cy="18" r="1" fill="currentColor" />
+          </svg>
         </button>
 
         <button
@@ -276,6 +312,7 @@ function SortableNavigationRow({
           className="min-w-0 flex-1 text-left"
           data-testid={`navigation-select-node-${node.id}`}
           onClick={() => onSelectNode(node.id)}
+          onDoubleClick={() => onEditNode(node.id)}
         >
           <p className="truncate text-sm font-medium text-foreground">
             {node.label}
@@ -297,6 +334,36 @@ function SortableNavigationRow({
             </p>
           ) : null}
         </button>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label={`Edit ${node.label}`}
+            onClick={() => onEditNode(node.id)}
+            data-testid={`navigation-edit-node-${node.id}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Delete ${node.label}`}
+            onClick={() => onDeleteNode(node.id)}
+            data-testid={`navigation-delete-node-${node.id}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" x2="10" y1="11" y2="17" />
+              <line x1="14" x2="14" y1="11" y2="17" />
+            </svg>
+          </button>
+        </div>
       </div>
     </li>
   );
@@ -308,6 +375,8 @@ type NavigationTreeListProps = {
   selectedNavigationId: string | null;
   collapsedNodeIds: Set<string>;
   onSelectNode: (navigationId: string) => void;
+  onEditNode: (navigationId: string) => void;
+  onDeleteNode: (navigationId: string) => void;
   onToggleCollapsed: (navigationId: string) => void;
   linkedDocumentTitleById: Map<string, string>;
 };
@@ -318,6 +387,8 @@ function NavigationTreeList({
   selectedNavigationId,
   collapsedNodeIds,
   onSelectNode,
+  onEditNode,
+  onDeleteNode,
   onToggleCollapsed,
   linkedDocumentTitleById,
 }: NavigationTreeListProps) {
@@ -342,6 +413,8 @@ function NavigationTreeList({
                 selectedNavigationId={selectedNavigationId}
                 collapsedNodeIds={collapsedNodeIds}
                 onSelectNode={onSelectNode}
+                onEditNode={onEditNode}
+                onDeleteNode={onDeleteNode}
                 onToggleCollapsed={onToggleCollapsed}
                 linkedDocumentTitle={
                   node.documentId ? (linkedDocumentTitleById.get(node.documentId) ?? null) : null
@@ -355,6 +428,8 @@ function NavigationTreeList({
                   selectedNavigationId={selectedNavigationId}
                   collapsedNodeIds={collapsedNodeIds}
                   onSelectNode={onSelectNode}
+                  onEditNode={onEditNode}
+                  onDeleteNode={onDeleteNode}
                   onToggleCollapsed={onToggleCollapsed}
                   linkedDocumentTitleById={linkedDocumentTitleById}
                 />
@@ -374,6 +449,7 @@ export function NavigationInspector() {
   const createAction = useCreateWorkspaceNavigationAction();
   const updateAction = useUpdateWorkspaceNavigationAction();
   const moveAction = useMoveWorkspaceNavigationAction();
+  const deleteAction = useDeleteWorkspaceNavigationAction();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -468,6 +544,10 @@ export function NavigationInspector() {
     [selectedNavigationId, sortedTreeItems],
   );
 
+  function selectNode(navigationId: string) {
+    setSelectedNavigationId(navigationId);
+  }
+
   function openEditDialog(navigationId: string) {
     const node = findNode(sortedTreeItems, navigationId);
     if (!node) {
@@ -506,6 +586,39 @@ export function NavigationInspector() {
     }));
     setActionFeedback(null);
     setIsCreateDialogOpen(true);
+  }
+
+  async function handleDeleteNode(navigationId: string) {
+    const node = findNode(sortedTreeItems, navigationId);
+    if (!node) return;
+
+    if (!window.confirm(`Delete navigation node "${node.label}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    const previousTree = structuredClone(treeItems);
+    setTreeItems((current) => removeNodeFromTree(current, navigationId));
+    setActionFeedback(null);
+
+    if (selectedNavigationId === navigationId) {
+      setSelectedNavigationId(null);
+    }
+
+    const result = await deleteAction.mutateAsync(navigationId);
+
+    if (result.status === "success") {
+      setActionFeedback({
+        tone: "success",
+        message: "Navigation node deleted.",
+      });
+      return;
+    }
+
+    setTreeItems(previousTree);
+    setActionFeedback({
+      tone: "error",
+      message: result.status === "not-found" ? "Node not found." : result.message,
+    });
   }
 
   async function handleCreateNodeSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -826,7 +939,9 @@ export function NavigationInspector() {
               depth={0}
               selectedNavigationId={selectedNavigationId}
               collapsedNodeIds={collapsedNodeIds}
-              onSelectNode={openEditDialog}
+              onSelectNode={selectNode}
+              onEditNode={openEditDialog}
+              onDeleteNode={(id) => { void handleDeleteNode(id); }}
               onToggleCollapsed={toggleCollapsed}
               linkedDocumentTitleById={linkedDocumentTitleById}
             />

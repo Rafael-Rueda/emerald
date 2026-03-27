@@ -2,12 +2,15 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 
 import { ArchiveVersionUseCase } from "@/domain/versions/application/use-cases/archive-version.use-case";
 import { CreateReleaseVersionUseCase } from "@/domain/versions/application/use-cases/create-release-version.use-case";
+import { DeleteVersionUseCase } from "@/domain/versions/application/use-cases/delete-version.use-case";
 import { GetVersionByIdUseCase } from "@/domain/versions/application/use-cases/get-version-by-id.use-case";
 import { GetVersionsUseCase } from "@/domain/versions/application/use-cases/get-versions.use-case";
 import { PublishVersionUseCase } from "@/domain/versions/application/use-cases/publish-version.use-case";
 import { SetDefaultVersionUseCase } from "@/domain/versions/application/use-cases/set-default-version.use-case";
+import { UnpublishVersionUseCase } from "@/domain/versions/application/use-cases/unpublish-version.use-case";
+import { UpdateVersionUseCase } from "@/domain/versions/application/use-cases/update-version.use-case";
 import { VersionPresenter } from "@/http/workspace/presenters/version.presenter";
-import { CreateVersionBodyDTO, ListVersionsQueryDTO } from "@/http/workspace/schemas/versions.schema";
+import { CreateVersionBodyDTO, ListVersionsQueryDTO, UpdateVersionBodyDTO } from "@/http/workspace/schemas/versions.schema";
 
 @Injectable()
 export class VersionsService {
@@ -24,6 +27,12 @@ export class VersionsService {
         private setDefaultVersionUseCase: SetDefaultVersionUseCase,
         @Inject("ArchiveVersionUseCase")
         private archiveVersionUseCase: ArchiveVersionUseCase,
+        @Inject("UnpublishVersionUseCase")
+        private unpublishVersionUseCase: UnpublishVersionUseCase,
+        @Inject("UpdateVersionUseCase")
+        private updateVersionUseCase: UpdateVersionUseCase,
+        @Inject("DeleteVersionUseCase")
+        private deleteVersionUseCase: DeleteVersionUseCase,
     ) {}
 
     async create(body: CreateVersionBodyDTO) {
@@ -85,6 +94,50 @@ export class VersionsService {
 
     async setDefault(versionId: string) {
         const result = await this.setDefaultVersionUseCase.execute({
+            versionId,
+        });
+
+        if (result.isLeft()) {
+            throw new NotFoundException(result.value.message);
+        }
+
+        return VersionPresenter.toHTTP(result.value.version);
+    }
+
+    async unpublish(versionId: string) {
+        const result = await this.unpublishVersionUseCase.execute({
+            versionId,
+        });
+
+        if (result.isLeft()) {
+            throw new NotFoundException(result.value.message);
+        }
+
+        return VersionPresenter.toHTTP(result.value.version);
+    }
+
+    async update(versionId: string, body: UpdateVersionBodyDTO) {
+        const result = await this.updateVersionUseCase.execute({
+            versionId,
+            label: body.label,
+            key: body.key,
+        });
+
+        if (result.isLeft()) {
+            const error = result.value;
+
+            if (error.name === "ReleaseVersionKeyAlreadyExistsError") {
+                throw new ConflictException(error.message);
+            }
+
+            throw new NotFoundException(error.message);
+        }
+
+        return VersionPresenter.toHTTP(result.value.version);
+    }
+
+    async remove(versionId: string) {
+        const result = await this.deleteVersionUseCase.execute({
             versionId,
         });
 

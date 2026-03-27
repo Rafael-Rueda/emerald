@@ -5,9 +5,12 @@ import type { WorkspaceReleaseVersion } from "@emerald/data-access";
 import { useWorkspaceContext } from "../../shared/application/workspace-context";
 import {
   createWorkspaceVersion,
+  deleteWorkspaceVersion,
   fetchWorkspaceVersionsList,
   publishWorkspaceVersion,
   setDefaultWorkspaceVersion,
+  unpublishWorkspaceVersion,
+  updateWorkspaceVersion,
   type WorkspaceVersionMutationResult,
   type WorkspaceVersionsListFetchResult,
 } from "../infrastructure/workspace-versions-api";
@@ -80,8 +83,30 @@ export function usePublishWorkspaceVersionAction() {
   });
 }
 
+export function useUnpublishWorkspaceVersionAction() {
+  return useMutation<WorkspaceVersionMutationResult, Error, string>({
+    mutationFn: unpublishWorkspaceVersion,
+  });
+}
+
 export function useSetDefaultWorkspaceVersionAction() {
   return useMutation<WorkspaceVersionMutationResult, Error, string>({
     mutationFn: setDefaultWorkspaceVersion,
+  });
+}
+
+export function useUpdateWorkspaceVersionAction() {
+  return useMutation<
+    WorkspaceVersionMutationResult,
+    Error,
+    { versionId: string; label?: string; key?: string }
+  >({
+    mutationFn: updateWorkspaceVersion,
+  });
+}
+
+export function useDeleteWorkspaceVersionAction() {
+  return useMutation<WorkspaceVersionMutationResult, Error, string>({
+    mutationFn: deleteWorkspaceVersion,
   });
 }

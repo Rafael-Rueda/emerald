@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { Validator } from "@/http/@shared/decorators/validator.decorator";
@@ -8,6 +8,8 @@ import {
     createVersionBodySchema,
     ListVersionsQueryDTO,
     listVersionsQuerySchema,
+    UpdateVersionBodyDTO,
+    updateVersionBodySchema,
     VersionResponseDTO,
     VersionsListResponseDTO,
 } from "@/http/workspace/schemas/versions.schema";
@@ -56,6 +58,33 @@ export class VersionsController {
         return this.versionsService.findOne(id);
     }
 
+    @Put(":id")
+    @Author()
+    @Validator(updateVersionBodySchema, 422)
+    @ApiOperation({ summary: "Update release version" })
+    @ApiParam({ name: "id", type: String, description: "Release version UUID" })
+    @ApiBody({ type: UpdateVersionBodyDTO })
+    @ApiResponse({ status: 200, description: "Release version updated", type: VersionResponseDTO })
+    @ApiResponse({ status: 401, description: "Unauthorized" })
+    @ApiResponse({ status: 403, description: "Forbidden" })
+    @ApiResponse({ status: 404, description: "Release version not found" })
+    @ApiResponse({ status: 409, description: "Duplicate version key in same space" })
+    update(@Param("id") id: string, @Body() body: UpdateVersionBodyDTO) {
+        return this.versionsService.update(id, body);
+    }
+
+    @Delete(":id")
+    @Author()
+    @ApiOperation({ summary: "Delete release version" })
+    @ApiParam({ name: "id", type: String, description: "Release version UUID" })
+    @ApiResponse({ status: 200, description: "Release version deleted", type: VersionResponseDTO })
+    @ApiResponse({ status: 401, description: "Unauthorized" })
+    @ApiResponse({ status: 403, description: "Forbidden" })
+    @ApiResponse({ status: 404, description: "Release version not found" })
+    remove(@Param("id") id: string) {
+        return this.versionsService.remove(id);
+    }
+
     @Patch(":id")
     @Author()
     @ApiOperation({ summary: "Archive release version" })
@@ -79,6 +108,19 @@ export class VersionsController {
     @ApiResponse({ status: 404, description: "Release version not found" })
     publish(@Param("id") id: string) {
         return this.versionsService.publish(id);
+    }
+
+    @Post(":id/unpublish")
+    @HttpCode(200)
+    @Author()
+    @ApiOperation({ summary: "Unpublish release version (revert to draft)" })
+    @ApiParam({ name: "id", type: String, description: "Release version UUID" })
+    @ApiResponse({ status: 200, description: "Release version unpublished", type: VersionResponseDTO })
+    @ApiResponse({ status: 401, description: "Unauthorized" })
+    @ApiResponse({ status: 403, description: "Forbidden" })
+    @ApiResponse({ status: 404, description: "Release version not found" })
+    unpublish(@Param("id") id: string) {
+        return this.versionsService.unpublish(id);
     }
 
     @Post(":id/set-default")
