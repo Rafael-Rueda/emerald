@@ -2,8 +2,8 @@ import { ReleaseVersionsRepository } from "../repositories/release-versions.repo
 
 import { Either, Left, Right } from "@/domain/@shared/either";
 import { ReleaseVersionEntity } from "@/domain/versions/enterprise/entities/release-version.entity";
-import { ReleaseVersionNotFoundError } from "@/domain/versions/errors/release-version-not-found.error";
 import { ReleaseVersionKeyAlreadyExistsError } from "@/domain/versions/errors/release-version-key-already-exists.error";
+import { ReleaseVersionNotFoundError } from "@/domain/versions/errors/release-version-not-found.error";
 
 interface UpdateVersionRequest {
     versionId: string;

@@ -6,7 +6,7 @@ import { DocumentStatus, ReleaseVersionStatus } from "@prisma/client";
 import * as pgvector from "pgvector";
 import request from "supertest";
 
-import { VOYAGE_AI_EMBEDDING_CLIENT } from "@/domain/ai-context/application/ai-context.service";
+import { EMBEDDING_PROVIDER } from "@/domain/ai-context/application/providers/embedding-provider";
 import { PublicModule } from "@/http/public/public.module";
 import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
@@ -133,11 +133,11 @@ describe("AiContextController (e2e)", () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [ConfigModule.forRoot({ isGlobal: true }), PublicModule],
         })
-            .overrideProvider(VOYAGE_AI_EMBEDDING_CLIENT)
+            .overrideProvider(EMBEDDING_PROVIDER)
             .useValue({
-                embed: jest.fn().mockResolvedValue({
-                    data: [{ embedding: makeVector(1, 0) }],
-                }),
+                name: "voyage",
+                dimension: 512,
+                embed: jest.fn().mockResolvedValue([makeVector(1, 0)]),
             })
             .compile();
 

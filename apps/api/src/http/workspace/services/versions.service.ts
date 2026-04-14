@@ -10,7 +10,11 @@ import { SetDefaultVersionUseCase } from "@/domain/versions/application/use-case
 import { UnpublishVersionUseCase } from "@/domain/versions/application/use-cases/unpublish-version.use-case";
 import { UpdateVersionUseCase } from "@/domain/versions/application/use-cases/update-version.use-case";
 import { VersionPresenter } from "@/http/workspace/presenters/version.presenter";
-import { CreateVersionBodyDTO, ListVersionsQueryDTO, UpdateVersionBodyDTO } from "@/http/workspace/schemas/versions.schema";
+import {
+    CreateVersionBodyDTO,
+    ListVersionsQueryDTO,
+    UpdateVersionBodyDTO,
+} from "@/http/workspace/schemas/versions.schema";
 
 @Injectable()
 export class VersionsService {

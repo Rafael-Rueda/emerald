@@ -40,10 +40,14 @@ None required. Use `curl.exe` for manual verification (NOT PowerShell's `curl` a
 - Use `@Public()` decorator for endpoints that don't require JWT
 - Prisma schema path: `apps/api/src/infra/database/prisma/schema.prisma`
 - `pgvector` npm package required for `pgvector.toSql(vector)` serialization in `$queryRaw`
-- Vector column declared as `Unsupported("vector(512)")` — NO read/write through Prisma Client typed API; all vector I/O via `$queryRaw` / `$executeRaw`
+- Vector column declared as `Unsupported("vector")` — NO read/write through Prisma Client typed API; all vector I/O via `$queryRaw` / `$executeRaw`. The live column dimension is driven at runtime by `EMBEDDING_DIMENSION` + the currently-applied migration, NOT by the Prisma schema
+
+### Provider selection
+
+Emerald has four pluggable embedding providers behind the `EmbeddingProvider` interface (`apps/api/src/domain/ai-context/application/providers/embedding-provider.ts`). Adapters live under `apps/api/src/infra/ai/providers/`: `voyage.embedding-provider.ts`, `openai.embedding-provider.ts`, `google-vertex.embedding-provider.ts`, `ollama.embedding-provider.ts`. The factory in `apps/api/src/http/@shared/modules/ai-context.module.ts` switches on `EMBEDDING_PROVIDER` at boot. Any code in this skill must depend on the interface, never on a concrete adapter.
 
 ### Important Technical Constraints
-- `voyage-3-lite` produces **512-dimensional** embeddings (not 1536)
+- Embedding dimension is **not hardcoded**. The active `EmbeddingProvider.dimension` and the live `document_chunks.embedding` column type are the source of truth. Use `env.EMBEDDING_DIMENSION` and the injected provider; never assume 512 or 1536
 - `SemanticSearchQuerySchema`: `{query: z.string().min(1), space: z.string().min(1), version: z.string().min(1)}` — all required
 - Search response uses `AiContextResponseSchema` with `entityType: "semantic-search"`, `entityId: <query string>`
 - pgvector indexes (HNSW) must be added via raw SQL in a migration file — Prisma `migrate dev` will break them; add them in a separate `_add_index.sql` file applied with `$executeRaw` in a seed/init, or via a manual migration
@@ -136,3 +140,6 @@ Complete the feature handoff with all required fields.
 - `@modelcontextprotocol/sdk` v1.27.1 is unavailable or has breaking import changes
 - Feature depends on a Prisma model or repository that hasn't been created yet (prior feature not done)
 - Any environment variable other than `VOYAGE_API_KEY` appears to be missing from `.env`
+- **Missing provider API key at boot** — `env.ts` `superRefine` rejects the config (e.g. `EMBEDDING_PROVIDER=openai` with no `OPENAI_API_KEY`). Do not try to "fix" by hardcoding a fallback; surface to the orchestrator.
+- **`EMBEDDING_DIMENSION` does not match the selected model's allowed dimensions** — e.g. `voyage-3-lite` with `EMBEDDING_DIMENSION=1024`. The env validator will refuse to boot.
+- **Runtime WARN for live-column vs provider dimension mismatch** — the API starts but logs a WARN on boot comparing provider dim against the live `document_chunks.embedding` column. This signals that `ai:dimension:apply` + `ai:reindex` have not been run after a provider/model swap; escalate rather than silently accepting incorrect search results.

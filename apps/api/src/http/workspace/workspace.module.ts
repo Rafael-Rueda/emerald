@@ -15,7 +15,13 @@ import { VersionsService } from "./services/versions.service";
 
 @Module({
     imports: [AiContextModule, DocumentsSharedModule, NavigationSharedModule, VersionsSharedModule],
-    controllers: [WorkspaceAiContextController, DocumentsController, RevisionsController, NavigationController, VersionsController],
+    controllers: [
+        WorkspaceAiContextController,
+        DocumentsController,
+        RevisionsController,
+        NavigationController,
+        VersionsController,
+    ],
     providers: [DocumentsService, NavigationService, VersionsService],
 })
 export class WorkspaceModule {}

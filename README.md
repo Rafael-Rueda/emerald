@@ -131,7 +131,9 @@ Whether it's ChatGPT, Claude, Gemini, or your own RAG pipeline — Emerald gives
 
 ### Semantic Search
 
-`POST /api/public/ai-context/search` performs **vector similarity search** over your published documentation using [Voyage AI](https://voyageai.com) embeddings stored in PostgreSQL via **pgvector**. Send `{ query: string, space: string, version: string }` and receive an `AiContextResponseSchema` with ranked chunks ordered by semantic relevance. Embeddings are generated automatically when a document is published — no manual indexing step required.
+`POST /api/public/ai-context/search` performs **vector similarity search** over your published documentation using pluggable embedding providers (Voyage AI by default) stored in PostgreSQL via **pgvector**. Send `{ query: string, space: string, version: string }` and receive an `AiContextResponseSchema` with ranked chunks ordered by semantic relevance. Embeddings are generated automatically when a document is published — no manual indexing step required.
+
+See [Embedding Providers](#embedding-providers) for how to swap Voyage for OpenAI, Google Vertex AI, or self-hosted Ollama.
 
 ### MCP Server — NestJS (`/api/mcp`)
 
@@ -145,9 +147,173 @@ A standalone **stdio MCP server** is available for use with Claude Desktop and o
 
 | Variable | Where | Purpose |
 |----------|-------|---------|
+| `EMBEDDING_PROVIDER` | `apps/api/.env` | `voyage` (default), `openai`, `google`, or `ollama` |
+| `EMBEDDING_DIMENSION` | `apps/api/.env` | Vector dimension; must match the chosen provider/model |
 | `VOYAGE_API_KEY` | `apps/api/.env` | Voyage AI embeddings — obtain at [voyageai.com](https://voyageai.com) |
 
 The Docker Compose configuration already uses the `pgvector/pgvector:pg17` image — no additional database setup is required beyond running `docker compose up -d`.
+
+---
+
+## Embedding Providers
+
+Emerald ships with **four pluggable embedding providers**. Select one with the `EMBEDDING_PROVIDER` environment variable. Per-provider constraints (required API keys, allowed dimensions per model) are enforced at startup by a `z.superRefine` in `apps/api/src/env/env.ts` — a misconfigured env never boots the API.
+
+| Provider | Default model | Default dim | Supported dims | Required env vars | When to use |
+|---|---|---|---|---|---|
+| `voyage` (default) | `voyage-3-lite` | 512 | `voyage-3-lite`: 512 · `voyage-3`: 1024 · `voyage-3-large` / `voyage-code-3`: 256 / 512 / 1024 / 2048 | `VOYAGE_API_KEY`, `VOYAGE_MODEL` | Default — balanced cost & quality |
+| `openai` | `text-embedding-3-small` | 1536 | `text-embedding-3-small`: 512 / 768 / 1024 / 1536 · `text-embedding-3-large`: 256 / 1024 / 3072 | `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL` | You already have an OpenAI account |
+| `google` | `text-embedding-004` | 768 | `text-embedding-004` / `text-multilingual-embedding-002`: 128 / 256 / 512 / 768 | `GOOGLE_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_VERTEX_LOCATION`, `GOOGLE_EMBEDDING_MODEL` | You already run on GCP |
+| `ollama` | `nomic-embed-text` | 768 | fixed per model: `nomic-embed-text` 768 · `mxbai-embed-large` 1024 · `all-minilm` 384 · `bge-m3` 1024 · `snowflake-arctic-embed` 1024 | `OLLAMA_BASE_URL`, `OLLAMA_EMBEDDING_MODEL` | Self-hosted, zero API cost, offline-capable |
+
+Provider implementations:
+- Interface: `apps/api/src/domain/ai-context/application/providers/embedding-provider.ts`
+- Adapters: `apps/api/src/infra/ai/providers/{voyage,openai,google-vertex,ollama}.embedding-provider.ts`
+- Factory wiring: `apps/api/src/http/@shared/modules/ai-context.module.ts`
+
+### Switching providers
+
+> **Warning — cross-provider vectors are not interchangeable.** Even at the same dimension, a vector produced by Voyage is **not comparable** to one produced by OpenAI, Google, or Ollama. Whenever you switch `EMBEDDING_PROVIDER` (or change a provider's model), you **must** truncate existing embeddings and regenerate them. The `ai:dimension:apply` script handles the schema side; `ai:reindex` handles the content side.
+
+Safe switch procedure:
+
+```bash
+# 1. Stop the API
+docker compose stop api          # (or however you run the API)
+
+# 2. Edit apps/api/.env — set EMBEDDING_PROVIDER, EMBEDDING_DIMENSION,
+#    and the provider-specific keys (see the table above).
+
+# 3. Apply the new dimension to the live database.
+#    DESTRUCTIVE: drops the HNSW index, TRUNCATEs document_chunks,
+#    alters the pgvector column type, recreates the index.
+pnpm --filter @emerald/api ai:dimension:apply
+
+# 4. Start the API again
+docker compose start api
+
+# 5. Regenerate embeddings for every published document with the new provider.
+pnpm --filter @emerald/api ai:reindex
+```
+
+`apply-embedding-dimension.ts` is a no-op when the target dimension already matches the live column — safe to run repeatedly. It does **not** modify `schema.prisma`: the source of truth for the runtime dimension is `EMBEDDING_DIMENSION` + the live column type.
+
+### Runtime dimension-mismatch warning
+
+On boot, `apps/api/src/main.ts` compares the active provider's dimension to the live `document_chunks.embedding` column. If they diverge, a `WARN` log is emitted pointing you at `ai:dimension:apply` + `ai:reindex`. The API will still start, but semantic search results will be incorrect until the mismatch is resolved.
+
+### Ollama setup
+
+Ollama is **not bundled** in `docker-compose.production.yml` — GPU-heavy inference is usually orchestrated separately. Run it on the host (`ollama serve`) or in its own container, then point the API at it:
+
+- **API in Docker, Ollama on the host (Windows / macOS):** `OLLAMA_BASE_URL=http://host.docker.internal:11434`
+- **API in Docker, Ollama on the host (Linux):** add `--add-host=host.docker.internal:host-gateway` to the `api` service (or use the host's LAN IP) and use the same `host.docker.internal` URL.
+- **Dedicated Ollama container on `emerald_net`:** `OLLAMA_BASE_URL=http://ollama:11434` and `docker run --network emerald_net --name ollama ollama/ollama`.
+
+Remember to `ollama pull <model>` on the Ollama host before the API tries to embed anything (e.g. `ollama pull nomic-embed-text`).
+
+---
+
+## Self-host in Production
+
+Emerald ships with a production-grade Docker Compose stack (`docker-compose.production.yml`) and a one-command setup script. Deploy it on any VPS with Docker installed, or drop the same images into Coolify/Kubernetes.
+
+### Quick start
+
+```bash
+# 1. Clone the repo on your server
+git clone https://github.com/Rafael-Rueda/emerald.git && cd emerald
+
+# 2. Generate secrets, collect config, write .env.production, build images
+./scripts/setup-production.sh
+
+# 3. Bring the stack up (embedded Caddy with automatic TLS)
+docker compose -f docker-compose.production.yml --profile with-proxy up -d
+
+# …or, if TLS is terminated by an external proxy (Coolify, Cloudflare, nginx):
+docker compose -f docker-compose.production.yml up -d
+```
+
+### Architecture
+
+All services share the `emerald_net` bridge network. A single `DOMAIN` env var drives three subdomains:
+
+| Service | Image | Role | Public at |
+|---|---|---|---|
+| `postgres` | `pgvector/pgvector:pg17` | Database with pgvector | (internal) |
+| `migrate` | built from `apps/api` | Init container — runs `prisma migrate deploy` once per deploy | (internal, exits) |
+| `api` | built from `apps/api` | NestJS 11 API + MCP server | `api.DOMAIN` |
+| `docs` | built from `apps/docs` | Public docs portal (Next.js SSR/ISR) | `docs.DOMAIN` |
+| `workspace` | built from `apps/workspace` | Admin workspace (Next.js) | `app.DOMAIN` |
+| `caddy` | `caddy:2` | Optional reverse proxy with Let's Encrypt TLS (profile `with-proxy`) | `:80`, `:443` |
+
+The `migrate` container runs to completion before `api` starts (via `depends_on.condition: service_completed_successfully`), so schema changes are always applied in lock-step with new image builds.
+
+### Required files
+
+| File | Source | Purpose |
+|---|---|---|
+| `.env.production` | copy from `.env.production.example` and fill in | All runtime config (DB URL, OAuth, GCP, embedding provider, domain) |
+| `secrets/jwt-private.pem` | generated by `scripts/setup-production.sh` | RS256 JWT signing key |
+| `secrets/jwt-public.pem` | generated by `scripts/setup-production.sh` | RS256 JWT verification key |
+| `secrets/gcp-service-account.json` | placed manually | GCP Storage credentials (path referenced from `.env.production`) |
+
+`secrets/` is gitignored. Never commit it.
+
+### Update flow
+
+```bash
+git pull
+docker compose -f docker-compose.production.yml build
+docker compose -f docker-compose.production.yml up -d
+```
+
+The `migrate` container automatically runs any pending Prisma migrations before `api` restarts. Zero-touch for the common case.
+
+### Rollback
+
+```bash
+git checkout <previous-tag>
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+> **Warning — destructive migrations are one-way.** If the release you are rolling back from applied a non-reversible migration (column drop, type change, HNSW index rebuild), restore the database from a backup taken **before** the upgrade *before* restarting the older image.
+
+### Backup & restore
+
+```bash
+# Dump the live database to ./backups/emerald-<timestamp>.sql.gz
+./scripts/backup-db.sh
+
+# Restore from a dump (DESTRUCTIVE: replaces current DB contents)
+./scripts/restore-db.sh ./backups/emerald-2026-04-14T03-00-00Z.sql.gz
+```
+
+Schedule `backup-db.sh` daily via cron:
+
+```cron
+0 3 * * * cd /opt/emerald && ./scripts/backup-db.sh >> /var/log/emerald-backup.log 2>&1
+```
+
+### Runtime dimension-mismatch warning
+
+On boot, the API compares the active embedding provider's dimension against the live `document_chunks.embedding` column. If they differ, a `WARN` log is emitted at startup. See [Embedding Providers — Runtime dimension-mismatch warning](#runtime-dimension-mismatch-warning) for the recovery procedure (`ai:dimension:apply` + `ai:reindex`).
+
+### Deploy with Coolify
+
+Coolify can drive the same Docker Compose file, or you can map each service to a native Coolify Application:
+
+1. **Managed Postgres** — create a Coolify Postgres database using the `pgvector/pgvector:pg17` image; copy the connection string into `DATABASE_URL`.
+2. **One Application per service** — create three Applications (`api`, `docs`, `workspace`) pointing at the same repo, each with:
+   - Build context: repo root
+   - Dockerfile: `apps/<service>/Dockerfile`
+   - Port: `3333` / `3100` / `3101`
+   - Domain: `api.DOMAIN` / `docs.DOMAIN` / `app.DOMAIN`
+3. **Environment variables** — copy from `.env.production.example` into each Application's env settings. Share JWT keys, GCP credentials, and `DATABASE_URL` across all three.
+4. **Skip the `caddy` service** — Coolify handles TLS and routing. Deploy without `--profile with-proxy`.
+5. **Run migrations** — either use Coolify's pre-deploy command (`pnpm --filter @emerald/api prisma migrate deploy`) on the `api` Application, or deploy the full compose file once to let the `migrate` init container do it.
+
+See [production-deploy.md](.factory/library/production-deploy.md) for the full operator runbook.
 
 ---
 
@@ -374,8 +540,8 @@ Tests run against the same MSW handlers used in the browser — what you test is
 - [x] Navigation tree drag-and-drop editor (dnd-kit)
 - [x] Semantic search via Voyage AI embeddings + pgvector (`POST /api/public/ai-context/search`)
 - [x] MCP server — StreamableHTTP (`/api/mcp`) and standalone stdio CLI (`packages/mcp-server`)
-- [ ] Pluggable AI provider adapters (OpenAI, Anthropic, Google, custom)
-- [ ] One-command deployment templates
+- [x] Pluggable embedding providers (Voyage, OpenAI, Google Vertex AI, Ollama)
+- [x] Self-host Docker Compose deployment (VPS / Coolify) with one-command setup script
 
 ---
 

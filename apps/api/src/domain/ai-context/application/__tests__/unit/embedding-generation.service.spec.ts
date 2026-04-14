@@ -2,11 +2,14 @@ import type { DocumentContent } from "@emerald/contracts";
 import { Logger } from "@nestjs/common";
 
 import { AiContextService } from "../../ai-context.service";
+import type { EmbeddingProvider } from "../../providers/embedding-provider";
 import type { DocumentChunkRepository } from "../../repositories/document-chunk.repository";
 
 import type { PrismaService } from "@/infra/database/prisma/prisma.service";
 
-type MockVoyageClient = {
+type MockEmbeddingProvider = {
+    name: EmbeddingProvider["name"];
+    dimension: number;
     embed: jest.Mock;
 };
 
@@ -23,7 +26,9 @@ const makePrismaService = (): jest.Mocked<Pick<PrismaService, "document">> => ({
     } as unknown as PrismaService["document"],
 });
 
-const makeVoyageClient = (): MockVoyageClient => ({
+const makeEmbeddingProvider = (): MockEmbeddingProvider => ({
+    name: "voyage",
+    dimension: 512,
     embed: jest.fn(),
 });
 
@@ -70,16 +75,16 @@ describe("AiContextService.generateAndStoreEmbeddings", () => {
     let sut: AiContextService;
     let chunkRepository: jest.Mocked<DocumentChunkRepository>;
     let prismaService: jest.Mocked<Pick<PrismaService, "document">>;
-    let voyageClient: MockVoyageClient;
+    let embeddingProvider: MockEmbeddingProvider;
     let loggerErrorSpy: jest.SpyInstance;
 
     beforeEach(() => {
         chunkRepository = makeChunkRepository();
         prismaService = makePrismaService();
-        voyageClient = makeVoyageClient();
+        embeddingProvider = makeEmbeddingProvider();
         loggerErrorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
 
-        sut = new AiContextService(chunkRepository, prismaService as never, voyageClient as never);
+        sut = new AiContextService(chunkRepository, prismaService as never, embeddingProvider as never);
     });
 
     afterEach(() => {
@@ -93,16 +98,12 @@ describe("AiContextService.generateAndStoreEmbeddings", () => {
         const advancedEmbedding = makeEmbedding(0.02);
 
         prismaService.document.findUnique.mockResolvedValue(document as never);
-        voyageClient.embed.mockResolvedValue({
-            data: [{ embedding: introEmbedding }, { embedding: advancedEmbedding }],
-        });
+        embeddingProvider.embed.mockResolvedValue([introEmbedding, advancedEmbedding]);
 
         await expect(sut.generateAndStoreEmbeddings("document-1")).resolves.toBeUndefined();
 
-        expect(voyageClient.embed).toHaveBeenCalledWith({
-            input: ["Welcome to Emerald", "Deep dive content"],
-            model: "voyage-3-lite",
-            input_type: "document",
+        expect(embeddingProvider.embed).toHaveBeenCalledWith(["Welcome to Emerald", "Deep dive content"], {
+            inputType: "document",
         });
 
         expect(chunkRepository.deleteByDocumentId).toHaveBeenCalledWith("document-1");
@@ -138,7 +139,7 @@ describe("AiContextService.generateAndStoreEmbeddings", () => {
         const document = makeDocument(content);
 
         prismaService.document.findUnique.mockResolvedValue(document as never);
-        voyageClient.embed.mockRejectedValue(new Error("voyage unavailable"));
+        embeddingProvider.embed.mockRejectedValue(new Error("voyage unavailable"));
 
         await expect(sut.generateAndStoreEmbeddings("document-1")).resolves.toBeUndefined();
 

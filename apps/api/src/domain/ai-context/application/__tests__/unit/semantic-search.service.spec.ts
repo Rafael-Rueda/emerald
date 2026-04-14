@@ -1,11 +1,14 @@
 import { AiContextResponseSchema } from "@emerald/contracts";
 
 import { AiContextService } from "../../ai-context.service";
+import type { EmbeddingProvider } from "../../providers/embedding-provider";
 import type { DocumentChunkRepository } from "../../repositories/document-chunk.repository";
 
 import type { PrismaService } from "@/infra/database/prisma/prisma.service";
 
-type MockVoyageClient = {
+type MockEmbeddingProvider = {
+    name: EmbeddingProvider["name"];
+    dimension: number;
     embed: jest.Mock;
 };
 
@@ -31,7 +34,9 @@ const makePrismaService = (): jest.Mocked<
     $queryRaw: jest.fn(),
 });
 
-const makeVoyageClient = (): MockVoyageClient => ({
+const makeEmbeddingProvider = (): MockEmbeddingProvider => ({
+    name: "voyage",
+    dimension: 512,
     embed: jest.fn(),
 });
 
@@ -40,22 +45,20 @@ const makeEmbedding = (seed = 0.1): number[] => Array.from({ length: 512 }, (_, 
 describe("AiContextService.semanticSearch", () => {
     let sut: AiContextService;
     let prismaService: jest.Mocked<Pick<PrismaService, "$queryRaw" | "document" | "space" | "releaseVersion">>;
-    let voyageClient: MockVoyageClient;
+    let embeddingProvider: MockEmbeddingProvider;
 
     beforeEach(() => {
         prismaService = makePrismaService();
-        voyageClient = makeVoyageClient();
+        embeddingProvider = makeEmbeddingProvider();
 
         prismaService.space.findUnique.mockResolvedValue({ id: "space-1" });
         prismaService.releaseVersion.findUnique.mockResolvedValue({ id: "version-1" });
 
-        sut = new AiContextService(makeChunkRepository(), prismaService as never, voyageClient as never);
+        sut = new AiContextService(makeChunkRepository(), prismaService as never, embeddingProvider as never);
     });
 
     it("embeds query and maps ranked semantic search rows to AiContextResponse shape", async () => {
-        voyageClient.embed.mockResolvedValue({
-            data: [{ embedding: makeEmbedding(0.42) }],
-        });
+        embeddingProvider.embed.mockResolvedValue([makeEmbedding(0.42)]);
 
         prismaService.$queryRaw.mockResolvedValue([
             {
@@ -90,11 +93,7 @@ describe("AiContextService.semanticSearch", () => {
 
         const result = await sut.semanticSearch("best practices", "guides", "v1");
 
-        expect(voyageClient.embed).toHaveBeenCalledWith({
-            input: ["best practices"],
-            model: "voyage-3-lite",
-            input_type: "query",
-        });
+        expect(embeddingProvider.embed).toHaveBeenCalledWith(["best practices"], { inputType: "query" });
         expect(prismaService.space.findUnique).toHaveBeenCalledWith({
             where: { key: "guides" },
             select: { id: true },
@@ -128,7 +127,7 @@ describe("AiContextService.semanticSearch", () => {
     });
 
     it("returns an empty result when the query embedding is missing", async () => {
-        voyageClient.embed.mockResolvedValue({ data: [] });
+        embeddingProvider.embed.mockResolvedValue([]);
 
         const result = await sut.semanticSearch("missing embedding", "guides", "v1");
 
@@ -141,7 +140,7 @@ describe("AiContextService.semanticSearch", () => {
     });
 
     it("returns an empty result when embedding request fails", async () => {
-        voyageClient.embed.mockRejectedValue(new Error("Voyage unavailable"));
+        embeddingProvider.embed.mockRejectedValue(new Error("Voyage unavailable"));
 
         const result = await sut.semanticSearch("embedding failure", "guides", "v1");
 
@@ -164,7 +163,7 @@ describe("AiContextService.semanticSearch", () => {
             chunks: [],
         });
         expect(prismaService.releaseVersion.findUnique).not.toHaveBeenCalled();
-        expect(voyageClient.embed).not.toHaveBeenCalled();
+        expect(embeddingProvider.embed).not.toHaveBeenCalled();
         expect(prismaService.$queryRaw).not.toHaveBeenCalled();
     });
 
@@ -178,23 +177,19 @@ describe("AiContextService.semanticSearch", () => {
             entityType: "semantic-search",
             chunks: [],
         });
-        expect(voyageClient.embed).not.toHaveBeenCalled();
+        expect(embeddingProvider.embed).not.toHaveBeenCalled();
         expect(prismaService.$queryRaw).not.toHaveBeenCalled();
     });
 
     it("propagates raw semantic query errors when pre-flight checks pass", async () => {
-        voyageClient.embed.mockResolvedValue({
-            data: [{ embedding: makeEmbedding(0.42) }],
-        });
+        embeddingProvider.embed.mockResolvedValue([makeEmbedding(0.42)]);
         prismaService.$queryRaw.mockRejectedValue(new Error("database unavailable"));
 
         await expect(sut.semanticSearch("db error", "guides", "v1")).rejects.toThrow("database unavailable");
     });
 
     it("maps nullable raw fields to strings so AiContextResponseSchema parse succeeds", async () => {
-        voyageClient.embed.mockResolvedValue({
-            data: [{ embedding: makeEmbedding(0.42) }],
-        });
+        embeddingProvider.embed.mockResolvedValue([makeEmbedding(0.42)]);
 
         prismaService.$queryRaw.mockResolvedValue([
             {

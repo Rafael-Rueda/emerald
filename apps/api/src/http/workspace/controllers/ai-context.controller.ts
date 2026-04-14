@@ -38,10 +38,7 @@ export class WorkspaceAiContextController {
     @ApiParam({ name: "entityId", type: String, description: "Entity UUID" })
     @ApiResponse({ status: 200, description: "AI context response" })
     @ApiResponse({ status: 401, description: "Unauthorized" })
-    getEntityContext(
-        @Param("entityType") entityType: string,
-        @Param("entityId") entityId: string,
-    ) {
+    getEntityContext(@Param("entityType") entityType: string, @Param("entityId") entityId: string) {
         if (entityType === "document") {
             return this.aiContextService.getDocumentContext(entityId);
         }

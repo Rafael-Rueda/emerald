@@ -1,0 +1,58 @@
+# Node / package manager
+node_modules
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+
+# Build outputs
+**/.next
+**/dist
+**/build
+**/*.tsbuildinfo
+
+# Tests / coverage / reports
+**/coverage
+test-results
+playwright-report
+storybook-static
+
+# Local DB volumes (dev compose)
+apps/api/data
+
+# VCS / IDE
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+
+# Env files — keep only the example templates
+.env
+.env.*
+!.env.example
+!.env.production.example
+!**/.env.example
+!**/.env.production.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Turbo / misc caches
+.turbo
+.DS_Store
+Thumbs.db
+
+# Docker-related (avoid recursive copy)
+**/Dockerfile
+**/.dockerignore
+
+# CI / docs assets not needed in image
+.github
+.factory
+.claude
+.storybook
+Emerald.png
+README.md

@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from "@nestjs/common";
 
-import { ROLES } from "@/domain/identity/enterprise/entities/user.entity";
 import { CreateUserUseCase } from "@/domain/identity/application/use-cases/create-user.use-case";
+import { ROLES } from "@/domain/identity/enterprise/entities/user.entity";
 import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
 const DEFAULT_ADMIN_EMAIL = "admin@emerald.local";

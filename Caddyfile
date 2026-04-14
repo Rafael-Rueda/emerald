@@ -1,0 +1,18 @@
+{
+	email {$ACME_EMAIL}
+}
+
+docs.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy docs:3100
+}
+
+app.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy workspace:3101
+}
+
+api.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:3333
+}

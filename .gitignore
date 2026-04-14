@@ -25,6 +25,10 @@ apps/api/data/*
 .env
 .env.local
 .env.*.local
+.env.production
+
+# Production setup state
+.setup-done
 
 # OS
 .DS_Store

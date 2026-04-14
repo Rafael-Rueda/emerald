@@ -144,12 +144,21 @@ apps/api/src/
 - `packages/mcp-server/src/client.ts` — HTTP client wrapper for semantic search API
 - Build output: `packages/mcp-server/dist/index.js`
 
+### Embedding Provider Abstraction
+- Interface: `apps/api/src/domain/ai-context/application/providers/embedding-provider.ts` — `embed(texts, inputType): Promise<number[][]>` + `dimension: number`
+- Four adapters under `apps/api/src/infra/ai/providers/`: `voyage.embedding-provider.ts`, `openai.embedding-provider.ts`, `google-vertex.embedding-provider.ts`, `ollama.embedding-provider.ts`
+- Factory in `apps/api/src/http/@shared/modules/ai-context.module.ts` switches on `EMBEDDING_PROVIDER` and returns the matching adapter
+- Per-provider env validation lives in `apps/api/src/env/env.ts` via `z.superRefine` — required API keys and allowed dimensions per model are enforced at boot
+- `inputType: "document" | "query"` is passed through so providers that distinguish (Voyage, Google) can use the right instruction
+
 ### pgvector Conventions
-- `DocumentChunk.embedding` declared as `Unsupported("vector(512)")` — invisible to typed Prisma Client
+- `DocumentChunk.embedding` declared as `Unsupported("vector")` — dimension is driven by `EMBEDDING_DIMENSION` and the live column type, not hardcoded in the Prisma schema
+- `apps/api/scripts/apply-embedding-dimension.ts` (exposed as `ai:dimension:apply`) aligns the live column to `EMBEDDING_DIMENSION`: drops the HNSW index, `TRUNCATE`s chunks, `ALTER`s the column, rebuilds the index
 - All vector I/O via `$executeRaw` (write) and `$queryRaw` (read/search)
 - Cosine similarity: `1 - (embedding <=> ${param}::vector)` as relevance score
-- HNSW index added via raw SQL migration (not in schema, Prisma would drop it on migrate)
+- HNSW index reactivated via migration `20260414120000_reactivate_hnsw_index_with_guard` (m=16, ef_construction=64); the guard skips recreation when the column dim has drifted, letting `ai:dimension:apply` own the rebuild
 - Use `pgvector.toSql(array)` from `pgvector` npm package for serialization
+- Vectors produced by different providers are **not interchangeable** — switching `EMBEDDING_PROVIDER` requires `ai:dimension:apply` + `ai:reindex`
 
 ### MCP Transport Conventions
 - NestJS: `StreamableHTTPServerTransport` at `/api/mcp` (POST/GET/DELETE)

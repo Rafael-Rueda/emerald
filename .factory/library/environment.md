@@ -79,6 +79,30 @@ Both apps have `.env.local.example` files with placeholder values.
 - **@modelcontextprotocol/sdk** — Required in both `apps/api` and `packages/mcp-server` (v1.27.1). Use StreamableHTTP transport in NestJS; Stdio transport in CLI.
 - MCP CLI package: `packages/mcp-server` (internal, not published). API_URL env var controls target (default: http://localhost:3333).
 
+## Production Environment Variables (.env.production)
+
+Used by `docker-compose.production.yml` and by the `api`, `docs`, and `workspace` service images. Copy `.env.production.example` to `.env.production` at the repo root; `scripts/setup-production.sh` fills most of these in for you. See that example file for the full set and allowed values.
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Postgres connection string with pgvector. Inside the compose network: `postgres://emerald:<pw>@postgres:5432/emerald`. |
+| `JWT_PRIVATE_KEY_PATH` | Container path to the RS256 private key (e.g. `/app/secrets/jwt-private.pem`); mounted from `./secrets/`. |
+| `JWT_PUBLIC_KEY_PATH` | Container path to the RS256 public key; mounted from `./secrets/`. |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID from Google Cloud Console. |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret. |
+| `GOOGLE_CALLBACK_URL` | Full public callback URL: `https://api.${DOMAIN}/api/auth/google/callback`. |
+| `GCP_STORAGE_BUCKET` | GCP Cloud Storage bucket name for image/file uploads. |
+| `GCP_SERVICE_ACCOUNT_KEY_PATH` | Container path to the GCP service account JSON key; mounted from `./secrets/`. |
+| `EMBEDDING_PROVIDER` | `voyage` \| `openai` \| `google` \| `ollama`. Drives which adapter wires in at boot. |
+| `EMBEDDING_DIMENSION` | Vector dimension for the live `document_chunks.embedding` column. Must match the selected provider/model. |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed origins for the API, typically `https://docs.${DOMAIN},https://app.${DOMAIN}`. |
+| `PUBLIC_API_URL` | Public URL of the API, baked into the `docs` and `workspace` Next.js builds: `https://api.${DOMAIN}`. |
+| `PUBLIC_DOCS_URL` | Public URL of the docs portal: `https://docs.${DOMAIN}`. |
+| `PUBLIC_WORKSPACE_URL` | Public URL of the workspace admin: `https://app.${DOMAIN}`. |
+| `DOMAIN` | Apex domain used to derive the three subdomains (`api`, `docs`, `app`). Consumed by Caddy when the `with-proxy` profile is active. |
+
+Provider-specific keys (`VOYAGE_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_PROJECT_ID`, `OLLAMA_BASE_URL`, etc.) live in the same file; only the ones required by the active `EMBEDDING_PROVIDER` are validated at boot. See the main README's `## Embedding Providers` table for the full matrix and `apps/api/src/env/env.ts` for the `superRefine` validation rules.
+
 ## External Accounts Required (not automated by init.sh)
 
 - **GCP Service Account** with Storage Object Admin permission on the configured bucket

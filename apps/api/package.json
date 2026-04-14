@@ -25,6 +25,8 @@
         "prisma:migrate": "prisma migrate dev",
         "prisma:seed": "prisma db seed",
         "prisma:studio": "prisma studio",
+        "ai:dimension:apply": "ts-node -r tsconfig-paths/register scripts/apply-embedding-dimension.ts",
+        "ai:reindex": "ts-node -r tsconfig-paths/register scripts/ai-reindex.ts",
         "sync:template": "node scripts/sync-template.js"
     },
     "prisma": {
@@ -49,6 +51,7 @@
         "google-auth-library": "^10.6.2",
         "googleapis": "^169.0.0",
         "nestjs-zod": "^5.0.1",
+        "openai": "^6.34.0",
         "pgvector": "^0.2.1",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.1",

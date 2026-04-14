@@ -10,6 +10,7 @@ import {
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import * as pgvector from "pgvector";
 
+import { EMBEDDING_PROVIDER, type EmbeddingProvider } from "./providers/embedding-provider";
 import {
     DOCUMENT_CHUNK_REPOSITORY,
     type DocumentChunkCreate,
@@ -21,15 +22,11 @@ import {
 import { renderDocumentContent } from "@/domain/documents/application/utils/document-content-renderer";
 import { PrismaService } from "@/infra/database/prisma/prisma.service";
 
-export const VOYAGE_AI_EMBEDDING_CLIENT = "VoyageAiEmbeddingClient";
-
-export interface VoyageAiEmbeddingClient {
-    embed(request: { input: string[]; model: string; input_type: "document" | "query" }): Promise<{
-        data?: Array<{
-            embedding?: number[];
-        }>;
-    }>;
-}
+/**
+ * @deprecated Use `EMBEDDING_PROVIDER` from `./providers/embedding-provider` instead.
+ * Kept as an alias for backwards compatibility (e.g. e2e tests that override the provider).
+ */
+export const VOYAGE_AI_EMBEDDING_CLIENT = EMBEDDING_PROVIDER;
 
 const normalizeWhitespace = (value: string): string => value.replace(/\s+/g, " ").trim();
 
@@ -97,8 +94,8 @@ export class AiContextService {
         @Inject(DOCUMENT_CHUNK_REPOSITORY)
         private readonly documentChunkRepository: DocumentChunkRepository,
         private readonly prisma: PrismaService,
-        @Inject(VOYAGE_AI_EMBEDDING_CLIENT)
-        private readonly voyageAiClient: VoyageAiEmbeddingClient,
+        @Inject(EMBEDDING_PROVIDER)
+        private readonly embedding: EmbeddingProvider,
     ) {}
 
     async semanticSearch(query: string, space: string, version: string): Promise<AiContextResponse> {
@@ -127,34 +124,30 @@ export class AiContextService {
             return this.emptySemanticSearchResponse(query);
         }
 
-        const embeddingResponse = await this.voyageAiClient
-            .embed({
-                input: [query],
-                model: "voyage-3-lite",
-                input_type: "query",
-            })
-            .catch((error) => {
-                this.logger.error("Voyage AI embedding request failed", {
-                    query,
-                    space,
-                    version,
-                    error: error instanceof Error ? error.message : String(error),
-                });
-
-                return null;
+        const embeddings = await this.embedding.embed([query], { inputType: "query" }).catch((error) => {
+            this.logger.error("Embedding request failed", {
+                query,
+                space,
+                version,
+                provider: this.embedding.name,
+                error: error instanceof Error ? error.message : String(error),
             });
 
-        if (!embeddingResponse) {
+            return null;
+        });
+
+        if (!embeddings) {
             return this.emptySemanticSearchResponse(query);
         }
 
-        const queryEmbedding = embeddingResponse.data?.[0]?.embedding;
+        const queryEmbedding = embeddings[0];
 
-        if (!queryEmbedding || queryEmbedding.length !== 512) {
+        if (!queryEmbedding || queryEmbedding.length !== this.embedding.dimension) {
             this.logger.warn("Skipping semantic search due invalid query embedding", {
                 query,
                 space,
                 version,
+                expected: this.embedding.dimension,
             });
 
             return this.emptySemanticSearchResponse(query);
@@ -278,6 +271,20 @@ export class AiContextService {
         return this.documentChunkRepository.getStatsBySpaceId(spaceId);
     }
 
+    /**
+     * Generates embeddings for a document's current (published) revision and
+     * persists them to `document_chunks`.
+     *
+     * Idempotent: existing chunks for the document are deleted before the new
+     * batch is inserted. Safe to call repeatedly (e.g. from the bulk reindex
+     * script `pnpm ai:reindex`) or after switching embedding provider/dimension.
+     *
+     * Behaviour:
+     *   - No current revision          => no-op.
+     *   - Invalid DocumentContent JSON => log + no-op (existing chunks kept).
+     *   - Empty chunk set              => deletes any existing chunks.
+     *   - Embedding length mismatch    => throws (caught & logged below).
+     */
     async generateAndStoreEmbeddings(documentId: string): Promise<void> {
         try {
             const document = await this.prisma.document.findUnique({
@@ -319,13 +326,10 @@ export class AiContextService {
                 return;
             }
 
-            const embeddingResponse = await this.voyageAiClient.embed({
-                input: chunkInputs.map((chunk) => chunk.content),
-                model: "voyage-3-lite",
-                input_type: "document",
-            });
-
-            const embeddings = (embeddingResponse.data ?? []).map((item) => item.embedding ?? []);
+            const embeddings = await this.embedding.embed(
+                chunkInputs.map((chunk) => chunk.content),
+                { inputType: "document" },
+            );
 
             if (embeddings.length !== chunkInputs.length) {
                 throw new Error(
@@ -333,8 +337,8 @@ export class AiContextService {
                 );
             }
 
-            if (embeddings.some((embedding) => embedding.length !== 512)) {
-                throw new Error("Embedding dimension mismatch: expected 512");
+            if (embeddings.some((embedding) => embedding.length !== this.embedding.dimension)) {
+                throw new Error(`Embedding dimension mismatch: expected ${this.embedding.dimension}`);
             }
 
             const chunksToCreate: DocumentChunkCreate[] = chunkInputs.map((chunk, index) => ({
